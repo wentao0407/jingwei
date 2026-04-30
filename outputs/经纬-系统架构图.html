@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>经纬（JingWei）— 系统架构图</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.0/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f5f7fa; color: #1a1a2e; }
+        .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); color: #fff; padding: 48px 0; text-align: center; }
+        .header h1 { font-size: 36px; font-weight: 700; letter-spacing: 4px; margin-bottom: 8px; }
+        .header .subtitle { font-size: 16px; opacity: 0.7; letter-spacing: 2px; }
+        .header .meta { margin-top: 16px; font-size: 13px; opacity: 0.5; }
+        .nav { background: #fff; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .nav-inner { max-width: 1200px; margin: 0 auto; display: flex; gap: 0; overflow-x: auto; }
+        .nav a { display: block; padding: 14px 20px; font-size: 14px; color: #64748b; text-decoration: none; white-space: nowrap; border-bottom: 3px solid transparent; transition: all 0.2s; }
+        .nav a:hover { color: #0f3460; border-bottom-color: #0f3460; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+        .section { background: #fff; border-radius: 12px; padding: 40px; margin-bottom: 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .section-title { font-size: 22px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+        .section-title .icon { width: 32px; height: 32px; background: linear-gradient(135deg, #0f3460, #1a1a2e); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; }
+        .section-desc { font-size: 14px; color: #64748b; margin-bottom: 24px; line-height: 1.8; }
+        .diagram-wrap { background: #fafbfc; border-radius: 8px; padding: 24px; overflow-x: auto; }
+        .mermaid { display: flex; justify-content: center; }
+        .mermaid svg { max-width: 100%; height: auto; }
+        .legend { margin-top: 16px; padding: 16px; background: #f0f4f8; border-radius: 8px; }
+        .legend-title { font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 8px; }
+        .legend-items { display: flex; flex-wrap: wrap; gap: 16px; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 6px; font-weight: 600; }
+        .badge-new { background: #dcfce7; color: #16a34a; }
+        .badge-updated { background: #fef9c3; color: #ca8a04; }
+        @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } .section { padding: 24px; } }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>经 纬</h1>
+    <div class="subtitle">JINGWEI — 服装生产管理系统架构设计</div>
+    <div class="meta">v2.0 · 2026-04-30 · com.jingwei</div>
+</div>
+
+<div class="nav">
+    <div class="nav-inner">
+        <a href="#arch-overview">系统架构</a>
+        <a href="#arch-modules">模块架构</a>
+        <a href="#arch-biz-flow">业务流程</a>
+        <a href="#arch-event">事件流</a>
+        <a href="#arch-state">状态机</a>
+        <a href="#arch-er">数据模型</a>
+        <a href="#arch-consistency">一致性</a>
+        <a href="#arch-deploy">部署架构</a>
+    </div>
+</div>
+
+<div class="container">
+
+<!-- ==================== 1. 系统整体架构 ==================== -->
+<div class="section" id="arch-overview">
+    <div class="section-title">
+        <span class="icon">1</span>
+        系统整体架构
+        <span class="badge badge-updated">v2更新</span>
+    </div>
+    <div class="section-desc">
+        经纬系统采用模块化单体（Modular Monolith）架构，物理上是一个部署单元，代码层面严格按限界上下文划分模块。模块之间通过领域事件+Outbox通信，不直接调用。<br/><br/>
+        <b>v2 变更点：</b>① 移除 Spring Cloud Gateway，改用 Nginx 直连（<20人并发不需要网关层）；② 新增审批引擎、通知中心、退货管理、成本核算四个模块；③ 部署层移除 RabbitMQ 和 MinIO，初期不需要。
+    </div>
+    <div class="diagram-wrap">
+        <div class="mermaid">
+graph TB
+    subgraph 前端["🖥️ 前端 (React + Ant Design Pro)"]
+        PC["PC管理后台"]
+        PDA["PDA扫码终端"]
+    end
+
+    subgraph 代理["Nginx 反向代理"]
+        NGX["静态资源托管 · 请求转发 · HTTPS"]
+    end
+
+    subgraph 应用["模块化单体应用 (Spring Boot 3 + JDK 17)"]
+        direction TB
+        subgraph MD["📦 基础数据 com.jingwei.master"]
+            MD1["物料主数据"]
+            MD2["SPU/SKU"]
+            MD3["编码规则"]
+            MD4["供应商/客户"]
+            MD5["仓库/库位"]
+        end
+        subgraph ORD["📋 订单管理 com.jingwei.order"]
+            ORD1["销售订单"]
+            ORD2["生产订单"]
+            ORD3["订单转化"]
+            ORD4["退货管理 🆕"]
+        end
+        subgraph PROC["🛒 采购管理 com.jingwei.procurement"]
+            PROC1["BOM管理"]
+            PROC2["MRP引擎"]
+            PROC3["采购订单"]
+            PROC4["到货检验"]
+        end
+        subgraph INV["📊 库存管理 com.jingwei.inventory"]
+            INV1["四类库存"]
+            INV2["预留/释放"]
+            INV3["出入库单"]
+            INV4["盘点/预警"]
+        end
+        subgraph WH["🏭 出入库作业 com.jingwei.warehouse"]
+            WH1["收货/上架"]
+            WH2["波次/拣货"]
+            WH3["复核/发货"]
+            WH4["条码/打印"]
+        end
+        subgraph CROSS["🔧 横切模块"]
+            APV["✅ 审批引擎 🆕<br/>com.jingwei.approval<br/>单人审批·或签"]
+            NTF["🔔 通知中心 🆕<br/>com.jingwei.notification<br/>站内+企微/钉钉"]
+            COST["💰 成本核算 🆕<br/>com.jingwei.cost<br/>加权平均·成本流转"]
+        end
+        subgraph SYS["⚙️ 系统管理 com.jingwei.system"]
+            SYS1["用户/角色"]
+            SYS2["权限/RBAC"]
+            SYS3["操作日志"]
+            SYS4["系统配置"]
+        end
+
+        BUS["🔄 领域事件总线 + Outbox<br/>(Spring ApplicationEvent → domain_event_outbox)"]
+    end
+
+    subgraph 基础设施["数据层"]
+        PG[("🐘 PostgreSQL 15")]
+        RD[("⚡ Redis 7<br/>Session·缓存·幂等令牌")]
+        FS["📁 本地文件存储"]
+    end
+
+    PC --> NGX
+    PDA --> NGX
+    NGX --> 应用
+    MD & ORD & PROC & INV & WH & CROSS --> BUS
+    BUS --> MD & ORD & PROC & INV & WH & CROSS
+    应用 --> PG
+    应用 --> RD
+    应用 --> FS
+    NTF -.企微/钉钉Webhook.-> EXT["📱 企业微信 / 钉钉"]
+
+    style 前端 fill:#e0f2fe,stroke:#0284c7,stroke-width:2px
+    style 代理 fill:#fef3c7,stroke:#d97706,stroke-width:2px
+    style 应用 fill:#f0fdf4,stroke:#16a34a,stroke-width:2px
+    style 基础设施 fill:#fce7f3,stroke:#db2777,stroke-width:2px
+    style MD fill:#dbeafe,stroke:#3b82f6
+    style ORD fill:#fef9c3,stroke:#eab308
+    style PROC fill:#dcfce7,stroke:#22c55e
+    style INV fill:#f3e8ff,stroke:#a855f7
+    style WH fill:#ffedd5,stroke:#f97316
+    style CROSS fill:#e0e7ff,stroke:#6366f1
+    style SYS fill:#f1f5f9,stroke:#64748b
+    style BUS fill:#fecaca,stroke:#ef4444,stroke-width:2px
+    style EXT fill:#dcfce7,stroke:#16a34a,stroke-dasharray:5 5
+        </div>
+    </div>
+    <div class="legend">
+        <div class="legend-title">图例说明</div>
+        <div class="legend-items">
+            <div class="legend-item"><div class="legend-dot" style="background:#0284c7"></div>前端层</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div>代理层（Nginx）</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div>应用层</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>事件总线+Outbox</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div>横切模块 🆕</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#db2777"></div>数据层</div>
+            <div class="legend-item">虚线 = 外部渠道推送</div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 2. 模块架构与限界上下文 ==================== -->
+<div class="section" id="arch-modules">
+    <div class="section-title">
+        <span class="icon">2</span>
+        模块架构与限界上下文
+        <span class="badge badge-updated">v2更新</span>
+    </div>
+    <div class="section-desc">
+        十个限界上下文的职责划分和依赖关系。每个上下文内部按DDD分层（domain/application/infrastructure/interfaces），上下文之间仅通过领域事件通信。<br/><br/>
+        <b>v2 变更点：</b>新增退货管理(RET)、审批引擎(APV)、通知中心(NTF)、成本核算(COST)四个上下文。
+    </div>
+    <div class="diagram-wrap">
+        <div class="mermaid">
+graph LR
+    subgraph 核心域
+        ORD["📋 订单管理 ORD<br/>──────────<br/>销售订单<br/>生产订单<br/>订单转化<br/>退货管理 🆕<br/>变更管理"]
+    end
+
+    subgraph 支撑域
+        PROC["🛒 采购管理 PROC<br/>──────────<br/>BOM<br/>MRP引擎<br/>采购订单<br/>到货检验"]
+        INV["📊 库存管理 INV<br/>──────────<br/>四类库存<br/>预留释放<br/>出入库单<br/>盘点预警"]
+        WH["🏭 出入库作业 WH<br/>──────────<br/>收货上架<br/>波次拣货<br/>复核发货<br/>条码打印"]
+        COST["💰 成本核算 COST 🆕<br/>──────────<br/>领料成本<br/>成品成本<br/>加权平均"]
+    end
+
+    subgraph 通用域
+        MD["📦 基础数据 MD<br/>──────────<br/>物料/SKU<br/>供应商客户<br/>仓库库位<br/>编码规则"]
+        SYS["⚙️ 系统管理 SYS<br/>──────────<br/>用户角色<br/>权限RBAC<br/>操作日志"]
+        APV["✅ 审批引擎 APV 🆕<br/>──────────<br/>单人审批<br/>多人或签<br/>审批配置"]
+        NTF["🔔 通知中心 NTF 🆕<br/>──────────<br/>站内消息<br/>企微推送<br/>钉钉推送"]
+    end
+
+    ORD -->|"OrderConfirmed<br/>OrderCancelled<br/>ReturnRequested"| INV
+    ORD -->|"ProductionOrderCreated"| PROC
+    PROC -->|"ProcurementIssued<br/>GoodsAccepted"| INV
+    INV -->|"InventoryAllocated<br/>OutboundCompleted"| ORD
+    WH -->|"GoodsReceived<br/>ShipmentShipped"| INV
+    INV -->|"InventoryInsufficient<br/>AllocationExpired"| ORD
+
+    ORD -.->|"提交审批"| APV
+    PROC -.->|"提交审批"| APV
+    APV -.->|"审批通过/驳回"| ORD
+    APV -.->|"审批通过/驳回"| PROC
+
+    APV -.->|"待审批通知"| NTF
+    INV -.->|"库存预警通知"| NTF
+    WH -.->|"到货/质检通知"| NTF
+
+    WH -.->|"领料出库"| COST
+    COST -.->|"成品成本"| INV
+
+    MD -.->|"主数据引用"| ORD & PROC & INV & WH
+
+    style 核心域 fill:#fef9c3,stroke:#eab308,stroke-width:2px
+    style 支撑域 fill:#dcfce7,stroke:#22c55e,stroke-width:2px
+    style 通用域 fill:#dbeafe,stroke:#3b82f6,stroke-width:2px
+    style ORD fill:#fff7ed,stroke:#f97316
+    style PROC fill:#f0fdf4,stroke:#16a34a
+    style INV fill:#faf5ff,stroke:#a855f7
+    style WH fill:#fff1f2,stroke:#f43f5e
+    style COST fill:#fffbeb,stroke:#f59e0b
+    style MD fill:#eff6ff,stroke:#3b82f6
+    style SYS fill:#f8fafc,stroke:#94a3b8
+    style APV fill:#ecfdf5,stroke:#10b981
+    style NTF fill:#fef2f2,stroke:#ef4444
+        </div>
+    </div>
+    <div class="legend">
+        <div class="legend-title">图例说明</div>
+        <div class="legend-items">
+            <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div>核心域</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div>支撑域</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>通用域</div>
+            <div class="legend-item">实线 = 领域事件</div>
+            <div class="legend-item">虚线 = 调用/引用</div>
+            <div class="legend-item">🆕 = v2新增</div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 3. 核心业务流程 ==================== -->
+<div class="section" id="arch-biz-flow">
+    <div class="section-title">
+        <span class="icon">3</span>
+        核心业务流程
+        <span class="badge badge-updated">v2更新</span>
+    </div>
+    <div class="section-desc">
+        从客户下单到最终发货的全链路，以及退货流程。每个节点标注了对应的系统模块和关键操作。<br/><br/>
+        <b>v2 变更点：</b>① 订单审批和采购审批改为审批引擎统一处理；② 新增退货流程分支。
+    </div>
+    <div class="diagram-wrap">
+        <div class="mermaid">
+flowchart TD
+    START([👤 客户下单]) --> SO[销售订单创建<br/>📋 ORD · 尺码矩阵录入]
+    SO --> SO_APPROVE[订单审批<br/>✅ APV · 业务经理审批]
+    SO_APPROVE --> ALLOC[库存预留<br/>📊 INV · 可用→锁定]
+
+    ALLOC --> CHECK{库存满足?}
+    CHECK -->|充足| READY_STOCK[备货完成]
+    CHECK -->|不足| CREATE_PO[生成生产订单<br/>📋 ORD · 销售订单→生产订单]
+
+    CREATE_PO --> MRP[MRP计算<br/>🛒 PROC · BOM展开·需求汇总]
+    MRP --> CREATE_PUR[生成采购订单<br/>🛒 PROC · 按供应商分组]
+    CREATE_PUR --> PUR_APPROVE[采购审批<br/>✅ APV · 采购经理/总监或签]
+    PUR_APPROVE --> ISSUE[采购下发<br/>🛒 PROC · 在途库存增加]
+
+    ISSUE --> RECEIVE[仓库收货<br/>🏭 WH · 扫码确认]
+    RECEIVE --> QC[来料检验<br/>🛒 PROC · 面料五项检验]
+    QC -->|合格| PUTAWAY[上架入库<br/>🏭 WH · 系统推荐库位]
+    QC -->|不合格| RETURN_PUR[退货出库<br/>🛒 PROC · 生成退货单]
+
+    PUTAWAY --> MAT_OUT[领料出库<br/>🏭 WH · 面料/辅料领出<br/>💰 COST · 记录领料成本]
+    MAT_OUT --> PRODUCE[车间生产<br/>📋 ORD · 裁剪→缝制→后整]
+    PRODUCE --> PROD_IN[完工入库<br/>🏭 WH · 成品入库<br/>💰 COST · 归集成品成本]
+
+    PROD_IN --> READY_STOCK
+    READY_STOCK --> WAVE[波次生成<br/>🏭 WH · 合并出库需求]
+    WAVE --> PICK[拣货作业<br/>🏭 WH · 路径优化·扫码拣货]
+    PICK --> CHECK2[复核<br/>🏭 WH · 逐件扫码核对]
+    CHECK2 --> PACK[打包发货<br/>🏭 WH · 贴面单·称重]
+    PACK --> SHIP[发货确认<br/>📊 INV · 锁定库存扣减]
+    SHIP --> DONE([📦 客户签收])
+
+    DONE -->|退货| RET_START
+
+    subgraph 退货流程["🔄 退货流程 🆕"]
+        RET_START[客户/经销商<br/>发起退货] --> RET_APPROVE[退货审核<br/>✅ APV · 业务员审批]
+        RET_APPROVE --> RET_RECEIVE[仓库收货<br/>🏭 WH · 扫码确认]
+        RET_RECEIVE --> RET_QC[退货质检<br/>🛒 PROC · 合格/不合格]
+        RET_QC -->|合格| RET_IN[入可用库存<br/>📊 INV · 质检→可用]
+        RET_QC -->|不合格| RET_SCRAP[标记报废/次品]
+    end
+
+    style START fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    style DONE fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    style SO fill:#fef9c3
+    style SO_APPROVE fill:#ecfdf5
+    style ALLOC fill:#f3e8ff
+    style CHECK fill:#fef3c7,stroke:#d97706,stroke-width:2px
+    style CREATE_PO fill:#fef9c3
+    style MRP fill:#dcfce7
+    style CREATE_PUR fill:#dcfce7
+    style PUR_APPROVE fill:#ecfdf5
+    style ISSUE fill:#dcfce7
+    style RECEIVE fill:#ffedd5
+    style QC fill:#ffedd5
+    style PUTAWAY fill:#ffedd5
+    style RETURN_PUR fill:#fecaca,stroke:#ef4444
+    style MAT_OUT fill:#ffedd5
+    style PRODUCE fill:#fef9c3
+    style PROD_IN fill:#ffedd5
+    style READY_STOCK fill:#f3e8ff
+    style WAVE fill:#ffedd5
+    style PICK fill:#ffedd5
+    style CHECK2 fill:#ffedd5
+    style PACK fill:#ffedd5
+    style SHIP fill:#f3e8ff
+    style 退货流程 fill:#fef2f2,stroke:#ef4444,stroke-width:2px
+    style RET_START fill:#fef2f2
+    style RET_APPROVE fill:#ecfdf5
+    style RET_RECEIVE fill:#ffedd5
+    style RET_QC fill:#ffedd5
+    style RET_IN fill:#f3e8ff
+    style RET_SCRAP fill:#fecaca,stroke:#ef4444
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 4. 领域事件流 ==================== -->
+<div class="section" id="arch-event">
+    <div class="section-title">
+        <span class="icon">4</span>
+        领域事件流
+        <span class="badge badge-updated">v2更新</span>
+    </div>
+    <div class="section-desc">
+        模块间通过领域事件+Outbox实现松耦合通信。初期用Spring ApplicationEvent + Outbox表保证事件不丢，后期拆微服务时切换为Debezium+MQ。
+    </div>
+    <div class="diagram-wrap">
+        <div class="mermaid">
+flowchart LR
+    subgraph 发布者
+        ORD_P["📋 订单"]
+        PROC_P["🛒 采购"]
+        WH_P["🏭 作业"]
+        INV_P["📊 库存"]
+        APV_P["✅ 审批 🆕"]
+    end
+
+    subgraph 事件
+        E1["SalesOrderConfirmed"]
+        E2["SalesOrderCancelled"]
+        E3["ProductionOrderCreated"]
+        E4["OrderQuantityChanged"]
+        E5["ProcurementOrderIssued"]
+        E6["ProcurementGoodsAccepted"]
+        E7["ProcurementGoodsRejected"]
+        E8["OutboundShipped"]
+        E9["InventoryInsufficient"]
+        E10["AllocationExpired"]
+        E11["ReturnRequested 🆕"]
+        E12["ApprovalApproved 🆕"]
+        E13["ApprovalRejected 🆕"]
+    end
+
+    subgraph 订阅者
+        ORD_S["📋 订单"]
+        PROC_S["🛒 采购"]
+        INV_S["📊 库存"]
+        NTF_S["🔔 通知 🆕"]
+    end
+
+    ORD_P --> E1 & E2 & E3 & E4 & E11
+    PROC_P --> E5 & E6 & E7
+    WH_P --> E8
+    INV_P --> E9 & E10
+    APV_P --> E12 & E13
+
+    E1 --> INV_S
+    E2 --> INV_S
+    E3 --> PROC_S
+    E4 --> PROC_S & INV_S
+    E5 --> INV_S
+    E6 --> INV_S
+    E7 --> PROC_S
+    E8 --> ORD_S & INV_S
+    E9 --> ORD_S
+    E10 --> INV_S
+    E11 --> INV_S
+    E12 & E13 --> ORD_S & NTF_S
+    E1 & E2 & E9 --> NTF_S
+
+    style 发布者 fill:#fef3c7,stroke:#d97706,stroke-width:1px
+    style 事件 fill:#f1f5f9,stroke:#94a3b8,stroke-width:1px
+    style 订阅者 fill:#dcfce7,stroke:#16a34a,stroke-width:1px
+    style E11 fill:#ffe4e6
+    style E12 fill:#d1fae5
+    style E13 fill:#fecaca
+        </div>
+    </div>
+    <div class="legend">
+        <div class="legend-title">事件用途速查</div>
+        <div class="legend-items" style="flex-wrap:wrap; gap:8px;">
+            <div class="legend-item" style="width:45%"><b>SalesOrderConfirmed</b> → 触发库存预留</div>
+            <div class="legend-item" style="width:45%"><b>SalesOrderCancelled</b> → 释放预留库存</div>
+            <div class="legend-item" style="width:45%"><b>ProductionOrderCreated</b> → 触发MRP计算</div>
+            <div class="legend-item" style="width:45%"><b>OrderQuantityChanged</b> → 调整预留+采购需求</div>
+            <div class="legend-item" style="width:45%"><b>ProcurementOrderIssued</b> → 记录在途库存</div>
+            <div class="legend-item" style="width:45%"><b>ProcurementGoodsAccepted</b> → 质检→可用库存</div>
+            <div class="legend-item" style="width:45%"><b>ProcurementGoodsRejected</b> → 触发退货流程</div>
+            <div class="legend-item" style="width:45%"><b>OutboundShipped</b> → 扣减锁定+更新订单</div>
+            <div class="legend-item" style="width:45%"><b>InventoryInsufficient</b> → 标记订单缺货</div>
+            <div class="legend-item" style="width:45%"><b>AllocationExpired</b> → 自动释放预留</div>
+            <div class="legend-item" style="width:45%"><b>ReturnRequested 🆕</b> → 退货入库预留</div>
+            <div class="legend-item" style="width:45%"><b>ApprovalApproved 🆕</b> → 通知业务模块</div>
+            <div class="legend-item" style="width:45%"><b>ApprovalRejected 🆕</b> → 退回草稿</div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 5. 订单状态机 ==================== -->
+<div class="section" id="arch-state">
+    <div class="section-title">
+        <span class="icon">5</span>
+        订单状态机
+    </div>
+    <div class="section-desc">
+        销售订单、生产订单、采购订单、退货单的状态流转图。采用轻量级自研状态机引擎，转移规则定义在代码中，前置条件和动作通过策略模式注入。
+    </div>
+    <div class="two-col">
+        <div>
+            <h3 style="font-size:16px; margin-bottom:16px; color:#f97316;">📋 销售订单状态机</h3>
+            <div class="diagram-wrap">
+                <div class="mermaid">
+stateDiagram-v2
+    [*] --> 草稿
+    草稿 --> 待审批 : 提交审批
+    待审批 --> 已确认 : 审批通过
+    待审批 --> 已驳回 : 审批驳回
+	    已驳回 --> 待审批 : 修改后重新提交
+    草稿 --> 已取消 : 取消
+    已确认 --> 生产中 : 排产 ✓已关联生产订单
+    已确认 --> 已取消 : 取消 ✓未关联生产订单
+    生产中 --> 备货完成 : 库存就绪
+    生产中 --> 已发货 : 部分发货
+    备货完成 --> 已发货 : 发货 ✓已创建出库单
+    已发货 --> 已完成 : 签收
+    已发货 --> 退货中 : 客户退货 🆕
+    退货中 --> 已完成 : 退货处理完毕
+    已取消 --> [*]
+    已完成 --> [*]
+
+    note right of 已确认 : 触发库存预留
+    note right of 已取消 : 释放预留库存
+    note right of 已发货 : 扣减锁定库存
+                </div>
+            </div>
+        </div>
+        <div>
+            <h3 style="font-size:16px; margin-bottom:16px; color:#a855f7;">🔧 生产订单状态机</h3>
+            <div class="diagram-wrap">
+                <div class="mermaid">
+stateDiagram-v2
+    [*] --> 草稿
+    草稿 --> 已下达 : 下达 ✓有BOM和数量
+    已下达 --> 已排产 : 排产完成
+    已排产 --> 裁剪中 : 开始裁剪 ✓不跳过裁剪
+    已排产 --> 缝制中 : 直接缝制 ✓跳过裁剪
+    裁剪中 --> 缝制中 : 裁剪完成
+    缝制中 --> 后整中 : 缝制完成
+    后整中 --> 已完工 : 完工
+    已完工 --> 已入库 : 入库确认 ✓全部入库
+    已入库 --> [*]
+
+    note right of 已完工 : 通知库存准备入库
+    note right of 已入库 : 通知销售可发货
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="two-col" style="margin-top:24px">
+        <div>
+            <h3 style="font-size:16px; margin-bottom:16px; color:#22c55e;">🛒 采购订单状态机</h3>
+            <div class="diagram-wrap">
+                <div class="mermaid">
+stateDiagram-v2
+    [*] --> 草稿
+    草稿 --> 待审批 : 提交审批
+    待审批 --> 已审批 : 审批通过
+    待审批 --> 已驳回 : 审批驳回
+    已驳回 --> 待审批 : 修改后重新提交
+    已审批 --> 已下发 : 下发给供应商
+    已下发 --> 到货中 : 部分到货
+    到货中 --> 已完成 : 全部到货+检验完成
+    已完成 --> [*]
+
+    note right of 已下发 : 在途库存增加
+    note right of 已完成 : 在途库存清零
+                </div>
+            </div>
+        </div>
+        <div>
+            <h3 style="font-size:16px; margin-bottom:16px; color:#ef4444;">🔄 退货单状态机 🆕</h3>
+            <div class="diagram-wrap">
+                <div class="mermaid">
+stateDiagram-v2
+    [*] --> 草稿
+    草稿 --> 待审批 : 提交退货申请
+    待审批 --> 已审批 : 审核通过
+    待审批 --> 已驳回 : 审核驳回
+    已驳回 --> 草稿 : 修改后重新提交
+    已审批 --> 收货中 : 仓库收货
+    收货中 --> 质检中 : 收货确认
+    质检中 --> 已完成 : 质检处理完毕
+    已驳回 --> [*]
+    已完成 --> [*]
+
+    note right of 收货中 : 质检库存增加
+    note right of 质检中 : 合格→可用库存<br/>不合格→报废
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 6. 数据模型ER图 ==================== -->
+<div class="section" id="arch-er">
+    <div class="section-title">
+        <span class="icon">6</span>
+        核心数据模型
+        <span class="badge badge-updated">v2更新</span>
+    </div>
+    <div class="section-desc">
+        核心实体关系图，包含v2新增的退货、审批、通知、成本表。公共审计字段省略。
+    </div>
+    <div class="diagram-wrap">
+        <div class="mermaid">
+erDiagram
+    %% ========== 基础数据 ==========
+    md_season ||--o{ md_spu : "所属季节"
+    md_category ||--o{ md_material : "物料分类"
+    md_category ||--o{ md_spu : "款式分类"
+    md_size_group ||--o{ md_size : "包含尺码"
+    md_size_group ||--o{ md_spu : "使用尺码组"
+    md_spu ||--o{ md_color_way : "颜色款"
+    md_spu ||--o| bom : "默认BOM"
+    md_color_way ||--o{ md_sku : "SKU"
+    md_size ||--o{ md_sku : "尺码"
+    md_warehouse ||--o{ md_location : "库位"
+
+    md_spu {
+        bigint id PK
+        varchar code "款式编码"
+        varchar name "款式名称"
+        bigint season_id FK
+        bigint size_group_id FK
+    }
+    md_sku {
+        bigint id PK
+        varchar code "SKU编码"
+        bigint spu_id FK
+        bigint color_way_id FK
+        bigint size_id FK
+        decimal sale_price "销售价"
+    }
+    md_material {
+        bigint id PK
+        varchar code "物料编码"
+        varchar type "FABRIC/TRIM/PACKAGING"
+        jsonb ext_attrs "扩展属性"
+    }
+
+    %% ========== BOM ==========
+    bom ||--o{ bom_item : "行项目"
+    bom_item }o--|| md_material : "关联物料"
+    bom {
+        bigint id PK
+        bigint spu_id FK
+        integer version "版本号"
+    }
+    bom_item {
+        bigint id PK
+        bigint bom_id FK
+        varchar consumption_type "SIZE_DEPENDENT/FIXED/PER_ORDER"
+        jsonb size_consumptions "尺码用量表"
+    }
+
+    %% ========== 订单 ==========
+    md_customer ||--o{ order_sales : "客户订单"
+    order_sales ||--o{ order_sales_line : "订单行"
+    order_sales ||--o{ order_return : "退货 🆕"
+    order_return ||--o{ order_return_line : "退货行 🆕"
+
+    order_sales {
+        bigint id PK
+        varchar order_no "订单编号"
+        bigint customer_id FK
+        varchar status "DRAFT/PENDING_APPROVAL/REJECTED/CONFIRMED/..."
+    }
+    order_sales_line {
+        bigint id PK
+        bigint order_id FK
+        jsonb size_matrix "尺码矩阵"
+    }
+    order_return {
+        bigint id PK
+        varchar return_no "退货单号"
+        varchar return_type "CUSTOMER_REJECT/LOGISTICS/DISTRIBUTOR 🆕"
+        bigint sales_order_id FK
+        varchar status "DRAFT/APPROVED/RECEIVING/QC/COMPLETED 🆕"
+    }
+    order_return_line {
+        bigint id PK
+        bigint return_id FK
+        bigint sku_id FK
+        jsonb size_matrix "退货尺码矩阵 🆕"
+    }
+
+    %% ========== 生产订单 ==========
+    order_production ||--o{ order_production_line : "生产订单行"
+    order_production_line }o--|| bom : "关联BOM"
+    order_production {
+        bigint id PK
+        varchar order_no "生产订单编号"
+        varchar status "DRAFT/RELEASED/..."
+    }
+
+    %% ========== 采购 ==========
+    md_supplier ||--o{ procurement_order : "供应商订单"
+    procurement_order ||--o{ procurement_order_line : "采购订单行"
+    procurement_order {
+        bigint id PK
+        varchar order_no "采购订单编号"
+        bigint supplier_id FK
+        varchar status "DRAFT/APPROVED/..."
+    }
+
+    %% ========== 库存 ==========
+    md_sku ||--o{ inventory_sku : "库存记录"
+    md_material ||--o{ inventory_material : "库存记录"
+    inventory_sku {
+        bigint id PK
+        bigint sku_id FK
+        varchar batch_no "批次号"
+        integer available_qty "可用数量"
+        integer locked_qty "锁定数量"
+        integer qc_qty "质检数量"
+        decimal unit_cost "单位成本"
+    }
+    inventory_material {
+        bigint id PK
+        bigint material_id FK
+        varchar batch_no "批次号"
+        decimal available_qty "可用数量"
+        integer roll_count "卷数(面料)"
+    }
+    inventory_allocation {
+        bigint id PK
+        varchar order_type "SALES/PRODUCTION"
+        bigint sku_id FK
+        decimal allocated_qty "预留数量"
+    }
+
+    %% ========== 审批 🆕 ==========
+    sys_approval_config ||--o{ sys_approval_task : "生成审批任务"
+    sys_approval_config {
+        bigint id PK
+        varchar business_type "SALES_ORDER/PURCHASE_ORDER/..."
+        varchar approval_mode "SINGLE/OR_SIGN"
+        jsonb approver_role_ids "审批人角色列表"
+    }
+    sys_approval_task {
+        bigint id PK
+        varchar business_type "业务类型"
+        bigint business_id FK "业务单据ID"
+        varchar status "PENDING/APPROVED/REJECTED"
+        bigint approver_id FK "审批人"
+    }
+
+    %% ========== 通知 🆕 ==========
+    sys_notification ||--o{ sys_notification_receiver : "接收人"
+    sys_notification {
+        bigint id PK
+        varchar title "消息标题"
+        varchar category "APPROVAL/INVENTORY_ALERT/..."
+        varchar business_type "关联业务类型"
+    }
+    sys_notification_receiver {
+        bigint id PK
+        bigint notification_id FK
+        bigint receiver_id FK "接收人"
+        boolean is_read "是否已读"
+    }
+
+    %% ========== 成本 🆕 ==========
+    order_production_line ||--o| cost_production_order : "成本归集"
+    cost_production_order ||--o{ cost_material_issue : "领料成本"
+    cost_production_order {
+        bigint id PK
+        bigint production_line_id FK
+        decimal total_cost "总领料成本"
+        integer completed_qty "完工数量"
+        decimal unit_cost "单位成本"
+    }
+    cost_material_issue {
+        bigint id PK
+        bigint production_line_id FK
+        bigint material_id FK
+        decimal issue_qty "领料数量"
+        decimal unit_cost "领料时单位成本"
+        decimal cost_amount "成本金额"
+    }
+        </div>
+    </div>
+    <div class="legend">
+        <div class="legend-title">说明</div>
+        <div class="legend-items">
+            <div class="legend-item">md_ 前缀 = 基础数据</div>
+            <div class="legend-item">order_ 前缀 = 订单</div>
+            <div class="legend-item">procurement_ 前缀 = 采购</div>
+            <div class="legend-item">inventory_ 前缀 = 库存</div>
+            <div class="legend-item">sys_approval_ 前缀 = 审批 🆕</div>
+            <div class="legend-item">sys_notification_ 前缀 = 通知 🆕</div>
+            <div class="legend-item">cost_ 前缀 = 成本 🆕</div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 7. 一致性保障 ==================== -->
+<div class="section" id="arch-consistency">
+    <div class="section-title">
+        <span class="icon">7</span>
+        数据一致性保障体系
+        <span class="badge badge-new">v2新增</span>
+    </div>
+    <div class="section-desc">
+        三层一致性保障：预防（事前）→ 检测（事中）→ 兜底（事后）。核心原则是模块内强一致、跨模块最终一致、业务容忍优先。
+    </div>
+    <div class="diagram-wrap">
+        <div class="mermaid">
+flowchart TB
+    subgraph L1["🛡️ 第一层：预防（事前）"]
+        direction LR
+        OL["乐观锁+重试<br/>库存并发控制"]
+        TX["@Transactional<br/>模块内原子性"]
+        OX["Outbox发件箱<br/>事件不丢失"]
+        ID["幂等令牌+唯一约束<br/>防重复操作"]
+        SM["状态机校验<br/>操作合法性"]
+    end
+
+    subgraph L2["🔍 第二层：检测（事中）"]
+        direction LR
+        BA["before/after流水<br/>每次变动可校验"]
+        LOG["变更日志<br/>所有变更可追溯"]
+        SNAP["快照时间标注<br/>长计算数据时间点"]
+    end
+
+    subgraph L3["🔁 第三层：兜底（事后）"]
+        direction LR
+        DAILY["日终对账<br/>流水 vs 余额"]
+        STOCK["定期盘点<br/>物理 vs 系统"]
+        VENDOR["供应商对账<br/>合格量×单价"]
+    end
+
+    L1 --> L2 --> L3
+
+    OL ---|"超卖"| L3
+    OX ---|"事件丢"| L2
+    ID ---|"重复操作"| L1
+
+    style L1 fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    style L2 fill:#fef9c3,stroke:#eab308,stroke-width:2px
+    style L3 fill:#fef3c7,stroke:#d97706,stroke-width:2px
+    style OL fill:#f0fdf4
+    style TX fill:#f0fdf4
+    style OX fill:#f0fdf4
+    style ID fill:#f0fdf4
+    style SM fill:#f0fdf4
+    style BA fill:#fefce8
+    style LOG fill:#fefce8
+    style SNAP fill:#fefce8
+    style DAILY fill:#fef3c7
+    style STOCK fill:#fef3c7
+    style VENDOR fill:#fef3c7
+        </div>
+    </div>
+    <div class="legend">
+        <div class="legend-title">场景-方案对照</div>
+        <div class="legend-items" style="flex-wrap:wrap; gap:8px;">
+            <div class="legend-item" style="width:48%"><b>库存超卖</b> → 乐观锁+日终对账+盘点</div>
+            <div class="legend-item" style="width:48%"><b>跨模块操作失败</b> → @Transactional</div>
+            <div class="legend-item" style="width:48%"><b>事件丢失</b> → Outbox同事务+重试</div>
+            <div class="legend-item" style="width:48%"><b>重复操作</b> → 幂等令牌+唯一约束+状态机</div>
+            <div class="legend-item" style="width:48%"><b>出库与库存不一致</b> → before/after流水+日终对账</div>
+            <div class="legend-item" style="width:48%"><b>MRP计算数据偏</b> → REPEATABLE_READ+快照标注</div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 8. 部署架构 ==================== -->
+<div class="section" id="arch-deploy">
+    <div class="section-title">
+        <span class="icon">8</span>
+        部署架构
+        <span class="badge badge-updated">v2更新</span>
+    </div>
+    <div class="section-desc">
+        基于&lt;20人并发规模，初期采用最简部署方案。后期业务增长时再演进为容器化微服务。<br/><br/>
+        <b>v2 变更点：</b>① 移除Spring Cloud Gateway，Nginx直连Spring Boot；② 移除RabbitMQ，用Spring Event + Outbox；③ 移除MinIO，用本地文件系统；④ Redis仅用于Session/缓存/幂等令牌，不用于库存扣减。
+    </div>
+    <div class="diagram-wrap">
+        <div class="mermaid">
+graph TB
+    subgraph 初期["🏠 初期部署（当前方案）"]
+        direction TB
+        NG1["Nginx<br/>反向代理 · 静态资源 · HTTPS"]
+        APP1["Spring Boot JAR<br/>单体应用 · systemd管理"]
+        PG1[("🐘 PostgreSQL 15<br/>主库")]
+        RD1[("⚡ Redis 7<br/>Session · 缓存 · 幂等令牌")]
+        FS1["📁 本地文件存储<br/>款式图 · 标签模板"]
+
+        NG1 --> APP1
+        APP1 --> PG1
+        APP1 --> RD1
+        APP1 --> FS1
+    end
+
+    subgraph 后期["🏢 后期部署（业务增长后演进）"]
+        direction TB
+        K8S["Kubernetes 集群"]
+        subgraph 服务["微服务集群"]
+            GW2["API Gateway"]
+            S_MD["基础数据服务"]
+            S_ORD["订单服务"]
+            S_PROC["采购服务"]
+            S_INV["库存服务"]
+            S_WH["作业服务"]
+            S_CROSS["审批·通知·成本服务 🆕"]
+        end
+        PG2[("PostgreSQL<br/>主从复制")]
+        RD2[("Redis Cluster")]
+        MQ2["RabbitMQ Cluster<br/>替代Outbox轮询"]
+        MINIO2[("MinIO<br/>分布式存储")]
+
+        K8S --> 服务
+        GW2 --> S_MD & S_ORD & S_PROC & S_INV & S_WH & S_CROSS
+        S_MD & S_ORD & S_PROC & S_INV & S_WH & S_CROSS --> PG2
+        S_MD & S_ORD & S_PROC & S_INV & S_WH & S_CROSS --> RD2
+        S_ORD & S_PROC & S_INV & S_WH --> MQ2
+        S_MD & S_ORD --> MINIO2
+    end
+
+    初期 -->|业务增长<br/>服务拆分| 后期
+
+    style 初期 fill:#f0fdf4,stroke:#16a34a,stroke-width:2px
+    style 后期 fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    style 服务 fill:#dbeafe,stroke:#3b82f6
+    style NG1 fill:#fef3c7
+    style APP1 fill:#dcfce7
+    style PG1 fill:#e0e7ff
+    style RD1 fill:#fce7f3
+    style FS1 fill:#ffedd5
+    style GW2 fill:#fef3c7
+    style PG2 fill:#e0e7ff
+    style RD2 fill:#fce7f3
+    style MQ2 fill:#f1f5f9
+    style MINIO2 fill:#ffedd5
+    style S_CROSS fill:#e0e7ff
+        </div>
+    </div>
+    <div class="legend">
+        <div class="legend-title">初期 vs 后期对照</div>
+        <div class="legend-items" style="flex-wrap:wrap; gap:8px;">
+            <div class="legend-item" style="width:100%"><b>反向代理</b>：Nginx → Spring Cloud Gateway</div>
+            <div class="legend-item" style="width:100%"><b>事件通信</b>：Spring Event + Outbox轮询 → Debezium + RabbitMQ</div>
+            <div class="legend-item" style="width:100%"><b>文件存储</b>：本地文件系统 → MinIO分布式</div>
+            <div class="legend-item" style="width:100%"><b>数据库</b>：单机PostgreSQL → 主从复制</div>
+            <div class="legend-item" style="width:100%"><b>库存扣减</b>：数据库乐观锁 → Redis原子+异步落库</div>
+            <div class="legend-item" style="width:100%"><b>横切模块</b>：应用内模块 → 独立微服务</div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'base',
+        themeVariables: {
+            primaryColor: '#eff6ff',
+            primaryTextColor: '#1e293b',
+            primaryBorderColor: '#3b82f6',
+            lineColor: '#94a3b8',
+            secondaryColor: '#f0fdf4',
+            tertiaryColor: '#fef9c3',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif',
+            fontSize: '13px'
+        },
+        flowchart: { htmlLabels: true, curve: 'basis', padding: 16 },
+        er: { useMaxWidth: true },
+        stateDiagram: { useMaxWidth: true }
+    });
+</script>
+
+</body>
+</html>
