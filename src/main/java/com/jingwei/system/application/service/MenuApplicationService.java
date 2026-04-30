@@ -169,10 +169,48 @@ public class MenuApplicationService {
         List<SysMenu> menus = menuDomainService.listMenusByRoleIds(roleIds);
 
         // 构建菜单树（仅包含目录和菜单，不含按钮）
-        List<SysMenu> directoryAndMenu = menus.stream()
-                .filter(m -> m.getType() != MenuType.BUTTON)
+        List<MenuVO> menuTree = buildAuthorizedMenuTree(menus);
+
+        // 提取所有按钮权限标识
+        List<String> permissions = menus.stream()
+                .filter(m -> m.getType() == MenuType.BUTTON)
+                .map(SysMenu::getPermission)
+                .filter(p -> p != null && !p.isBlank())
                 .toList();
-        List<MenuVO> menuTree = buildMenuTree(directoryAndMenu);
+
+        UserPermissionVO vo = new UserPermissionVO();
+        vo.setMenuTree(menuTree);
+        vo.setPermissions(permissions);
+        return vo;
+    }
+
+    /**
+     * 根据用户ID查询授权菜单树和权限标识列表
+     * <p>
+     * 供登录接口使用，在登录成功后一次性返回菜单树和权限标识，
+     * 避免前端登录后再发一次请求获取权限。
+     * 逻辑与 {@link #getCurrentUserPermissions()} 一致，但接受 userId 参数，
+     * 不依赖 UserContext（登录时还未设置上下文）。
+     * </p>
+     *
+     * @param userId 用户ID
+     * @return 用户权限信息（菜单树 + 权限标识列表）
+     */
+    public UserPermissionVO getUserPermissionsByUserId(Long userId) {
+        // 查询用户角色ID列表
+        List<Long> roleIds = sysUserRoleRepository.selectRoleIdsByUserId(userId);
+        if (roleIds.isEmpty()) {
+            UserPermissionVO vo = new UserPermissionVO();
+            vo.setMenuTree(List.of());
+            vo.setPermissions(List.of());
+            return vo;
+        }
+
+        // 查询有权限的菜单
+        List<SysMenu> menus = menuDomainService.listMenusByRoleIds(roleIds);
+
+        // 构建菜单树（仅包含目录和菜单，不含按钮）
+        List<MenuVO> menuTree = buildAuthorizedMenuTree(menus);
 
         // 提取所有按钮权限标识
         List<String> permissions = menus.stream()
@@ -231,6 +269,22 @@ public class MenuApplicationService {
         vo.setCreatedAt(menu.getCreatedAt());
         vo.setUpdatedAt(menu.getUpdatedAt());
         return vo;
+    }
+
+    /**
+     * 构建授权菜单树（过滤掉按钮，只保留目录+菜单）
+     * <p>
+     * 供登录和权限查询使用，前端只需目录和菜单节点渲染导航栏，按钮权限通过 permissions 列表控制。
+     * </p>
+     *
+     * @param menus 用户有权限的菜单列表（含按钮）
+     * @return 菜单树（仅目录+菜单，不含按钮）
+     */
+    private List<MenuVO> buildAuthorizedMenuTree(List<SysMenu> menus) {
+        List<SysMenu> directoryAndMenu = menus.stream()
+                .filter(m -> m.getType() != MenuType.BUTTON)
+                .toList();
+        return buildMenuTree(directoryAndMenu);
     }
 
     /**

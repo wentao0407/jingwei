@@ -96,6 +96,12 @@ class GlobalExceptionHandlerTest {
         public Object systemError() {
             throw new RuntimeException("something went wrong");
         }
+
+        /** 抛出 ACCESS_DENIED BizException */
+        @org.springframework.web.bind.annotation.PostMapping("/test/access-denied")
+        public Object accessDenied() {
+            throw new BizException(ErrorCode.ACCESS_DENIED);
+        }
     }
 
     /**
@@ -161,6 +167,16 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value(ErrorCode.SYSTEM_ERROR.getCode()))
                 .andExpect(jsonPath("$.message").value("系统异常，请稍后重试"))
+                .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @Test
+    @DisplayName("BizException ACCESS_DENIED → 返回403")
+    void handleBizException_accessDenied_shouldReturn403() throws Exception {
+        mockMvc.perform(post("/test/access-denied"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(ErrorCode.ACCESS_DENIED.getCode()))
+                .andExpect(jsonPath("$.message").value("无权限访问该资源"))
                 .andExpect(jsonPath("$.data").isEmpty());
     }
 }

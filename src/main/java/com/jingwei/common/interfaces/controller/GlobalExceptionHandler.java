@@ -6,6 +6,7 @@ import com.jingwei.common.domain.model.R;
 import com.jingwei.common.interfaces.vo.FieldErrorVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -37,16 +38,23 @@ public class GlobalExceptionHandler {
      * 处理业务异常
      * <p>
      * BizException 携带错误码和中文提示，直接转为业务错误响应。
+     * 特殊处理：ACCESS_DENIED(91012) 错误码对应 HTTP 403，而非默认的 200，
+     * 因为前端和网关通常依赖 HTTP 状态码判断权限问题。
      * </p>
      *
      * @param e 业务异常
      * @return 统一错误响应
      */
     @ExceptionHandler(BizException.class)
-    @ResponseStatus(HttpStatus.OK)
-    public R<Void> handleBizException(BizException e) {
+    public ResponseEntity<R<Void>> handleBizException(BizException e) {
         log.warn("业务异常: code={}, message={}", e.getCode(), e.getMessage());
-        return R.fail(e.getCode(), e.getMessage());
+        R<Void> body = R.fail(e.getCode(), e.getMessage());
+
+        // 权限不足 → HTTP 403，其余业务异常 → HTTP 200
+        if (e.getCode() == ErrorCode.ACCESS_DENIED.getCode()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+        }
+        return ResponseEntity.ok(body);
     }
 
     /**
