@@ -1,0 +1,23 @@
+# Compiled class files
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+
+# Environment
+.env
