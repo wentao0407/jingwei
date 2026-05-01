@@ -94,6 +94,10 @@ com.jingwei
 - 日志使用 Slf4j (@Slf4j)，关键操作记录 info 日志
 - 领域事件通过 Outbox 发送，不直接用 Spring ApplicationEventPublisher
 - 关键业务逻辑必须加行内注释（说明为什么，不只是做什么）
+- 每完成一个完整功能（Controller + Service + 测试就绪）后，必须同步编写接口文档，存放在 `api/代码模块目录名/` 下（与 src/main/java/com/jingwei/ 下的模块目录名一一对应，方便前端按模块找接口）
+  - 模块目录映射：master → api/master/，order → api/order/，procurement → api/procurement/，inventory → api/inventory/，warehouse → api/warehouse/，approval → api/approval/，notification → api/notification/，cost → api/cost/，system → api/system/
+  - 接口文档内容须包含：接口路径、请求方法、请求参数（字段名/类型/是否必填/说明）、响应结构、业务规则说明
+  - 跨模块调用时，主接口文档放主模块目录下，跨模块部分在文档中引用说明
 
 ## 模块依赖关系
 ```
