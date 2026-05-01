@@ -1,12 +1,12 @@
 package com.jingwei.master.domain.service;
 
 import com.jingwei.common.domain.model.BizException;
+import com.jingwei.common.domain.model.CommonStatus;
 import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.master.application.dto.CodingRuleSegmentDTO;
 import com.jingwei.master.application.dto.UpdateCodingRuleDTO;
 import com.jingwei.master.domain.model.*;
 import com.jingwei.master.domain.repository.CodingRuleRepository;
-import com.jingwei.system.domain.model.UserStatus;
 import com.jingwei.master.domain.repository.CodingRuleSegmentRepository;
 import com.jingwei.master.domain.repository.CodingSequenceRepository;
 import lombok.RequiredArgsConstructor;
@@ -68,7 +68,7 @@ public class CodingRuleDomainService {
         // 校验段列表：必须包含且仅包含一个 SEQUENCE 段
         validateSegments(segments);
 
-        rule.setStatus(UserStatus.ACTIVE);
+        rule.setStatus(CommonStatus.ACTIVE);
         rule.setUsed(false);
         codingRuleRepository.insert(rule);
 
@@ -105,7 +105,7 @@ public class CodingRuleDomainService {
             existing.setDescription(dto.getDescription());
         }
         if (dto.getStatus() != null) {
-            existing.setStatus(UserStatus.valueOf(dto.getStatus()));
+            existing.setStatus(CommonStatus.valueOf(dto.getStatus()));
         }
 
         int rows = codingRuleRepository.updateById(existing);
@@ -201,7 +201,7 @@ public class CodingRuleDomainService {
         CodingRule rule = getRuleByCode(ruleCode);
 
         // 检查规则状态
-        if (rule.getStatus() == UserStatus.INACTIVE) {
+        if (rule.getStatus() == CommonStatus.INACTIVE) {
             throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED, "编码规则已停用");
         }
 

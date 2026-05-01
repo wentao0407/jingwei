@@ -1,11 +1,11 @@
 package com.jingwei.master;
 
 import com.jingwei.common.domain.model.BizException;
+import com.jingwei.common.domain.model.CommonStatus;
 import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.master.application.dto.UpdateCodingRuleDTO;
 import com.jingwei.master.domain.model.*;
 import com.jingwei.master.domain.repository.CodingRuleRepository;
-import com.jingwei.system.domain.model.UserStatus;
 import com.jingwei.master.domain.repository.CodingRuleSegmentRepository;
 import com.jingwei.master.domain.repository.CodingSequenceRepository;
 import com.jingwei.master.domain.service.CodingRuleDomainService;
@@ -114,7 +114,7 @@ class CodingRuleDomainServiceTest {
         CodingRule result = codingRuleDomainService.createRule(rule, segments);
 
         assertNotNull(result);
-        assertEquals(UserStatus.ACTIVE, result.getStatus());
+        assertEquals(CommonStatus.ACTIVE, result.getStatus());
         assertFalse(result.getUsed());
     }
 
@@ -156,7 +156,7 @@ class CodingRuleDomainServiceTest {
         CodingRule rule = new CodingRule();
         rule.setId(1L);
         rule.setCode("SALES_ORDER");
-        rule.setStatus(UserStatus.ACTIVE);
+        rule.setStatus(CommonStatus.ACTIVE);
         when(codingRuleRepository.selectByCode("SALES_ORDER")).thenReturn(rule);
 
         CodingRuleSegment fixedSeg = new CodingRuleSegment();
@@ -196,7 +196,7 @@ class CodingRuleDomainServiceTest {
         CodingRule rule = new CodingRule();
         rule.setId(2L);
         rule.setCode("INBOUND_ORDER");
-        rule.setStatus(UserStatus.ACTIVE);
+        rule.setStatus(CommonStatus.ACTIVE);
         when(codingRuleRepository.selectByCode("INBOUND_ORDER")).thenReturn(rule);
 
         CodingRuleSegment fixedSeg = new CodingRuleSegment();
@@ -235,7 +235,7 @@ class CodingRuleDomainServiceTest {
         CodingRule rule = new CodingRule();
         rule.setId(3L);
         rule.setCode("NEEDS_WH");
-        rule.setStatus(UserStatus.ACTIVE);
+        rule.setStatus(CommonStatus.ACTIVE);
         when(codingRuleRepository.selectByCode("NEEDS_WH")).thenReturn(rule);
 
         CodingRuleSegment whSeg = new CodingRuleSegment();
@@ -258,7 +258,7 @@ class CodingRuleDomainServiceTest {
         CodingRule rule = new CodingRule();
         rule.setId(1L);
         rule.setCode("SALES_ORDER");
-        rule.setStatus(UserStatus.ACTIVE);
+        rule.setStatus(CommonStatus.ACTIVE);
         when(codingRuleRepository.selectByCode("SALES_ORDER")).thenReturn(rule);
 
         CodingRuleSegment fixedSeg = new CodingRuleSegment();

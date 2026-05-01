@@ -2,7 +2,7 @@ package com.jingwei.master.domain.model;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.jingwei.common.domain.model.BaseEntity;
-import com.jingwei.system.domain.model.UserStatus;
+import com.jingwei.common.domain.model.CommonStatus;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -35,7 +35,7 @@ public class CodingRule extends BaseEntity {
     private String description;
 
     /** 状态：ACTIVE/INACTIVE */
-    private UserStatus status;
+    private CommonStatus status;
 
     /** 是否已使用（已使用的规则不可删除，只能停用） */
     private Boolean used;
