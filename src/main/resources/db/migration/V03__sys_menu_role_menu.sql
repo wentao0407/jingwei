@@ -36,8 +36,8 @@ COMMENT ON COLUMN t_sys_menu.sort_order    IS '排序号，越小越靠前';
 COMMENT ON COLUMN t_sys_menu.visible       IS '是否可见';
 COMMENT ON COLUMN t_sys_menu.status        IS '状态：ACTIVE/INACTIVE';
 
-CREATE INDEX idx_sys_menu_parent_id ON t_sys_menu (parent_id);
-CREATE UNIQUE INDEX uk_sys_menu_permission ON t_sys_menu (permission) WHERE deleted = FALSE AND permission != '';
+CREATE INDEX IF NOT EXISTS idx_sys_menu_parent_id ON t_sys_menu (parent_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_sys_menu_permission ON t_sys_menu (permission) WHERE deleted = FALSE AND permission != '';
 
 -- 角色菜单关联表
 CREATE TABLE IF NOT EXISTS t_sys_role_menu (
@@ -57,7 +57,7 @@ COMMENT ON COLUMN t_sys_role_menu.id         IS '主键ID';
 COMMENT ON COLUMN t_sys_role_menu.role_id    IS '角色ID';
 COMMENT ON COLUMN t_sys_role_menu.menu_id    IS '菜单ID';
 
-CREATE UNIQUE INDEX uk_sys_role_menu ON t_sys_role_menu (role_id, menu_id) WHERE deleted = FALSE;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_sys_role_menu ON t_sys_role_menu (role_id, menu_id) WHERE deleted = FALSE;
 
 -- ============================================================
 -- 初始菜单数据

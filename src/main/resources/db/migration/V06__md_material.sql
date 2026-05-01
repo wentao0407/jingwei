@@ -31,8 +31,8 @@ COMMENT ON COLUMN t_md_attribute_def.sort_order       IS '排序号';
 COMMENT ON COLUMN t_md_attribute_def.options          IS '选项列表（SELECT类型用）';
 COMMENT ON COLUMN t_md_attribute_def.ext_json_path    IS 'JSONB中对应路径（如 weight）';
 
-CREATE UNIQUE INDEX uk_md_attribute_def_code ON t_md_attribute_def (code) WHERE deleted = FALSE;
-CREATE INDEX idx_md_attribute_def_type ON t_md_attribute_def (material_type) WHERE deleted = FALSE;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_md_attribute_def_code ON t_md_attribute_def (code) WHERE deleted = FALSE;
+CREATE INDEX IF NOT EXISTS idx_md_attribute_def_type ON t_md_attribute_def (material_type) WHERE deleted = FALSE;
 
 -- 物料主数据表
 CREATE TABLE IF NOT EXISTS t_md_material (
@@ -63,10 +63,10 @@ COMMENT ON COLUMN t_md_material.status           IS '状态：ACTIVE/INACTIVE';
 COMMENT ON COLUMN t_md_material.ext_attrs        IS '扩展属性（JSONB，按type不同存不同结构）';
 COMMENT ON COLUMN t_md_material.remark           IS '备注';
 
-CREATE UNIQUE INDEX uk_md_material_code ON t_md_material (code) WHERE deleted = FALSE;
-CREATE INDEX idx_md_material_type ON t_md_material (type) WHERE deleted = FALSE;
-CREATE INDEX idx_md_material_category ON t_md_material (category_id) WHERE deleted = FALSE;
-CREATE INDEX idx_md_material_status ON t_md_material (status) WHERE deleted = FALSE;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_md_material_code ON t_md_material (code) WHERE deleted = FALSE;
+CREATE INDEX IF NOT EXISTS idx_md_material_type ON t_md_material (type) WHERE deleted = FALSE;
+CREATE INDEX IF NOT EXISTS idx_md_material_category ON t_md_material (category_id) WHERE deleted = FALSE;
+CREATE INDEX IF NOT EXISTS idx_md_material_status ON t_md_material (status) WHERE deleted = FALSE;
 
 -- ============================================================
 -- 预置属性定义

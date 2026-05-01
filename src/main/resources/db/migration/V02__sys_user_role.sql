@@ -28,7 +28,7 @@ COMMENT ON COLUMN t_sys_user.phone        IS '手机号';
 COMMENT ON COLUMN t_sys_user.email        IS '邮箱';
 COMMENT ON COLUMN t_sys_user.status       IS '状态：ACTIVE/INACTIVE';
 
-CREATE UNIQUE INDEX uk_sys_user_username ON t_sys_user (username) WHERE deleted = FALSE;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_sys_user_username ON t_sys_user (username) WHERE deleted = FALSE;
 
 -- 角色表
 CREATE TABLE IF NOT EXISTS t_sys_role (
@@ -52,7 +52,7 @@ COMMENT ON COLUMN t_sys_role.role_name    IS '角色名称';
 COMMENT ON COLUMN t_sys_role.description  IS '角色描述';
 COMMENT ON COLUMN t_sys_role.status       IS '状态：ACTIVE/INACTIVE';
 
-CREATE UNIQUE INDEX uk_sys_role_code ON t_sys_role (role_code) WHERE deleted = FALSE;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_sys_role_code ON t_sys_role (role_code) WHERE deleted = FALSE;
 
 -- 用户角色关联表
 CREATE TABLE IF NOT EXISTS t_sys_user_role (
@@ -72,4 +72,4 @@ COMMENT ON COLUMN t_sys_user_role.id       IS '主键ID';
 COMMENT ON COLUMN t_sys_user_role.user_id  IS '用户ID';
 COMMENT ON COLUMN t_sys_user_role.role_id  IS '角色ID';
 
-CREATE UNIQUE INDEX uk_sys_user_role ON t_sys_user_role (user_id, role_id) WHERE deleted = FALSE;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_sys_user_role ON t_sys_user_role (user_id, role_id) WHERE deleted = FALSE;

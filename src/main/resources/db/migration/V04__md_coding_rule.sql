@@ -27,7 +27,7 @@ COMMENT ON COLUMN t_md_coding_rule.business_type  IS '业务类型';
 COMMENT ON COLUMN t_md_coding_rule.status         IS '状态：ACTIVE/INACTIVE';
 COMMENT ON COLUMN t_md_coding_rule.used           IS '是否已使用（已使用不可删除）';
 
-CREATE UNIQUE INDEX uk_md_coding_rule_code ON t_md_coding_rule (code) WHERE deleted = FALSE;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_md_coding_rule_code ON t_md_coding_rule (code) WHERE deleted = FALSE;
 
 -- 编码规则段表
 CREATE TABLE IF NOT EXISTS t_md_coding_rule_segment (
@@ -56,7 +56,7 @@ COMMENT ON COLUMN t_md_coding_rule_segment.seq_reset_type IS '流水号重置方
 COMMENT ON COLUMN t_md_coding_rule_segment.connector      IS '连接符（本段与前段之间）';
 COMMENT ON COLUMN t_md_coding_rule_segment.sort_order     IS '排序号';
 
-CREATE INDEX idx_md_coding_rule_segment_rule_id ON t_md_coding_rule_segment (rule_id);
+CREATE INDEX IF NOT EXISTS idx_md_coding_rule_segment_rule_id ON t_md_coding_rule_segment (rule_id);
 
 -- 编码流水号表（行级锁保证原子递增）
 CREATE TABLE IF NOT EXISTS t_md_coding_sequence (
@@ -73,7 +73,7 @@ COMMENT ON COLUMN t_md_coding_sequence.rule_id      IS '规则ID';
 COMMENT ON COLUMN t_md_coding_sequence.reset_key    IS '重置键（如 202604 表示按月重置时的当前月份）';
 COMMENT ON COLUMN t_md_coding_sequence.current_value IS '当前流水号值';
 
-CREATE UNIQUE INDEX uk_md_coding_sequence ON t_md_coding_sequence (rule_id, reset_key);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_md_coding_sequence ON t_md_coding_sequence (rule_id, reset_key);
 
 -- ============================================================
 -- 预置编码规则

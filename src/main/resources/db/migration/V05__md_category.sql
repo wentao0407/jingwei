@@ -31,10 +31,10 @@ COMMENT ON COLUMN t_md_category.status         IS '状态：ACTIVE/INACTIVE';
 -- 同级分类编码唯一约束（同一 parent_id 下 code 不可重复，排除已软删除的记录）
 -- 使用 COALESCE(parent_id, 0) 解决 PostgreSQL 中 NULL != NULL 导致顶级分类编码无法去重的问题
 -- 顶级分类 parent_id 为 NULL，COALESCE 后变为 0，保证顶级编码唯一性
-CREATE UNIQUE INDEX uk_md_category_code_parent ON t_md_category (code, COALESCE(parent_id, 0)) WHERE deleted = FALSE;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_md_category_code_parent ON t_md_category (code, COALESCE(parent_id, 0)) WHERE deleted = FALSE;
 
 -- 按 parent_id 查询子分类的索引
-CREATE INDEX idx_md_category_parent ON t_md_category (parent_id) WHERE deleted = FALSE;
+CREATE INDEX IF NOT EXISTS idx_md_category_parent ON t_md_category (parent_id) WHERE deleted = FALSE;
 
 -- 预置分类数据（服装行业典型分类结构）
 INSERT INTO t_md_category (id, parent_id, code, name, level, sort_order, status) VALUES
