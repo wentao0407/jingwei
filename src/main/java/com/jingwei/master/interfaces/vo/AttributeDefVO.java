@@ -1,6 +1,7 @@
 package com.jingwei.master.interfaces.vo;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 
@@ -9,7 +10,8 @@ import java.util.List;
  *
  * @author JingWei
  */
-@Data
+@Getter
+@Setter
 public class AttributeDefVO {
 
     /** 属性定义ID */

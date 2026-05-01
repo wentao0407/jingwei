@@ -1,13 +1,15 @@
 package com.jingwei.master.application.dto;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * 物料分页查询请求 DTO
  *
  * @author JingWei
  */
-@Data
+@Getter
+@Setter
 public class MaterialQueryDTO {
 
     /** 当前页码（默认1） */

@@ -1,6 +1,7 @@
 package com.jingwei.master.interfaces.vo;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -13,7 +14,8 @@ import java.util.Map;
  *
  * @author JingWei
  */
-@Data
+@Getter
+@Setter
 public class MaterialVO {
 
     /** 物料ID */

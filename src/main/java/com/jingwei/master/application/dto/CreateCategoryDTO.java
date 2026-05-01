@@ -2,7 +2,8 @@ package com.jingwei.master.application.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * 创建物料分类请求 DTO
@@ -13,7 +14,8 @@ import lombok.Data;
  *
  * @author JingWei
  */
-@Data
+@Getter
+@Setter
 public class CreateCategoryDTO {
 
     /** 父级分类ID（NULL 或不传表示顶级分类） */

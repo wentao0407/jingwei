@@ -1,6 +1,7 @@
 package com.jingwei.master.application.dto;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.Map;
 
@@ -13,7 +14,8 @@ import java.util.Map;
  *
  * @author JingWei
  */
-@Data
+@Getter
+@Setter
 public class UpdateMaterialDTO {
 
     /** 物料名称（可选） */

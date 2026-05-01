@@ -3,31 +3,35 @@ package com.jingwei.master.interfaces.vo;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * 尺码响应 VO
+ * 波段响应 VO
  * <p>
- * 返回给前端的尺码数据，通常嵌套在 SizeGroupVO 中。
+ * 返回给前端的波段数据，通常嵌套在 SeasonVO 中。
  * </p>
  *
  * @author JingWei
  */
 @Getter
 @Setter
-public class SizeVO {
+public class WaveVO {
 
-    /** 尺码ID */
+    /** 波段ID */
     private Long id;
 
-    /** 所属尺码组ID */
-    private Long sizeGroupId;
+    /** 所属季节ID */
+    private Long seasonId;
 
-    /** 尺码编码 */
+    /** 波段编码 */
     private String code;
 
-    /** 尺码名称 */
+    /** 波段名称 */
     private String name;
+
+    /** 交货日期 */
+    private LocalDate deliveryDate;
 
     /** 排序号 */
     private Integer sortOrder;

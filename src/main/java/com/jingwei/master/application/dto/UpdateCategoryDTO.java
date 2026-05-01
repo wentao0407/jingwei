@@ -1,7 +1,8 @@
 package com.jingwei.master.application.dto;
 
 import jakarta.validation.constraints.Size;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * 更新物料分类请求 DTO
@@ -12,7 +13,8 @@ import lombok.Data;
  *
  * @author JingWei
  */
-@Data
+@Getter
+@Setter
 public class UpdateCategoryDTO {
 
     /** 分类编码（可选，修改时校验同级唯一性） */

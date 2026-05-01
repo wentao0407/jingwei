@@ -1,7 +1,8 @@
 package com.jingwei.master.application.dto;
 
 import jakarta.validation.constraints.Size;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * 更新尺码请求 DTO
@@ -13,7 +14,8 @@ import lombok.Data;
  *
  * @author JingWei
  */
-@Data
+@Getter
+@Setter
 public class UpdateSizeDTO {
 
     /** 尺码编码（可选，已被 SPU 引用的尺码组不可修改） */

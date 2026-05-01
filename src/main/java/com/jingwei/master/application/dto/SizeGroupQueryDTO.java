@@ -1,6 +1,7 @@
 package com.jingwei.master.application.dto;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * 尺码组查询条件 DTO
@@ -10,7 +11,8 @@ import lombok.Data;
  *
  * @author JingWei
  */
-@Data
+@Getter
+@Setter
 public class SizeGroupQueryDTO {
 
     /** 适用品类（WOMEN/MEN/CHILDREN），null 表示不限 */
