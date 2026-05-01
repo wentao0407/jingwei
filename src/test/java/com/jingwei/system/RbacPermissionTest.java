@@ -80,7 +80,7 @@ class RbacPermissionTest {
         // 创建可登录的管理员用户
         SysUser admin = new SysUser();
         admin.setUsername("rbacadmin");
-        admin.setPassword(new BCryptPasswordEncoder().encode("admin123"));
+        admin.setPassword(new BCryptPasswordEncoder().encode("Admin123"));
         admin.setRealName("RBAC测试管理员");
         admin.setStatus(UserStatus.ACTIVE);
         sysUserMapper.insert(admin);
@@ -170,7 +170,7 @@ class RbacPermissionTest {
         // 登录获取 Token
         LoginDTO loginDTO = new LoginDTO();
         loginDTO.setUsername("rbacadmin");
-        loginDTO.setPassword("admin123");
+        loginDTO.setPassword("Admin123");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -360,7 +360,7 @@ class RbacPermissionTest {
         // 登录（setUp 中已创建管理员并分配了全部菜单权限）
         LoginDTO dto = new LoginDTO();
         dto.setUsername("rbacadmin");
-        dto.setPassword("admin123");
+        dto.setPassword("Admin123");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -399,7 +399,7 @@ class RbacPermissionTest {
         // 创建一个没有任何菜单权限的用户
         SysUser limitedUser = new SysUser();
         limitedUser.setUsername("limiteduser");
-        limitedUser.setPassword(new BCryptPasswordEncoder().encode("pass123"));
+        limitedUser.setPassword(new BCryptPasswordEncoder().encode("Pass1234"));
         limitedUser.setRealName("无权限用户");
         limitedUser.setStatus(UserStatus.ACTIVE);
         sysUserMapper.insert(limitedUser);
@@ -419,7 +419,7 @@ class RbacPermissionTest {
         // 登录获取 Token
         LoginDTO loginDTO = new LoginDTO();
         loginDTO.setUsername("limiteduser");
-        loginDTO.setPassword("pass123");
+        loginDTO.setPassword("Pass1234");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -435,14 +435,14 @@ class RbacPermissionTest {
         HttpClient client = HttpClient.newHttpClient();
         CreateUserDTO createUserDto = new CreateUserDTO();
         createUserDto.setUsername("newuser");
-        createUserDto.setPassword("pass123");
+        createUserDto.setPassword("Pass1234");
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(restTemplate.getRootUri() + "/system/user/create"))
                 .header("Authorization", "Bearer " + limitedToken)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(
-                        "{\"username\":\"newuser\",\"password\":\"pass123\"}"))
+                        "{\"username\":\"newuser\",\"password\":\"Pass1234\"}"))
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());

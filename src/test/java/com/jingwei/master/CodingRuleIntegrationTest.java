@@ -72,7 +72,7 @@ class CodingRuleIntegrationTest {
         // 创建带全权限的测试用户
         SysUser user = new SysUser();
         user.setUsername("codingadmin");
-        user.setPassword(new BCryptPasswordEncoder().encode("admin123"));
+        user.setPassword(new BCryptPasswordEncoder().encode("Admin123"));
         user.setRealName("编码规则管理员");
         user.setStatus(UserStatus.ACTIVE);
         sysUserMapper.insert(user);
@@ -122,7 +122,7 @@ class CodingRuleIntegrationTest {
         // 登录
         LoginDTO loginDTO = new LoginDTO();
         loginDTO.setUsername("codingadmin");
-        loginDTO.setPassword("admin123");
+        loginDTO.setPassword("Admin123");
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<LoginDTO> entity = new HttpEntity<>(loginDTO, headers);

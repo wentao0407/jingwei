@@ -151,7 +151,13 @@ public enum ErrorCode {
     /** 菜单已分配给角色，不可删除 */
     MENU_ASSIGNED_TO_ROLE(91011, "菜单已分配给角色，不可删除"),
     /** 无权限访问 */
-    ACCESS_DENIED(91012, "无权限访问该资源");
+    ACCESS_DENIED(91012, "无权限访问该资源"),
+    /** 密码已过期 */
+    PASSWORD_EXPIRED(91013, "密码已过期，请修改密码"),
+    /** 旧密码不正确 */
+    OLD_PASSWORD_MISMATCH(91014, "旧密码不正确"),
+    /** 新密码不能与旧密码相同 */
+    PASSWORD_SAME_AS_OLD(91015, "新密码不能与旧密码相同");
 
     /** 错误码 */
     private final int code;

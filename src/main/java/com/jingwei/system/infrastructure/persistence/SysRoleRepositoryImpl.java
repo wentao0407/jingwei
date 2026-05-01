@@ -61,4 +61,9 @@ public class SysRoleRepositoryImpl implements SysRoleRepository {
                         .eq(SysRole::getRoleCode, roleCode)
         ) > 0;
     }
+
+    @Override
+    public boolean existsById(Long id) {
+        return sysRoleMapper.selectById(id) != null;
+    }
 }

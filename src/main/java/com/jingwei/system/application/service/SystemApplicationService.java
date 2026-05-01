@@ -117,6 +117,17 @@ public class SystemApplicationService {
         userDomainService.assignRoles(userId, dto.getRoleIds());
     }
 
+    /**
+     * 修改密码
+     *
+     * @param userId 用户ID
+     * @param dto    修改密码请求（旧密码+新密码）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void changePassword(Long userId, ChangePasswordDTO dto) {
+        userDomainService.changePassword(userId, dto.getOldPassword(), dto.getNewPassword());
+    }
+
     // ==================== 角色管理 ====================
 
     /**

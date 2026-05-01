@@ -10,6 +10,7 @@ import java.util.List;
  * <p>
  * 登录成功后返回用户信息、Token、权限标识列表和授权菜单树。
  * 菜单树仅包含目录和菜单类型节点（不含按钮），前端据此渲染侧边栏导航。
+ * 当 passwordExpired=true 时，前端应引导用户修改密码。
  * </p>
  *
  * @author JingWei
@@ -38,4 +39,7 @@ public class LoginVO {
 
     /** 授权菜单树（仅目录+菜单，不含按钮） */
     private List<MenuVO> menuTree;
+
+    /** 密码是否已过期，过期时前端应引导用户修改密码 */
+    private boolean passwordExpired;
 }

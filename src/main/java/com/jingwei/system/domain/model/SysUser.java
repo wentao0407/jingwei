@@ -5,6 +5,8 @@ import com.jingwei.common.domain.model.BaseEntity;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 /**
  * 用户实体
  * <p>
@@ -37,4 +39,7 @@ public class SysUser extends BaseEntity {
 
     /** 状态：ACTIVE/INACTIVE */
     private UserStatus status;
+
+    /** 密码最后更新时间，用于判断密码是否过期 */
+    private LocalDateTime passwordUpdatedAt;
 }

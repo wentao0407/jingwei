@@ -102,6 +102,28 @@ VALUES
 (132, 130, '编辑菜单', 'BUTTON', '', '', 'system:menu:update', '', 2, TRUE, 'ACTIVE'),
 (133, 130, '删除菜单', 'BUTTON', '', '', 'system:menu:delete', '', 3, TRUE, 'ACTIVE');
 
+-- 系统管理 → 数据权限、操作日志、系统配置菜单
+INSERT INTO t_sys_menu (id, parent_id, name, type, path, component, permission, icon, sort_order, visible, status)
+VALUES
+(140, 100, '数据权限', 'MENU', '/system/data-scope', 'system/DataScopeList', '', 'SafetyOutlined', 4, TRUE, 'ACTIVE'),
+(150, 100, '操作日志', 'MENU', '/system/audit-log',  'system/AuditLogList',  '', 'FileSearchOutlined', 5, TRUE, 'ACTIVE'),
+(160, 100, '系统配置', 'MENU', '/system/config',     'system/ConfigList',    '', 'ToolOutlined', 6, TRUE, 'ACTIVE');
+
+-- 数据权限按钮
+INSERT INTO t_sys_menu (id, parent_id, name, type, path, component, permission, icon, sort_order, visible, status)
+VALUES
+(141, 140, '配置数据权限', 'BUTTON', '', '', 'system:dataScope:config', '', 1, TRUE, 'ACTIVE');
+
+-- 操作日志按钮（只读，仅查询）
+INSERT INTO t_sys_menu (id, parent_id, name, type, path, component, permission, icon, sort_order, visible, status)
+VALUES
+(151, 150, '查询操作日志', 'BUTTON', '', '', 'system:auditLog:query', '', 1, TRUE, 'ACTIVE');
+
+-- 系统配置按钮
+INSERT INTO t_sys_menu (id, parent_id, name, type, path, component, permission, icon, sort_order, visible, status)
+VALUES
+(161, 160, '修改系统配置', 'BUTTON', '', '', 'system:config:update', '', 1, TRUE, 'ACTIVE');
+
 -- 基础数据 → 二级菜单
 INSERT INTO t_sys_menu (id, parent_id, name, type, path, component, permission, icon, sort_order, visible, status)
 VALUES
@@ -188,8 +210,8 @@ INSERT INTO t_sys_role_menu (id, role_id, menu_id)
 SELECT (10000 + ROW_NUMBER() OVER (ORDER BY id)), 1, id FROM t_sys_menu;
 
 -- 创建管理员用户（密码: admin123）
-INSERT INTO t_sys_user (id, username, password, real_name, phone, email, status)
-VALUES (1, 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '系统管理员', '', '', 'ACTIVE');
+INSERT INTO t_sys_user (id, username, password, real_name, phone, email, status, password_updated_at)
+VALUES (1, 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '系统管理员', '', '', 'ACTIVE', NOW());
 
 -- 分配管理员角色给 admin 用户
 INSERT INTO t_sys_user_role (id, user_id, role_id)

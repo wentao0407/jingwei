@@ -55,4 +55,12 @@ public interface SysRoleRepository {
      * @return true=已存在
      */
     boolean existsByRoleCode(String roleCode);
+
+    /**
+     * 检查角色是否存在
+     *
+     * @param id 角色ID
+     * @return true=存在
+     */
+    boolean existsById(Long id);
 }

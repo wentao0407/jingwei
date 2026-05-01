@@ -58,12 +58,12 @@ class AuthJwtTest {
     @DisplayName("正确的用户名密码 → 登录成功，返回 Token")
     void login_withCorrectCredentials_shouldReturnToken() {
         // 先创建用户
-        createUser("loginuser", "password123");
+        createUser("loginuser", "Password123");
 
         // 登录
         LoginDTO loginDTO = new LoginDTO();
         loginDTO.setUsername("loginuser");
-        loginDTO.setPassword("password123");
+        loginDTO.setPassword("Password123");
 
         ResponseEntity<R<LoginVO>> response = post("/auth/login", loginDTO,
                 new ParameterizedTypeReference<>() {});
@@ -78,11 +78,11 @@ class AuthJwtTest {
     @Test
     @DisplayName("错误的密码 → 返回'用户名或密码错误'")
     void login_withWrongPassword_shouldReturnLoginFailed() {
-        createUser("wrongpwd", "password123");
+        createUser("wrongpwd", "Password123");
 
         LoginDTO loginDTO = new LoginDTO();
         loginDTO.setUsername("wrongpwd");
-        loginDTO.setPassword("wrongpassword");
+        loginDTO.setPassword("WrongPassword1");
 
         ResponseEntity<R<LoginVO>> response = post("/auth/login", loginDTO,
                 new ParameterizedTypeReference<>() {});
@@ -95,12 +95,12 @@ class AuthJwtTest {
     @DisplayName("停用用户 → 拒绝登录")
     void login_withInactiveUser_shouldReturnUserInactive() {
         // 创建用户并停用
-        Long userId = createUser("inactiveuser", "password123");
+        Long userId = createUser("inactiveuser", "Password123");
         deactivateUser(userId);
 
         LoginDTO loginDTO = new LoginDTO();
         loginDTO.setUsername("inactiveuser");
-        loginDTO.setPassword("password123");
+        loginDTO.setPassword("Password123");
 
         ResponseEntity<R<LoginVO>> response = post("/auth/login", loginDTO,
                 new ParameterizedTypeReference<>() {});
@@ -113,8 +113,8 @@ class AuthJwtTest {
     @DisplayName("携带有效 Token 访问受保护接口 → 正常返回")
     void accessProtected_withValidToken_shouldSucceed() {
         // 创建用户并登录获取 Token
-        createUser("tokenuser", "password123");
-        String token = loginAndGetToken("tokenuser", "password123");
+        createUser("tokenuser", "Password123");
+        String token = loginAndGetToken("tokenuser", "Password123");
 
         // 用 Token 访问受保护接口
         HttpHeaders headers = new HttpHeaders();
@@ -171,11 +171,11 @@ class AuthJwtTest {
     @Test
     @DisplayName("登录成功 → Token 可解析出用户ID")
     void loginSuccess_tokenShouldContainUserId() {
-        Long userId = createUser("parsetest", "password123");
+        Long userId = createUser("parsetest", "Password123");
 
         LoginDTO loginDTO = new LoginDTO();
         loginDTO.setUsername("parsetest");
-        loginDTO.setPassword("password123");
+        loginDTO.setPassword("Password123");
 
         ResponseEntity<R<LoginVO>> response = post("/auth/login", loginDTO,
                 new ParameterizedTypeReference<>() {});

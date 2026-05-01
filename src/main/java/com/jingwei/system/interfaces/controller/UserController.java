@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jingwei.common.config.RequirePermission;
 import com.jingwei.common.domain.model.R;
 import com.jingwei.system.application.dto.AssignRoleDTO;
+import com.jingwei.system.application.dto.ChangePasswordDTO;
 import com.jingwei.system.application.dto.CreateUserDTO;
 import com.jingwei.system.application.dto.UpdateUserDTO;
 import com.jingwei.system.application.dto.UserQueryDTO;
@@ -65,6 +66,22 @@ public class UserController {
     @RequirePermission("system:user:deactivate")
     public R<Void> deactivateUser(@RequestParam Long userId) {
         systemApplicationService.deactivateUser(userId);
+        return R.ok();
+    }
+
+    /**
+     * 修改密码
+     * <p>
+     * 用户修改自己的密码，需验证旧密码，新密码需满足密码策略（至少8位，含大小写和数字）。
+     * </p>
+     *
+     * @param userId 用户ID
+     * @param dto    修改密码请求（旧密码+新密码）
+     * @return 操作结果
+     */
+    @PostMapping("/system/user/changePassword")
+    public R<Void> changePassword(@RequestParam Long userId, @Valid @RequestBody ChangePasswordDTO dto) {
+        systemApplicationService.changePassword(userId, dto);
         return R.ok();
     }
 

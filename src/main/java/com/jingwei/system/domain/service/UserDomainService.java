@@ -14,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
 /**
  * 用户领域服务
  * <p>
@@ -34,7 +36,7 @@ public class UserDomainService {
     /**
      * 创建用户
      * <p>
-     * 校验用户名唯一性，密码BCrypt加密后存储。
+     * 校验用户名唯一性，密码BCrypt加密后存储，记录密码更新时间。
      * </p>
      *
      * @param user     用户实体（password 字段为明文）
@@ -48,6 +50,9 @@ public class UserDomainService {
 
         // 密码BCrypt加密，数据库中不存明文
         user.setPassword(passwordEncoder.encode(user.getPassword()));
+
+        // 记录密码更新时间，用于密码过期检查
+        user.setPasswordUpdatedAt(LocalDateTime.now());
 
         // 默认状态为 ACTIVE
         user.setStatus(UserStatus.ACTIVE);
@@ -95,6 +100,70 @@ public class UserDomainService {
 
         log.info("更新用户: id={}", userId);
         return sysUserRepository.selectById(userId);
+    }
+
+    /**
+     * 修改密码
+     * <p>
+     * 验证旧密码正确性，新密码不能与旧密码相同，修改后更新 passwordUpdatedAt。
+     * </p>
+     *
+     * @param userId      用户ID
+     * @param oldPassword 旧密码（明文）
+     * @param newPassword 新密码（明文）
+     */
+    public void changePassword(Long userId, String oldPassword, String newPassword) {
+        SysUser user = sysUserRepository.selectById(userId);
+        if (user == null) {
+            throw new BizException(ErrorCode.DATA_NOT_FOUND, "用户不存在");
+        }
+
+        // 验证旧密码是否正确
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new BizException(ErrorCode.OLD_PASSWORD_MISMATCH);
+        }
+
+        // 新密码不能与旧密码相同
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new BizException(ErrorCode.PASSWORD_SAME_AS_OLD);
+        }
+
+        // 加密新密码并更新
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPasswordUpdatedAt(LocalDateTime.now());
+
+        int rows = sysUserRepository.updateById(user);
+        if (rows == 0) {
+            throw new BizException(ErrorCode.CONCURRENT_CONFLICT);
+        }
+
+        log.info("用户修改密码: userId={}", userId);
+    }
+
+    /**
+     * 检查用户密码是否已过期
+     * <p>
+     * 根据 t_sys_config 中 password.expiry.days 配置判断。
+     * 配置值为0表示密码永不过期。
+     * </p>
+     *
+     * @param user             用户实体
+     * @param passwordExpiryDays 密码过期天数（从系统配置读取）
+     * @return true=密码已过期
+     */
+    public boolean isPasswordExpired(SysUser user, int passwordExpiryDays) {
+        // 配置为0表示密码永不过期
+        if (passwordExpiryDays <= 0) {
+            return false;
+        }
+
+        // passwordUpdatedAt 为空时视为已过期（兼容老数据）
+        if (user.getPasswordUpdatedAt() == null) {
+            return true;
+        }
+
+        LocalDateTime expiryTime = user.getPasswordUpdatedAt().plusDays(passwordExpiryDays);
+        return LocalDateTime.now().isAfter(expiryTime);
     }
 
     /**

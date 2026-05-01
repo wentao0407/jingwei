@@ -85,7 +85,7 @@ class SystemUserAndRoleTest {
     void createUser_shouldEncryptPassword() {
         CreateUserDTO dto = new CreateUserDTO();
         dto.setUsername("testuser1");
-        dto.setPassword("plain123");
+        dto.setPassword("Plain123");
         dto.setRealName("测试用户");
 
         ResponseEntity<R<UserVO>> response = postWithAuth("/system/user/create", dto,
@@ -98,7 +98,7 @@ class SystemUserAndRoleTest {
 
         // 验证数据库中密码不是明文
         SysUser dbUser = sysUserMapper.selectById(user.getId());
-        assertNotEquals("plain123", dbUser.getPassword(), "密码不应为明文");
+        assertNotEquals("Plain123", dbUser.getPassword(), "密码不应为明文");
         assertTrue(dbUser.getPassword().startsWith("$2a$"), "密码应为BCrypt格式");
     }
 
@@ -107,12 +107,12 @@ class SystemUserAndRoleTest {
     void createUser_duplicateUsername_shouldFail() {
         CreateUserDTO dto1 = new CreateUserDTO();
         dto1.setUsername("duplicate");
-        dto1.setPassword("pass123123");
+        dto1.setPassword("Pass123123");
         postWithAuth("/system/user/create", dto1, new ParameterizedTypeReference<R<UserVO>>() {});
 
         CreateUserDTO dto2 = new CreateUserDTO();
         dto2.setUsername("duplicate");
-        dto2.setPassword("pass456456");
+        dto2.setPassword("Pass456456");
 
         ResponseEntity<R<UserVO>> response = postWithAuth("/system/user/create", dto2,
                 new ParameterizedTypeReference<R<UserVO>>() {});
@@ -128,7 +128,7 @@ class SystemUserAndRoleTest {
         for (int i = 1; i <= 3; i++) {
             CreateUserDTO dto = new CreateUserDTO();
             dto.setUsername("pageuser" + i);
-            dto.setPassword("pass" + i + "12345");
+            dto.setPassword("Pass" + i + "12345");
             postWithAuth("/system/user/create", dto, new ParameterizedTypeReference<R<UserVO>>() {});
         }
 
@@ -152,7 +152,7 @@ class SystemUserAndRoleTest {
         // 先创建用户
         CreateUserDTO createDto = new CreateUserDTO();
         createDto.setUsername("deactivate");
-        createDto.setPassword("pass123456");
+        createDto.setPassword("Pass123456");
         R<UserVO> created = postWithAuth("/system/user/create", createDto,
                 new ParameterizedTypeReference<R<UserVO>>() {}).getBody();
         assertTrue(created.isSuccess(), "创建用户应成功: " + created.getMessage());
@@ -175,7 +175,7 @@ class SystemUserAndRoleTest {
         // 创建用户
         CreateUserDTO userDto = new CreateUserDTO();
         userDto.setUsername("roletest");
-        userDto.setPassword("pass123456");
+        userDto.setPassword("Pass123456");
         R<UserVO> createdUser = postWithAuth("/system/user/create", userDto,
                 new ParameterizedTypeReference<R<UserVO>>() {}).getBody();
         assertTrue(createdUser.isSuccess(), "创建用户应成功: " + createdUser.getMessage());
@@ -255,7 +255,7 @@ class SystemUserAndRoleTest {
         // 1. 创建测试用户
         SysUser user = new SysUser();
         user.setUsername("authtestuser");
-        user.setPassword(new BCryptPasswordEncoder().encode("authpass123"));
+        user.setPassword(new BCryptPasswordEncoder().encode("Authpass123"));
         user.setRealName("认证测试用户");
         user.setStatus(UserStatus.ACTIVE);
         sysUserMapper.insert(user);
@@ -345,7 +345,7 @@ class SystemUserAndRoleTest {
         // 6. 登录获取 Token
         LoginDTO loginDTO = new LoginDTO();
         loginDTO.setUsername("authtestuser");
-        loginDTO.setPassword("authpass123");
+        loginDTO.setPassword("Authpass123");
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<LoginDTO> entity = new HttpEntity<>(loginDTO, headers);

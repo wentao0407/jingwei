@@ -1,17 +1,17 @@
 # 待实现功能：系统管理模块缺失接口
 
-## 数据权限管理（US-SYS-003）
-- 按角色配置数据可见范围（如只能看本部门/指定仓库的数据），与角色管理关联
-- 需要：数据权限规则表、角色关联配置、查询时自动注入数据过滤条件
+## ~~数据权限管理（US-SYS-003）~~ ✅ 已完成
+- 按角色配置数据可见范围（仓库/部门维度），全量替换式配置
+- 实现：DataScope 实体 + DataScopeRepository + DataScopeDomainService + SystemExtController
 
-## 操作日志查询（US-SYS-004）
-- 记录用户的关键操作（登录、新增、修改、删除等）
-- 需要：操作日志表、AOP 切面自动记录、按用户/时间/操作类型分页查询接口
+## ~~操作日志查询（US-SYS-004）~~ ✅ 已完成
+- 记录用户关键操作，分页查询支持按用户/时间/模块/类型筛选
+- 实现：AuditLog 实体 + AuditLogRepository + AuditLogDomainService + SystemExtController
 
-## 系统配置管理（US-SYS-005）
-- 管理系统级参数（如密码过期天数、预留过期天数等键值对配置）
-- 需要：系统配置表、CRUD 接口、按分组查询接口、启动时加载到缓存
+## ~~系统配置管理（US-SYS-005）~~ ✅ 已完成
+- 键值对配置管理，预置6项配置，修改需填原因
+- 实现：SysConfig 实体 + SysConfigRepository + SysConfigDomainService + SystemExtController
 
-## 审批规则配置（US-SYS-006）
+## 审批规则配置（US-SYS-006）— 待第二阶段状态机完成后实现
 - 配置审批流的规则（审批人、条件、级联等），与审批引擎模块（approval）联动
 - 详见 api/approval/ 目录（待创建）
