@@ -95,6 +95,24 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 处理非法参数异常
+     * <p>
+     * 典型场景：枚举 valueOf() 传入非法值时抛出 IllegalArgumentException，
+     * 如前端传 status="abc" 导致 SpuStatus.valueOf("abc") 失败。
+     * 转为参数校验失败响应，提示具体非法值。
+     * </p>
+     *
+     * @param e 非法参数异常
+     * @return 统一错误响应
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public R<Void> handleIllegalArgumentException(IllegalArgumentException e) {
+        log.warn("非法参数: {}", e.getMessage());
+        return R.fail(ErrorCode.PARAM_VALIDATION_FAILED.getCode(), "参数值不合法: " + e.getMessage());
+    }
+
+    /**
      * 处理所有未捕获异常
      * <p>
      * 兜底处理，记录错误日志但不暴露堆栈信息给前端。
