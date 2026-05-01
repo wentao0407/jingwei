@@ -1,5 +1,7 @@
 package com.jingwei.master.domain.model;
 
+import lombok.Getter;
+
 /**
  * 供应商资质状态枚举
  * <p>

@@ -1,7 +1,7 @@
 package com.jingwei.master.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.jingwei.master.domain.model.CommonStatus;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jingwei.master.domain.model.Supplier;
 import com.jingwei.master.domain.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +48,22 @@ public class SupplierRepositoryImpl implements SupplierRepository {
     }
 
     @Override
+    public IPage<Supplier> selectPage(IPage<Supplier> page, String type,
+                                      String qualificationStatus, String status, String keyword) {
+        LambdaQueryWrapper<Supplier> wrapper = new LambdaQueryWrapper<Supplier>()
+                .eq(type != null && !type.isEmpty(), Supplier::getType, type)
+                .eq(qualificationStatus != null && !qualificationStatus.isEmpty(),
+                        Supplier::getQualificationStatus, qualificationStatus)
+                .eq(status != null && !status.isEmpty(), Supplier::getStatus, status)
+                .and(keyword != null && !keyword.isBlank(), w ->
+                        w.like(Supplier::getCode, keyword)
+                                .or()
+                                .like(Supplier::getName, keyword))
+                .orderByDesc(Supplier::getCreatedAt);
+        return supplierMapper.selectPage(page, wrapper);
+    }
+
+    @Override
     public boolean existsByName(String name, Long excludeId) {
         LambdaQueryWrapper<Supplier> wrapper = new LambdaQueryWrapper<Supplier>()
                 .eq(Supplier::getName, name);
@@ -58,6 +74,13 @@ public class SupplierRepositoryImpl implements SupplierRepository {
     }
 
     @Override
+    public boolean existsByCode(String code) {
+        return supplierMapper.selectCount(
+                new LambdaQueryWrapper<Supplier>()
+                        .eq(Supplier::getCode, code)) > 0;
+    }
+
+    @Override
     public int insert(Supplier supplier) {
         return supplierMapper.insert(supplier);
     }
@@ -65,5 +88,10 @@ public class SupplierRepositoryImpl implements SupplierRepository {
     @Override
     public int updateById(Supplier supplier) {
         return supplierMapper.updateById(supplier);
+    }
+
+    @Override
+    public int deleteById(Long id) {
+        return supplierMapper.deleteById(id);
     }
 }

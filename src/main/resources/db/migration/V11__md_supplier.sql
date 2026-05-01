@@ -50,11 +50,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_md_supplier_name ON t_md_supplier (name) WH
 -- ============================================================
 
 INSERT INTO t_md_coding_rule (id, code, name, business_type, description, status, used)
-VALUES (6, 'SUPPLIER_CODE', '供应商编码', 'MASTER', '格式：SUP-6位流水号，不重置', 'ACTIVE', FALSE);
+VALUES (6, 'SUPPLIER_CODE', '供应商编码', 'MASTER', '格式：SUP-6位流水号，不重置', 'ACTIVE', FALSE)
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO t_md_coding_rule_segment (id, rule_id, segment_type, segment_value, seq_length, seq_reset_type, connector, sort_order) VALUES
 (601, 6, 'FIXED', 'SUP', 0, 'NEVER', '', 1),
-(602, 6, 'SEQUENCE', '',   6, 'NEVER', '-', 2);
+(602, 6, 'SEQUENCE', '',   6, 'NEVER', '-', 2)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
 -- 供应商管理菜单按钮权限（菜单 ID=230 已在 V03 预置）

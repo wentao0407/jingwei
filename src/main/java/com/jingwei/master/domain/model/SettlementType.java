@@ -1,5 +1,7 @@
 package com.jingwei.master.domain.model;
 
+import lombok.Getter;
+
 /**
  * 供应商结算方式枚举
  *
