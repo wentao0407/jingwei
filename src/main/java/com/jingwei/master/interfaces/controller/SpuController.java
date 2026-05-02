@@ -1,5 +1,6 @@
 package com.jingwei.master.interfaces.controller;
 
+import com.jingwei.common.config.RequirePermission;
 import com.jingwei.common.domain.model.R;
 import com.jingwei.master.application.dto.AddColorDTO;
 import com.jingwei.master.application.dto.BatchUpdateSkuPriceDTO;
@@ -34,6 +35,7 @@ public class SpuController {
     /**
      * 创建款式（含自动生成颜色款和SKU）
      */
+    @RequirePermission("master:spu:create")
     @PostMapping("/master/spu/create")
     public R<SpuVO> createSpu(@Valid @RequestBody CreateSpuDTO dto) {
         return R.ok(spuApplicationService.createSpu(dto));
@@ -42,6 +44,7 @@ public class SpuController {
     /**
      * 更新款式
      */
+    @RequirePermission("master:spu:update")
     @PostMapping("/master/spu/update")
     public R<SpuVO> updateSpu(@RequestParam Long spuId,
                               @Valid @RequestBody UpdateSpuDTO dto) {
@@ -51,6 +54,7 @@ public class SpuController {
     /**
      * 删除款式
      */
+    @RequirePermission("master:spu:deactivate")
     @PostMapping("/master/spu/delete")
     public R<Void> deleteSpu(@RequestParam Long spuId) {
         spuApplicationService.deleteSpu(spuId);
@@ -78,6 +82,7 @@ public class SpuController {
     /**
      * 追加颜色（增量生成SKU）
      */
+    @RequirePermission("master:spu:addColor")
     @PostMapping("/master/spu/addColor")
     public R<SpuVO> addColors(@RequestParam Long spuId,
                               @Valid @RequestBody AddColorDTO dto) {
@@ -87,6 +92,7 @@ public class SpuController {
     /**
      * 更新SKU价格
      */
+    @RequirePermission("master:sku:updatePrice")
     @PostMapping("/master/sku/updatePrice")
     public R<SkuVO> updateSkuPrice(@Valid @RequestBody UpdateSkuPriceDTO dto) {
         return R.ok(spuApplicationService.updateSkuPrice(dto));
@@ -99,6 +105,7 @@ public class SpuController {
      * 传入 colorWayId 则只更新该颜色下所有 SKU，不传则更新该款式下所有 SKU。
      * </p>
      */
+    @RequirePermission("master:sku:updatePrice")
     @PostMapping("/master/sku/batchUpdatePrice")
     public R<Integer> batchUpdateSkuPrice(@Valid @RequestBody BatchUpdateSkuPriceDTO dto) {
         return R.ok(spuApplicationService.batchUpdateSkuPrice(dto));
@@ -107,6 +114,7 @@ public class SpuController {
     /**
      * 停用SKU
      */
+    @RequirePermission("master:sku:deactivate")
     @PostMapping("/master/sku/deactivate")
     public R<Void> deactivateSku(@RequestParam Long skuId) {
         spuApplicationService.deactivateSku(skuId);

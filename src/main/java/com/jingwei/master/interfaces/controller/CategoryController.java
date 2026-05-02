@@ -1,5 +1,6 @@
 package com.jingwei.master.interfaces.controller;
 
+import com.jingwei.common.config.RequirePermission;
 import com.jingwei.common.domain.model.R;
 import com.jingwei.master.application.dto.CreateCategoryDTO;
 import com.jingwei.master.application.dto.UpdateCategoryDTO;
@@ -34,6 +35,7 @@ public class CategoryController {
     /**
      * 创建物料分类
      */
+    @RequirePermission("master:category:create")
     @PostMapping("/master/category/create")
     public R<CategoryTreeVO> createCategory(@Valid @RequestBody CreateCategoryDTO dto) {
         return R.ok(categoryApplicationService.createCategory(dto));
@@ -42,6 +44,7 @@ public class CategoryController {
     /**
      * 更新物料分类
      */
+    @RequirePermission("master:category:update")
     @PostMapping("/master/category/update")
     public R<CategoryTreeVO> updateCategory(@RequestParam Long categoryId,
                                             @Valid @RequestBody UpdateCategoryDTO dto) {
@@ -51,6 +54,7 @@ public class CategoryController {
     /**
      * 删除物料分类（有子分类或被物料引用时不可删除）
      */
+    @RequirePermission("master:category:delete")
     @PostMapping("/master/category/delete")
     public R<Void> deleteCategory(@RequestParam Long categoryId) {
         categoryApplicationService.deleteCategory(categoryId);

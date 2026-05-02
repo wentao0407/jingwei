@@ -1,5 +1,6 @@
 package com.jingwei.master.interfaces.controller;
 
+import com.jingwei.common.config.RequirePermission;
 import com.jingwei.common.domain.model.R;
 import com.jingwei.master.application.dto.CreateSeasonDTO;
 import com.jingwei.master.application.dto.CreateWaveDTO;
@@ -40,6 +41,7 @@ public class SeasonController {
     /**
      * 创建季节
      */
+    @RequirePermission("master:season:create")
     @PostMapping("/master/season/create")
     public R<SeasonVO> createSeason(@Valid @RequestBody CreateSeasonDTO dto) {
         return R.ok(seasonApplicationService.createSeason(dto));
@@ -48,6 +50,7 @@ public class SeasonController {
     /**
      * 更新季节
      */
+    @RequirePermission("master:season:update")
     @PostMapping("/master/season/update")
     public R<SeasonVO> updateSeason(@RequestParam Long seasonId,
                                     @Valid @RequestBody UpdateSeasonDTO dto) {
@@ -61,6 +64,7 @@ public class SeasonController {
      * 关闭是单向操作，不可恢复。
      * </p>
      */
+    @RequirePermission("master:season:close")
     @PostMapping("/master/season/close")
     public R<Void> closeSeason(@RequestParam Long seasonId) {
         seasonApplicationService.closeSeason(seasonId);
@@ -70,6 +74,7 @@ public class SeasonController {
     /**
      * 删除季节（同时删除季节下的所有波段）
      */
+    @RequirePermission("master:season:delete")
     @PostMapping("/master/season/delete")
     public R<Void> deleteSeason(@RequestParam Long seasonId) {
         seasonApplicationService.deleteSeason(seasonId);
@@ -102,6 +107,7 @@ public class SeasonController {
      * 已关闭的季节不允许新增波段。
      * </p>
      */
+    @RequirePermission("master:wave:create")
     @PostMapping("/master/season/wave/create")
     public R<WaveVO> createWave(@RequestParam Long seasonId,
                                 @Valid @RequestBody CreateWaveDTO dto) {
@@ -114,6 +120,7 @@ public class SeasonController {
      * 已关闭的季节下的波段不允许修改。
      * </p>
      */
+    @RequirePermission("master:wave:update")
     @PostMapping("/master/season/wave/update")
     public R<WaveVO> updateWave(@RequestParam Long waveId,
                                 @Valid @RequestBody UpdateWaveDTO dto) {
@@ -126,6 +133,7 @@ public class SeasonController {
      * 已关闭的季节下的波段不允许删除。
      * </p>
      */
+    @RequirePermission("master:wave:delete")
     @PostMapping("/master/season/wave/delete")
     public R<Void> deleteWave(@RequestParam Long waveId) {
         seasonApplicationService.deleteWave(waveId);

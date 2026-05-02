@@ -1,6 +1,7 @@
 package com.jingwei.master.interfaces.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.jingwei.common.config.RequirePermission;
 import com.jingwei.common.domain.model.R;
 import com.jingwei.master.application.dto.CreateSupplierDTO;
 import com.jingwei.master.application.dto.SupplierQueryDTO;
@@ -38,6 +39,7 @@ public class SupplierController {
      * 状态默认 ACTIVE，资质默认 PENDING。
      * </p>
      */
+    @RequirePermission("master:supplier:create")
     @PostMapping("/master/supplier/create")
     public R<SupplierVO> createSupplier(@Valid @RequestBody CreateSupplierDTO dto) {
         return R.ok(supplierApplicationService.createSupplier(dto));
@@ -51,6 +53,7 @@ public class SupplierController {
      * 编码和类型不可修改。
      * </p>
      */
+    @RequirePermission("master:supplier:update")
     @PostMapping("/master/supplier/update")
     public R<SupplierVO> updateSupplier(@RequestParam Long supplierId,
                                         @Valid @RequestBody UpdateSupplierDTO dto) {
@@ -63,6 +66,7 @@ public class SupplierController {
      * 停用后不可创建新采购订单，已有采购订单不受影响。
      * </p>
      */
+    @RequirePermission("master:supplier:deactivate")
     @PostMapping("/master/supplier/deactivate")
     public R<Void> deactivateSupplier(@RequestParam Long supplierId) {
         supplierApplicationService.deactivateSupplier(supplierId);
@@ -75,6 +79,7 @@ public class SupplierController {
      * 将停用的供应商重新启用，启用后可创建新采购订单。
      * </p>
      */
+    @RequirePermission("master:supplier:activate")
     @PostMapping("/master/supplier/activate")
     public R<Void> activateSupplier(@RequestParam Long supplierId) {
         supplierApplicationService.activateSupplier(supplierId);
@@ -87,6 +92,7 @@ public class SupplierController {
      * 仅允许删除未被采购订单引用的供应商。
      * </p>
      */
+    @RequirePermission("master:supplier:delete")
     @PostMapping("/master/supplier/delete")
     public R<Void> deleteSupplier(@RequestParam Long supplierId) {
         supplierApplicationService.deleteSupplier(supplierId);

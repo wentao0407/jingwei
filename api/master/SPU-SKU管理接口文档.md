@@ -18,7 +18,6 @@ Controller：`SpuController`
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| code | String | 是 | 款式编码，最长32字符，全局唯一 |
 | name | String | 是 | 款式名称，最长128字符 |
 | seasonId | Long | 否 | 季节ID |
 | categoryId | Long | 否 | 品类ID |
@@ -90,7 +89,7 @@ Controller：`SpuController`
 | updatedAt | LocalDateTime | 更新时间 |
 
 **业务规则**：
-- 款式编码由前端传入（非自动生成），全局唯一
+- 款式编码由后端编码规则引擎自动生成（规则代码 SPU_CODE，格式 SP-6位流水号），无需前端传入
 - 创建时状态为 DRAFT
 - 系统自动按 颜色×尺码 交叉生成 SKU
 - SKU 编码格式：款式编码-颜色编码-尺码编码

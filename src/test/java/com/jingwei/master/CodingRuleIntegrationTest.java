@@ -110,7 +110,26 @@ class CodingRuleIntegrationTest {
         menu.setStatus(UserStatus.ACTIVE);
         sysMenuMapper.insert(menu);
 
-        // 添加一些菜单让角色有基础数据权限（不需要具体按钮权限，编码规则接口没加 @RequirePermission）
+        // 创建编码规则按钮级权限
+        String[][] buttons = {
+                {"创建编码规则", "master:codingRule:create"},
+                {"更新编码规则", "master:codingRule:update"},
+                {"删除编码规则", "master:codingRule:delete"},
+                {"生成编码", "master:codingRule:generate"}
+        };
+        for (int i = 0; i < buttons.length; i++) {
+            SysMenu btn = new SysMenu();
+            btn.setParentId(menu.getId());
+            btn.setName(buttons[i][0]);
+            btn.setType(com.jingwei.system.domain.model.MenuType.BUTTON);
+            btn.setPermission(buttons[i][1]);
+            btn.setSortOrder(i + 1);
+            btn.setVisible(true);
+            btn.setStatus(UserStatus.ACTIVE);
+            sysMenuMapper.insert(btn);
+        }
+
+        // 将所有菜单分配给角色（包含按钮权限）
         List<SysMenu> allMenus = sysMenuMapper.selectList(null);
         for (SysMenu m : allMenus) {
             SysRoleMenu rm = new SysRoleMenu();

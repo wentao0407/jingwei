@@ -1,6 +1,7 @@
 package com.jingwei.master.interfaces.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.jingwei.common.config.RequirePermission;
 import com.jingwei.common.domain.model.R;
 import com.jingwei.master.application.dto.CreateCustomerDTO;
 import com.jingwei.master.application.dto.CustomerQueryDTO;
@@ -38,6 +39,7 @@ public class CustomerController {
      * 状态默认 ACTIVE，等级默认 C。
      * </p>
      */
+    @RequirePermission("master:customer:create")
     @PostMapping("/master/customer/create")
     public R<CustomerVO> createCustomer(@Valid @RequestBody CreateCustomerDTO dto) {
         return R.ok(customerApplicationService.createCustomer(dto));
@@ -51,6 +53,7 @@ public class CustomerController {
      * 编码和类型不可修改。
      * </p>
      */
+    @RequirePermission("master:customer:update")
     @PostMapping("/master/customer/update")
     public R<CustomerVO> updateCustomer(@RequestParam Long customerId,
                                         @Valid @RequestBody UpdateCustomerDTO dto) {
@@ -63,6 +66,7 @@ public class CustomerController {
      * 停用后不可创建新销售订单，已有订单不受影响。
      * </p>
      */
+    @RequirePermission("master:customer:deactivate")
     @PostMapping("/master/customer/deactivate")
     public R<Void> deactivateCustomer(@RequestParam Long customerId) {
         customerApplicationService.deactivateCustomer(customerId);
@@ -75,6 +79,7 @@ public class CustomerController {
      * 将停用的客户重新启用，启用后可创建新销售订单。
      * </p>
      */
+    @RequirePermission("master:customer:activate")
     @PostMapping("/master/customer/activate")
     public R<Void> activateCustomer(@RequestParam Long customerId) {
         customerApplicationService.activateCustomer(customerId);
@@ -87,6 +92,7 @@ public class CustomerController {
      * 仅允许删除未被销售订单引用的客户。
      * </p>
      */
+    @RequirePermission("master:customer:delete")
     @PostMapping("/master/customer/delete")
     public R<Void> deleteCustomer(@RequestParam Long customerId) {
         customerApplicationService.deleteCustomer(customerId);

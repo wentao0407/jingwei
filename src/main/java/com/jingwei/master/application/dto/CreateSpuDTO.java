@@ -22,11 +22,6 @@ import java.util.List;
 @Setter
 public class CreateSpuDTO {
 
-    /** 款式编码（全局唯一，必填） */
-    @NotBlank(message = "款式编码不能为空")
-    @Size(max = 32, message = "款式编码长度不能超过32个字符")
-    private String code;
-
     /** 款式名称（必填） */
     @NotBlank(message = "款式名称不能为空")
     @Size(max = 128, message = "款式名称长度不能超过128个字符")

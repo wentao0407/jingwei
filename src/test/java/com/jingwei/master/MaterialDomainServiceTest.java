@@ -5,6 +5,7 @@ import com.jingwei.common.domain.model.CommonStatus;
 import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.master.domain.model.*;
 import com.jingwei.master.domain.repository.AttributeDefRepository;
+import com.jingwei.master.domain.repository.CategoryRepository;
 import com.jingwei.master.domain.repository.MaterialRepository;
 import com.jingwei.master.domain.service.MaterialDomainService;
 import org.junit.jupiter.api.DisplayName;
@@ -43,6 +44,9 @@ class MaterialDomainServiceTest {
     @Mock
     private AttributeDefRepository attributeDefRepository;
 
+    @Mock
+    private CategoryRepository categoryRepository;
+
     @InjectMocks
     private MaterialDomainService materialDomainService;
 
@@ -61,6 +65,7 @@ class MaterialDomainServiceTest {
                 "yarnCount", "40S/1"
         );
 
+        mockCategoryLeafCheck();
         when(materialRepository.existsByCode("ML-000001")).thenReturn(false);
         when(attributeDefRepository.selectByMaterialType(MaterialType.FABRIC))
                 .thenReturn(buildFabricAttributeDefs());
@@ -85,6 +90,7 @@ class MaterialDomainServiceTest {
                 "color", "黑色"
         );
 
+        mockCategoryLeafCheck();
         when(materialRepository.existsByCode("ML-000002")).thenReturn(false);
         when(attributeDefRepository.selectByMaterialType(MaterialType.TRIM))
                 .thenReturn(buildTrimAttributeDefs());
@@ -107,6 +113,7 @@ class MaterialDomainServiceTest {
                 "thickness", "5层"
         );
 
+        mockCategoryLeafCheck();
         when(materialRepository.existsByCode("ML-000003")).thenReturn(false);
         when(attributeDefRepository.selectByMaterialType(MaterialType.PACKAGING))
                 .thenReturn(buildPackagingAttributeDefs());
@@ -136,6 +143,7 @@ class MaterialDomainServiceTest {
     @Test
     @DisplayName("创建物料 — 编码重复应抛异常")
     void createMaterial_duplicateCode_shouldThrow() {
+        mockCategoryLeafCheck();
         when(materialRepository.existsByCode("ML-000001")).thenReturn(true);
 
         Material material = buildMaterial("ML-000001", "重复编码", MaterialType.FABRIC, Map.of());
@@ -148,6 +156,7 @@ class MaterialDomainServiceTest {
     @Test
     @DisplayName("创建物料 — 未填必填属性应提示具体缺少哪些字段")
     void createMaterial_missingRequired_shouldTellWhichFields() {
+        mockCategoryLeafCheck();
         when(materialRepository.existsByCode("ML-000001")).thenReturn(false);
         when(attributeDefRepository.selectByMaterialType(MaterialType.FABRIC))
                 .thenReturn(buildFabricAttributeDefs());
@@ -179,6 +188,7 @@ class MaterialDomainServiceTest {
                 )
         );
 
+        mockCategoryLeafCheck();
         when(materialRepository.existsByCode("ML-000001")).thenReturn(false);
         when(attributeDefRepository.selectByMaterialType(MaterialType.FABRIC))
                 .thenReturn(buildFabricAttributeDefs());
@@ -202,6 +212,7 @@ class MaterialDomainServiceTest {
                 )
         );
 
+        mockCategoryLeafCheck();
         when(materialRepository.existsByCode("ML-000001")).thenReturn(false);
         when(attributeDefRepository.selectByMaterialType(MaterialType.FABRIC))
                 .thenReturn(buildFabricAttributeDefs());
@@ -219,6 +230,7 @@ class MaterialDomainServiceTest {
                 "material", "树脂"
         );
 
+        mockCategoryLeafCheck();
         when(materialRepository.existsByCode("ML-000002")).thenReturn(false);
         when(attributeDefRepository.selectByMaterialType(MaterialType.TRIM))
                 .thenReturn(buildTrimAttributeDefs());
@@ -260,9 +272,22 @@ class MaterialDomainServiceTest {
         material.setName(name);
         material.setType(type);
         material.setUnit("米");
+        material.setCategoryId(1L);
         material.setExtAttrs(extAttrs);
         material.setStatus(CommonStatus.ACTIVE);
         return material;
+    }
+
+    /**
+     * 模拟末级分类校验通过（分类存在、启用、无子分类）
+     */
+    private void mockCategoryLeafCheck() {
+        Category category = new Category();
+        category.setId(1L);
+        category.setName("测试分类");
+        category.setStatus(CommonStatus.ACTIVE);
+        when(categoryRepository.selectById(1L)).thenReturn(category);
+        when(categoryRepository.hasChildren(1L)).thenReturn(false);
     }
 
     /**

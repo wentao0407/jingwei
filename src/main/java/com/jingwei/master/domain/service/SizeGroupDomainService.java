@@ -8,6 +8,7 @@ import com.jingwei.master.domain.model.SizeCategory;
 import com.jingwei.master.domain.model.SizeGroup;
 import com.jingwei.master.domain.repository.SizeGroupRepository;
 import com.jingwei.master.domain.repository.SizeRepository;
+import com.jingwei.master.domain.repository.SpuRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -36,8 +37,8 @@ import java.util.List;
  * <p>
  * 设计决策：
  * <ul>
- *   <li>isReferencedBySpu() 目前返回 false（SPU 模块尚未实现），预留了校验钩子，
- *       SPU 模块实现后注入真实查询即可，无需改动本服务</li>
+ *   <li>isReferencedBySpu() 通过 SpuRepository 查询真实 SPU 引用数量，
+ *       用于删除尺码组和修改/删除尺码时的引用保护校验</li>
  *   <li>尺码排序号由前端控制，后端只保证按 sort_order 排序返回</li>
  * </ul>
  * </p>
@@ -51,6 +52,7 @@ public class SizeGroupDomainService {
 
     private final SizeGroupRepository sizeGroupRepository;
     private final SizeRepository sizeRepository;
+    private final SpuRepository spuRepository;
 
     // ==================== 尺码组 CRUD ====================
 
@@ -329,24 +331,14 @@ public class SizeGroupDomainService {
     /**
      * 统计引用该尺码组的 SPU 数量
      * <p>
-     * 当前 SPU 模块尚未实现，返回 0。
-     * SPU 模块实现后，应替换为真实查询（通过注入 SPU 的 Mapper 或 Repository）。
-     * </p>
-     * <p>
-     * 预留此方法而非硬编码 false，好处是：
-     * <ol>
-     *   <li>所有引用检查逻辑集中在此，SPU 实现后只需修改此处</li>
-     *   <li>返回具体数量可用于提示用户"已被N个款式引用"</li>
-     * </ol>
+     * 通过注入 SpuRepository 查询引用该尺码组的 SPU 数量，
+     * 用于删除尺码组和修改/删除尺码时的引用保护校验。
      * </p>
      *
      * @param sizeGroupId 尺码组ID
      * @return 引用该尺码组的 SPU 数量
      */
     private long countSpuReferences(Long sizeGroupId) {
-        // TODO: SPU 模块实现后，注入 SpuMapper 并查询真实引用数量
-        // 示例实现：return spuMapper.selectCount(
-        //     new LambdaQueryWrapper<Spu>().eq(Spu::getSizeGroupId, sizeGroupId));
-        return 0;
+        return spuRepository.countBySizeGroupId(sizeGroupId);
     }
 }

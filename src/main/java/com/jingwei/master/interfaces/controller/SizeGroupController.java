@@ -1,5 +1,6 @@
 package com.jingwei.master.interfaces.controller;
 
+import com.jingwei.common.config.RequirePermission;
 import com.jingwei.common.domain.model.R;
 import com.jingwei.master.application.dto.CreateSizeDTO;
 import com.jingwei.master.application.dto.CreateSizeGroupDTO;
@@ -40,6 +41,7 @@ public class SizeGroupController {
     /**
      * 创建尺码组
      */
+    @RequirePermission("master:sizeGroup:create")
     @PostMapping("/master/size-group/create")
     public R<SizeGroupVO> createSizeGroup(@Valid @RequestBody CreateSizeGroupDTO dto) {
         return R.ok(sizeGroupApplicationService.createSizeGroup(dto));
@@ -48,6 +50,7 @@ public class SizeGroupController {
     /**
      * 更新尺码组
      */
+    @RequirePermission("master:sizeGroup:update")
     @PostMapping("/master/size-group/update")
     public R<SizeGroupVO> updateSizeGroup(@RequestParam Long sizeGroupId,
                                           @Valid @RequestBody UpdateSizeGroupDTO dto) {
@@ -60,6 +63,7 @@ public class SizeGroupController {
      * 被SPU引用的尺码组不可删除，但可停用。
      * </p>
      */
+    @RequirePermission("master:sizeGroup:delete")
     @PostMapping("/master/size-group/delete")
     public R<Void> deleteSizeGroup(@RequestParam Long sizeGroupId) {
         sizeGroupApplicationService.deleteSizeGroup(sizeGroupId);
@@ -91,6 +95,7 @@ public class SizeGroupController {
      * 已被引用的尺码组也允许新增尺码（追加到末尾）。
      * </p>
      */
+    @RequirePermission("master:sizeGroup:create")
     @PostMapping("/master/size-group/size/create")
     public R<SizeVO> createSize(@RequestParam Long sizeGroupId,
                                 @Valid @RequestBody CreateSizeDTO dto) {
@@ -103,6 +108,7 @@ public class SizeGroupController {
      * 已被引用的尺码组内，不可修改尺码编码。
      * </p>
      */
+    @RequirePermission("master:sizeGroup:update")
     @PostMapping("/master/size-group/size/update")
     public R<SizeVO> updateSize(@RequestParam Long sizeId,
                                 @Valid @RequestBody UpdateSizeDTO dto) {
@@ -115,6 +121,7 @@ public class SizeGroupController {
      * 已被引用的尺码组内，不可删除尺码。
      * </p>
      */
+    @RequirePermission("master:sizeGroup:delete")
     @PostMapping("/master/size-group/size/delete")
     public R<Void> deleteSize(@RequestParam Long sizeId) {
         sizeGroupApplicationService.deleteSize(sizeId);

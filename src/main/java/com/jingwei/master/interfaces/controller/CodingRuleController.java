@@ -1,5 +1,6 @@
 package com.jingwei.master.interfaces.controller;
 
+import com.jingwei.common.config.RequirePermission;
 import com.jingwei.common.domain.model.R;
 import com.jingwei.master.application.dto.CreateCodingRuleDTO;
 import com.jingwei.master.application.dto.GenerateCodeDTO;
@@ -36,6 +37,7 @@ public class CodingRuleController {
     /**
      * 创建编码规则
      */
+    @RequirePermission("master:codingRule:create")
     @PostMapping("/master/codingRule/create")
     public R<CodingRuleVO> createRule(@Valid @RequestBody CreateCodingRuleDTO dto) {
         return R.ok(codingRuleApplicationService.createRule(dto));
@@ -44,6 +46,7 @@ public class CodingRuleController {
     /**
      * 更新编码规则
      */
+    @RequirePermission("master:codingRule:update")
     @PostMapping("/master/codingRule/update")
     public R<CodingRuleVO> updateRule(@RequestParam Long ruleId, @Valid @RequestBody UpdateCodingRuleDTO dto) {
         return R.ok(codingRuleApplicationService.updateRule(ruleId, dto));
@@ -52,6 +55,7 @@ public class CodingRuleController {
     /**
      * 删除编码规则（已使用的规则不可删除）
      */
+    @RequirePermission("master:codingRule:delete")
     @PostMapping("/master/codingRule/delete")
     public R<Void> deleteRule(@RequestParam Long ruleId) {
         codingRuleApplicationService.deleteRule(ruleId);
@@ -77,6 +81,7 @@ public class CodingRuleController {
     /**
      * 生成编码（原子递增流水号）
      */
+    @RequirePermission("master:codingRule:generate")
     @PostMapping("/master/codingRule/generate")
     public R<String> generateCode(@Valid @RequestBody GenerateCodeDTO dto) {
         return R.ok(codingRuleApplicationService.generateCode(dto.getRuleCode(), dto.getContext()));

@@ -74,4 +74,11 @@ public class SpuRepositoryImpl implements SpuRepository {
     public int deleteById(Long id) {
         return spuMapper.deleteById(id);
     }
+
+    @Override
+    public long countBySizeGroupId(Long sizeGroupId) {
+        return spuMapper.selectCount(
+                new LambdaQueryWrapper<Spu>()
+                        .eq(Spu::getSizeGroupId, sizeGroupId));
+    }
 }

@@ -10,6 +10,7 @@ import com.jingwei.master.domain.model.ColorWay;
 import com.jingwei.master.domain.model.Sku;
 import com.jingwei.master.domain.model.Spu;
 import com.jingwei.master.domain.model.SpuStatus;
+import com.jingwei.master.domain.service.CodingRuleDomainService;
 import com.jingwei.master.domain.service.SpuDomainService;
 import com.jingwei.master.interfaces.vo.ColorWayVO;
 import com.jingwei.master.interfaces.vo.SkuVO;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 款式应用服务
@@ -31,15 +33,31 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SpuApplicationService {
 
+    /** SPU 编码规则代码，与 V04 迁移脚本中 t_md_coding_rule 的 rule_code 一致 */
+    private static final String SPU_CODE_RULE = "SPU_CODE";
+
     private final SpuDomainService spuDomainService;
+    private final CodingRuleDomainService codingRuleDomainService;
 
     /**
      * 创建款式（含自动生成 Color-way 和 SKU）
+     * <p>
+     * 编排流程：
+     * <ol>
+     *   <li>调用编码规则引擎生成款式编码</li>
+     *   <li>组装 SPU 实体</li>
+     *   <li>调用 DomainService 执行业务校验和持久化</li>
+     * </ol>
+     * </p>
      */
     @Transactional(rollbackFor = Exception.class)
     public SpuVO createSpu(CreateSpuDTO dto) {
+        // 1. 调用编码规则引擎生成款式编码
+        String code = codingRuleDomainService.generateCode(SPU_CODE_RULE, Map.of());
+
+        // 2. 组装实体
         Spu spu = new Spu();
-        spu.setCode(dto.getCode());
+        spu.setCode(code);
         spu.setName(dto.getName());
         spu.setSeasonId(dto.getSeasonId());
         spu.setCategoryId(dto.getCategoryId());

@@ -5,6 +5,7 @@ import com.jingwei.common.domain.model.CommonStatus;
 import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.master.domain.model.*;
 import com.jingwei.master.domain.repository.AttributeDefRepository;
+import com.jingwei.master.domain.repository.CategoryRepository;
 import com.jingwei.master.domain.repository.MaterialRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +45,7 @@ public class MaterialDomainService {
 
     private final MaterialRepository materialRepository;
     private final AttributeDefRepository attributeDefRepository;
+    private final CategoryRepository categoryRepository;
 
     /**
      * 获取物料仓库引用（供 ApplicationService 分页查询使用）
@@ -59,6 +61,7 @@ public class MaterialDomainService {
      * <ol>
      *   <li>物料编码由编码规则引擎生成，不可为空</li>
      *   <li>物料编码不可重复（应用层校验 + 数据库唯一索引兜底）</li>
+     *   <li>物料分类必须存在、启用且为末级分类（无子分类）</li>
      *   <li>ext_attrs 必填属性校验：根据属性定义表检查必填项是否已填写</li>
      *   <li>成分百分比合计必须等于 100%</li>
      * </ol>
@@ -72,6 +75,9 @@ public class MaterialDomainService {
         if (material.getCode() == null || material.getCode().isBlank()) {
             throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED, "物料编码不能为空");
         }
+
+        // 分类校验：必须存在、启用且为末级分类
+        validateCategoryIsLeaf(material.getCategoryId());
 
         // 编码唯一性校验
         if (materialRepository.existsByCode(material.getCode())) {
@@ -118,6 +124,11 @@ public class MaterialDomainService {
         material.setId(materialId);
         material.setCode(existing.getCode());
         material.setType(existing.getType());
+
+        // 如果更换了分类，校验新分类是否为末级
+        if (material.getCategoryId() != null && !material.getCategoryId().equals(existing.getCategoryId())) {
+            validateCategoryIsLeaf(material.getCategoryId());
+        }
 
         // 如果更新了 extAttrs，需要校验必填项和成分
         if (material.getExtAttrs() != null) {
@@ -240,6 +251,34 @@ public class MaterialDomainService {
         // 使用 0.01 容差避免浮点精度问题
         if (Math.abs(total - 100.0) > 0.01) {
             throw new BizException(ErrorCode.COMPOSITION_PERCENT_INVALID);
+        }
+    }
+
+    /**
+     * 校验分类是否为末级分类
+     * <p>
+     * PRD 要求物料创建时必须选择末级分类（无子分类的分类），
+     * 确保按分类筛选、BOM、采购和库存统计口径的一致性。
+     * </p>
+     *
+     * @param categoryId 分类ID
+     */
+    private void validateCategoryIsLeaf(Long categoryId) {
+        if (categoryId == null) {
+            throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED, "物料分类不能为空，必须选择末级分类");
+        }
+
+        Category category = categoryRepository.selectById(categoryId);
+        if (category == null) {
+            throw new BizException(ErrorCode.DATA_NOT_FOUND, "物料分类不存在");
+        }
+
+        if (category.getStatus() == CommonStatus.INACTIVE) {
+            throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED, "物料分类已停用，不可选择");
+        }
+
+        if (categoryRepository.hasChildren(categoryId)) {
+            throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED, "必须选择末级分类，该分类下仍有子分类");
         }
     }
 }

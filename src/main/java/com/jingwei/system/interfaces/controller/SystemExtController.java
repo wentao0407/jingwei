@@ -1,6 +1,7 @@
 package com.jingwei.system.interfaces.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.jingwei.common.config.RequirePermission;
 import com.jingwei.common.domain.model.R;
 import com.jingwei.system.application.dto.*;
 import com.jingwei.system.application.service.SystemExtApplicationService;
@@ -36,6 +37,7 @@ public class SystemExtController {
     /**
      * 为角色配置数据权限（全量替换）
      */
+    @RequirePermission("system:dataScope:config")
     @PostMapping("/system/data-scope/configure")
     public R<Void> configureDataScope(@RequestParam Long roleId,
                                       @Valid @RequestBody BatchDataScopeDTO dto) {
@@ -56,6 +58,7 @@ public class SystemExtController {
     /**
      * 分页查询操作日志
      */
+    @RequirePermission("system:auditLog:query")
     @PostMapping("/system/audit-log/page")
     public R<IPage<AuditLogVO>> pageQueryAuditLog(@Valid @RequestBody AuditLogQueryDTO dto) {
         return R.ok(systemExtApplicationService.pageQueryAuditLog(dto));
@@ -66,6 +69,7 @@ public class SystemExtController {
     /**
      * 创建配置项
      */
+    @RequirePermission("system:config:update")
     @PostMapping("/system/config/create")
     public R<SysConfigVO> createConfig(@Valid @RequestBody CreateSysConfigDTO dto) {
         return R.ok(systemExtApplicationService.createConfig(dto));
@@ -74,6 +78,7 @@ public class SystemExtController {
     /**
      * 更新配置项（需填写修改原因）
      */
+    @RequirePermission("system:config:update")
     @PostMapping("/system/config/update")
     public R<SysConfigVO> updateConfig(@RequestParam Long configId,
                                        @Valid @RequestBody UpdateSysConfigDTO dto) {

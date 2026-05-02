@@ -1,6 +1,7 @@
 package com.jingwei.master.interfaces.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.jingwei.common.config.RequirePermission;
 import com.jingwei.common.domain.model.R;
 import com.jingwei.master.application.dto.CreateMaterialDTO;
 import com.jingwei.master.application.dto.MaterialQueryDTO;
@@ -37,6 +38,7 @@ public class MaterialController {
     /**
      * 创建物料（编码由后端编码规则引擎自动生成）
      */
+    @RequirePermission("master:material:create")
     @PostMapping("/master/material/create")
     public R<MaterialVO> createMaterial(@Valid @RequestBody CreateMaterialDTO dto) {
         return R.ok(materialApplicationService.createMaterial(dto));
@@ -45,6 +47,7 @@ public class MaterialController {
     /**
      * 更新物料（编码和类型不可修改）
      */
+    @RequirePermission("master:material:update")
     @PostMapping("/master/material/update")
     public R<MaterialVO> updateMaterial(@RequestParam Long materialId,
                                         @Valid @RequestBody UpdateMaterialDTO dto) {
@@ -54,6 +57,7 @@ public class MaterialController {
     /**
      * 停用物料（停用后不可在业务单据中选择）
      */
+    @RequirePermission("master:material:deactivate")
     @PostMapping("/master/material/deactivate")
     public R<Void> deactivateMaterial(@RequestParam Long materialId) {
         materialApplicationService.deactivateMaterial(materialId);

@@ -1,6 +1,7 @@
 package com.jingwei.master.application.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,7 +29,8 @@ public class CreateMaterialDTO {
     @NotBlank(message = "物料类型不能为空")
     private String type;
 
-    /** 物料分类ID（可选） */
+    /** 物料分类ID（必填，必须选择末级分类） */
+    @NotNull(message = "物料分类不能为空，必须选择末级分类")
     private Long categoryId;
 
     /** 基本单位（必填，如 米/个/套/件） */
