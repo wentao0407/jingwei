@@ -37,4 +37,16 @@ public interface SysUserRoleRepository {
      * @return 角色ID列表
      */
     List<Long> selectRoleIdsByUserId(Long userId);
+
+    /**
+     * 查询指定角色下的用户ID列表
+     * <p>
+     * 审批引擎使用：根据审批配置中的角色ID，查找该角色下的所有用户，
+     * 为其生成审批待办任务。
+     * </p>
+     *
+     * @param roleId 角色ID
+     * @return 用户ID列表
+     */
+    List<Long> selectUserIdsByRoleId(Long roleId);
 }

@@ -45,4 +45,14 @@ public class SysUserRoleRepositoryImpl implements SysUserRoleRepository {
                 .map(SysUserRole::getRoleId)
                 .toList();
     }
+
+    @Override
+    public List<Long> selectUserIdsByRoleId(Long roleId) {
+        return sysUserRoleMapper.selectList(
+                        new LambdaQueryWrapper<SysUserRole>()
+                                .eq(SysUserRole::getRoleId, roleId)
+                ).stream()
+                .map(SysUserRole::getUserId)
+                .toList();
+    }
 }
