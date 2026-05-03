@@ -1,8 +1,11 @@
 package com.jingwei.order.domain.service;
 
+import com.jingwei.approval.domain.service.ApprovalDomainService;
 import com.jingwei.common.domain.model.BizException;
 import com.jingwei.common.domain.model.ErrorCode;
+import com.jingwei.common.statemachine.StateMachine;
 import com.jingwei.order.domain.model.SalesOrder;
+import com.jingwei.order.domain.model.SalesOrderEvent;
 import com.jingwei.order.domain.model.SalesOrderLine;
 import com.jingwei.order.domain.model.SalesOrderStatus;
 import com.jingwei.order.domain.model.SizeMatrix;
@@ -51,11 +54,19 @@ class SalesOrderDomainServiceTest {
     @Mock
     private SalesOrderLineRepository salesOrderLineRepository;
 
+    @Mock
+    private StateMachine<SalesOrderStatus, SalesOrderEvent> salesOrderStateMachine;
+
+    @Mock
+    private ApprovalDomainService approvalDomainService;
+
     private SalesOrderDomainService service;
 
     @BeforeEach
     void setUp() {
-        service = new SalesOrderDomainService(salesOrderRepository, salesOrderLineRepository);
+        service = new SalesOrderDomainService(
+                salesOrderRepository, salesOrderLineRepository,
+                salesOrderStateMachine, approvalDomainService);
     }
 
     // ==================== 辅助方法 ====================
@@ -275,8 +286,8 @@ class SalesOrderDomainServiceTest {
     class UpdateOrder {
 
         @Test
-        @DisplayName("非DRAFT状态编辑 → 抛异常")
-        void shouldRejectEditWhenNotDraft() {
+        @DisplayName("非DRAFT/REJECTED状态编辑 → 抛异常")
+        void shouldRejectEditWhenNotDraftOrRejected() {
             SalesOrder existing = buildOrder();
             existing.setStatus(SalesOrderStatus.CONFIRMED);
             when(salesOrderRepository.selectById(anyLong())).thenReturn(existing);
@@ -292,6 +303,22 @@ class SalesOrderDomainServiceTest {
         void shouldAllowEditWhenDraft() {
             SalesOrder existing = buildOrder();
             existing.setStatus(SalesOrderStatus.DRAFT);
+            existing.setId(1L);
+            when(salesOrderRepository.selectById(anyLong())).thenReturn(existing);
+            when(salesOrderRepository.updateById(any())).thenReturn(1);
+            when(salesOrderLineRepository.deleteByOrderId(anyLong())).thenReturn(2);
+            when(salesOrderLineRepository.batchInsert(any())).thenReturn(2);
+            when(salesOrderRepository.selectDetailById(anyLong())).thenReturn(existing);
+
+            SalesOrder update = buildOrder();
+            assertDoesNotThrow(() -> service.updateOrder(1L, update, buildTwoLines()));
+        }
+
+        @Test
+        @DisplayName("REJECTED状态编辑 → 成功（驳回后修改再提交）")
+        void shouldAllowEditWhenRejected() {
+            SalesOrder existing = buildOrder();
+            existing.setStatus(SalesOrderStatus.REJECTED);
             existing.setId(1L);
             when(salesOrderRepository.selectById(anyLong())).thenReturn(existing);
             when(salesOrderRepository.updateById(any())).thenReturn(1);

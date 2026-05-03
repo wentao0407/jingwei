@@ -2,6 +2,7 @@ package com.jingwei.order.application.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.jingwei.common.domain.model.UserContext;
 import com.jingwei.master.domain.model.ColorWay;
 import com.jingwei.master.domain.model.Customer;
 import com.jingwei.master.domain.model.Season;
@@ -159,6 +160,49 @@ public class SalesOrderApplicationService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteSalesOrder(Long orderId) {
         salesOrderDomainService.deleteOrder(orderId);
+    }
+
+    /**
+     * 提交订单审批
+     * <p>
+     * DRAFT → PENDING_APPROVAL，触发审批引擎。
+     * 若无审批配置则自动通过，状态直接到 CONFIRMED。
+     * </p>
+     *
+     * @param orderId 订单ID
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void submitOrder(Long orderId) {
+        Long operatorId = UserContext.getUserId();
+        salesOrderDomainService.submitOrder(orderId, operatorId);
+    }
+
+    /**
+     * 修改后重新提交
+     * <p>
+     * REJECTED → PENDING_APPROVAL，触发审批引擎。
+     * </p>
+     *
+     * @param orderId 订单ID
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void resubmitOrder(Long orderId) {
+        Long operatorId = UserContext.getUserId();
+        salesOrderDomainService.resubmitOrder(orderId, operatorId);
+    }
+
+    /**
+     * 取消订单
+     * <p>
+     * DRAFT → CANCELLED 或 CONFIRMED → CANCELLED。
+     * </p>
+     *
+     * @param orderId 订单ID
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelOrder(Long orderId) {
+        Long operatorId = UserContext.getUserId();
+        salesOrderDomainService.cancelOrder(orderId, operatorId);
     }
 
     /**

@@ -60,4 +60,11 @@ public class SalesOrderLineRepositoryImpl implements SalesOrderLineRepository {
         }
         return salesOrderLineMapper.selectCount(wrapper) > 0;
     }
+
+    @Override
+    public boolean existsByOrderId(Long orderId) {
+        return salesOrderLineMapper.selectCount(
+                new LambdaQueryWrapper<SalesOrderLine>()
+                        .eq(SalesOrderLine::getOrderId, orderId)) > 0;
+    }
 }

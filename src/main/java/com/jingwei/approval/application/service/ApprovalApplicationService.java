@@ -15,6 +15,7 @@ import com.jingwei.approval.interfaces.vo.ApprovalTaskVO;
 import com.jingwei.common.domain.model.BizException;
 import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.common.domain.model.UserContext;
+import com.jingwei.order.domain.service.SalesOrderDomainService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,9 +37,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ApprovalApplicationService {
 
+    private static final String SALES_ORDER_TYPE = "SALES_ORDER";
+
     private final ApprovalDomainService domainService;
     private final ApprovalConfigRepository configRepository;
     private final ApprovalTaskRepository taskRepository;
+    private final SalesOrderDomainService salesOrderDomainService;
 
     // ========== 审批配置 CRUD ==========
 
@@ -135,11 +139,26 @@ public class ApprovalApplicationService {
 
     /**
      * 审批操作（通过或驳回）
+     * <p>
+     * 审批完成后，同步更新业务单据状态。
+     * 当前仅处理 SALES_ORDER 类型，其他类型忽略。
+     * TODO: T-40 Outbox 实现后，改为事件驱动，移除对 SalesOrderDomainService 的直接依赖
+     * </p>
      */
     @Transactional
     public void approve(ApproveDTO dto) {
         Long operatorId = UserContext.getUserId();
         domainService.approve(dto.getTaskId(), dto.getApproved(), dto.getOpinion(), operatorId);
+
+        // 审批完成后同步更新销售订单状态（临时直接调用，T-40 后改为 Outbox 事件驱动）
+        ApprovalTask task = taskRepository.selectById(dto.getTaskId());
+        if (task != null && SALES_ORDER_TYPE.equals(task.getBusinessType())) {
+            if (Boolean.TRUE.equals(dto.getApproved())) {
+                salesOrderDomainService.approveOrder(task.getBusinessId(), operatorId);
+            } else {
+                salesOrderDomainService.rejectOrder(task.getBusinessId(), operatorId);
+            }
+        }
     }
 
     // ========== 审批查询 ==========

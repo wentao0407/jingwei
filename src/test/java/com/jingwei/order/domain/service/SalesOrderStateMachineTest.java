@@ -6,6 +6,7 @@ import com.jingwei.common.statemachine.Transition;
 import com.jingwei.common.statemachine.TransitionContext;
 import com.jingwei.order.domain.model.SalesOrderEvent;
 import com.jingwei.order.domain.model.SalesOrderStatus;
+import com.jingwei.order.domain.repository.SalesOrderLineRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,6 +17,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * 销售订单状态机配置单元测试
@@ -45,7 +49,9 @@ class SalesOrderStateMachineTest {
     void setUp() {
         // 使用与 SalesOrderStateMachineConfig 相同的转移规则构建状态机
         // 但不依赖 Spring 容器，直接构造 ConditionEvaluator 和 ActionExecutor
-        SalesOrderConditionEvaluator evaluator = new SalesOrderConditionEvaluator();
+        SalesOrderLineRepository lineRepository = mock(SalesOrderLineRepository.class);
+        when(lineRepository.existsByOrderId(any())).thenReturn(true);
+        SalesOrderConditionEvaluator evaluator = new SalesOrderConditionEvaluator(lineRepository);
         SalesOrderActionExecutor executor = new SalesOrderActionExecutor();
 
         stateMachine = buildSalesOrderStateMachine(evaluator, executor);

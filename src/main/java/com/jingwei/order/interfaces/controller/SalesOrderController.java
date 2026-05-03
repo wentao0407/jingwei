@@ -72,6 +72,47 @@ public class SalesOrderController {
     }
 
     /**
+     * 提交订单审批
+     * <p>
+     * 仅 DRAFT 状态可提交。提交后触发审批引擎，
+     * 若无审批配置则自动通过，状态直接变为 CONFIRMED。
+     * </p>
+     */
+    @RequirePermission("order:sales:submit")
+    @PostMapping("/order/sales/submit")
+    public R<Void> submitOrder(@RequestParam Long orderId) {
+        salesOrderApplicationService.submitOrder(orderId);
+        return R.ok();
+    }
+
+    /**
+     * 修改后重新提交
+     * <p>
+     * 仅 REJECTED 状态可重新提交。提交后触发审批引擎。
+     * </p>
+     */
+    @RequirePermission("order:sales:resubmit")
+    @PostMapping("/order/sales/resubmit")
+    public R<Void> resubmitOrder(@RequestParam Long orderId) {
+        salesOrderApplicationService.resubmitOrder(orderId);
+        return R.ok();
+    }
+
+    /**
+     * 取消订单
+     * <p>
+     * DRAFT 或 CONFIRMED 状态可取消。
+     * CONFIRMED 状态取消需未关联生产订单。
+     * </p>
+     */
+    @RequirePermission("order:sales:cancel")
+    @PostMapping("/order/sales/cancel")
+    public R<Void> cancelOrder(@RequestParam Long orderId) {
+        salesOrderApplicationService.cancelOrder(orderId);
+        return R.ok();
+    }
+
+    /**
      * 查询订单详情（含矩阵展开）
      * <p>
      * 返回订单主表信息、订单行列表及尺码矩阵数据，

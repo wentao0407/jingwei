@@ -5,6 +5,8 @@ import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.common.statemachine.TransitionContext;
 import com.jingwei.order.domain.model.SalesOrderEvent;
 import com.jingwei.order.domain.model.SalesOrderStatus;
+import com.jingwei.order.domain.repository.SalesOrderLineRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -16,45 +18,42 @@ import org.springframework.stereotype.Component;
  * 不满足时直接抛出 {@link BizException}，携带具体业务原因。
  * </p>
  * <p>
- * 当前阶段（T-17）销售订单 CRUD 尚未实现（T-19），条件方法使用预留钩子：
+ * 条件实现状态：
  * <ul>
- *   <li>hasOrderLines — 预留，检查订单是否有明细行</li>
- *   <li>hasLinkedProductionOrder — 预留，检查是否已关联生产订单</li>
- *   <li>hasNoLinkedProductionOrder — 预留，检查是否未关联生产订单</li>
- *   <li>allStockFulfilled — 预留，检查所有SKU库存是否满足</li>
- *   <li>partialStockFulfilled — 预留，检查是否有部分库存满足</li>
- *   <li>hasOutboundOrder — 预留，检查是否已创建出库单</li>
+ *   <li>hasOrderLines — 已实现，查询 SalesOrderLineRepository</li>
+ *   <li>hasLinkedProductionOrder — 预留，待 T-24 订单转化实现</li>
+ *   <li>hasNoLinkedProductionOrder — 预留，待 T-24 订单转化实现</li>
+ *   <li>allStockFulfilled — 预留，待 T-29/T-30 库存管理实现</li>
+ *   <li>partialStockFulfilled — 预留，待 T-29/T-30 库存管理实现</li>
+ *   <li>hasOutboundOrder — 预留，待 T-31 出入库单实现</li>
  * </ul>
- * 待 T-19/T-20/T-22/T-24 实现后替换为真实逻辑。
  * </p>
  *
  * @author JingWei
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class SalesOrderConditionEvaluator {
+
+    private final SalesOrderLineRepository salesOrderLineRepository;
 
     /**
      * 检查订单是否有明细行
      * <p>
-     * 用于：DRAFT → PENDING_APPROVAL（提交审批）的前置条件。
+     * 用于：DRAFT → PENDING_APPROVAL（提交审批）和 REJECTED → PENDING_APPROVAL（重新提交）的前置条件。
      * 没有明细行的订单没有业务意义，不允许提交。
-     * </p>
-     * <p>
-     * TODO: T-19 实现后替换为 SalesOrderRepository 查询真实数据
      * </p>
      *
      * @param context 转移上下文，businessId 为订单ID
      * @return true 表示有明细行
-     * @throws BizException 无明细行时抛出，携带具体提示
+     * @throws BizException 无明细行时抛出
      */
     public boolean hasOrderLines(TransitionContext<SalesOrderStatus, SalesOrderEvent> context) {
-        // 预留钩子：T-19 销售订单 CRUD 实现后，从 Repository 查询
-        // SalesOrder order = salesOrderRepository.findById(context.getBusinessId());
-        // if (order == null || order.getLines().isEmpty()) {
-        //     throw new BizException(ErrorCode.ORDER_LINE_EMPTY);
-        // }
-        log.debug("[预留] hasOrderLines 检查, orderId={}", context.getBusinessId());
+        boolean hasLines = salesOrderLineRepository.existsByOrderId(context.getBusinessId());
+        if (!hasLines) {
+            throw new BizException(ErrorCode.ORDER_LINE_EMPTY);
+        }
         return true;
     }
 

@@ -1,8 +1,12 @@
 package com.jingwei.order.domain.service;
 
+import com.jingwei.approval.domain.service.ApprovalDomainService;
 import com.jingwei.common.domain.model.BizException;
 import com.jingwei.common.domain.model.ErrorCode;
+import com.jingwei.common.statemachine.StateMachine;
+import com.jingwei.common.statemachine.TransitionContext;
 import com.jingwei.order.domain.model.SalesOrder;
+import com.jingwei.order.domain.model.SalesOrderEvent;
 import com.jingwei.order.domain.model.SalesOrderLine;
 import com.jingwei.order.domain.model.SalesOrderStatus;
 import com.jingwei.order.domain.model.SizeMatrix;
@@ -29,6 +33,7 @@ import java.util.Set;
  *   <li>尺码矩阵校验（矩阵数据完整性）</li>
  *   <li>金额自动计算（行金额、行实际金额、订单总金额）</li>
  *   <li>订单状态校验（只有 DRAFT 状态可编辑）</li>
+ *   <li>状态流转（通过状态机引擎驱动）</li>
  * </ul>
  * </p>
  * <p>
@@ -41,6 +46,8 @@ import java.util.Set;
  *   <li>订单总金额 = 所有行实际金额之和</li>
  *   <li>只有 DRAFT 状态允许编辑</li>
  *   <li>创建时必须有至少一行明细</li>
+ *   <li>状态流转通过状态机引擎驱动，保证转移合法性</li>
+ *   <li>提交和重新提交时调用审批引擎，自动通过则直接推进状态</li>
  * </ul>
  * </p>
  *
@@ -51,8 +58,12 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class SalesOrderDomainService {
 
+    private static final String SALES_ORDER_APPROVAL_TYPE = "SALES_ORDER";
+
     private final SalesOrderRepository salesOrderRepository;
     private final SalesOrderLineRepository salesOrderLineRepository;
+    private final StateMachine<SalesOrderStatus, SalesOrderEvent> salesOrderStateMachine;
+    private final ApprovalDomainService approvalDomainService;
 
     /**
      * 获取仓库引用（供 ApplicationService 分页查询使用）
@@ -145,9 +156,10 @@ public class SalesOrderDomainService {
             throw new BizException(ErrorCode.DATA_NOT_FOUND, "销售订单不存在");
         }
 
-        // 只有 DRAFT 状态可编辑
-        if (existing.getStatus() != SalesOrderStatus.DRAFT) {
-            throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED, "只有草稿状态的订单允许编辑");
+        // 只有 DRAFT 和 REJECTED 状态可编辑（驳回后需修改再重新提交）
+        if (existing.getStatus() != SalesOrderStatus.DRAFT
+                && existing.getStatus() != SalesOrderStatus.REJECTED) {
+            throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED, "只有草稿或驳回状态的订单允许编辑");
         }
 
         // 至少一行明细
@@ -226,6 +238,141 @@ public class SalesOrderDomainService {
             throw new BizException(ErrorCode.DATA_NOT_FOUND, "销售订单不存在");
         }
         return order;
+    }
+
+    // ==================== 状态流转方法 ====================
+
+    /**
+     * 提交订单审批
+     * <p>
+     * 流程：DRAFT → PENDING_APPROVAL，触发审批引擎。
+     * 若审批配置不存在或未启用，自动通过，状态直接推进到 CONFIRMED。
+     * </p>
+     *
+     * @param orderId    订单ID
+     * @param operatorId 操作人ID
+     */
+    public void submitOrder(Long orderId, Long operatorId) {
+        SalesOrder order = getExistingOrder(orderId);
+        TransitionContext<SalesOrderStatus, SalesOrderEvent> ctx = buildContext(orderId, operatorId);
+
+        // 状态机校验 + 转移：DRAFT → PENDING_APPROVAL
+        SalesOrderStatus newStatus = salesOrderStateMachine.fireEvent(
+                order.getStatus(), SalesOrderEvent.SUBMIT, ctx);
+        order.setStatus(newStatus);
+        salesOrderRepository.updateById(order);
+
+        // 调用审批引擎
+        boolean needApproval = approvalDomainService.submitForApproval(
+                SALES_ORDER_APPROVAL_TYPE, orderId, order.getOrderNo(), operatorId);
+
+        if (!needApproval) {
+            // 自动通过：PENDING_APPROVAL → CONFIRMED
+            approveOrder(orderId, operatorId);
+        }
+
+        log.info("提交销售订单审批: orderId={}, orderNo={}, needApproval={}",
+                orderId, order.getOrderNo(), needApproval);
+    }
+
+    /**
+     * 审批通过
+     * <p>
+     * 流程：PENDING_APPROVAL → CONFIRMED，触发库存预留（Outbox 预留）。
+     * 由审批引擎回调调用。
+     * </p>
+     *
+     * @param orderId    订单ID
+     * @param operatorId 操作人ID
+     */
+    public void approveOrder(Long orderId, Long operatorId) {
+        SalesOrder order = getExistingOrder(orderId);
+        TransitionContext<SalesOrderStatus, SalesOrderEvent> ctx = buildContext(orderId, operatorId);
+
+        SalesOrderStatus newStatus = salesOrderStateMachine.fireEvent(
+                order.getStatus(), SalesOrderEvent.APPROVE, ctx);
+        order.setStatus(newStatus);
+        salesOrderRepository.updateById(order);
+
+        log.info("销售订单审批通过: orderId={}, orderNo={}", orderId, order.getOrderNo());
+    }
+
+    /**
+     * 审批驳回
+     * <p>
+     * 流程：PENDING_APPROVAL → REJECTED。
+     * 由审批引擎回调调用。
+     * </p>
+     *
+     * @param orderId    订单ID
+     * @param operatorId 操作人ID
+     */
+    public void rejectOrder(Long orderId, Long operatorId) {
+        SalesOrder order = getExistingOrder(orderId);
+        TransitionContext<SalesOrderStatus, SalesOrderEvent> ctx = buildContext(orderId, operatorId);
+
+        SalesOrderStatus newStatus = salesOrderStateMachine.fireEvent(
+                order.getStatus(), SalesOrderEvent.REJECT, ctx);
+        order.setStatus(newStatus);
+        salesOrderRepository.updateById(order);
+
+        log.info("销售订单审批驳回: orderId={}, orderNo={}", orderId, order.getOrderNo());
+    }
+
+    /**
+     * 修改后重新提交
+     * <p>
+     * 流程：REJECTED → PENDING_APPROVAL，触发审批引擎。
+     * 若自动通过则直接推进到 CONFIRMED。
+     * </p>
+     *
+     * @param orderId    订单ID
+     * @param operatorId 操作人ID
+     */
+    public void resubmitOrder(Long orderId, Long operatorId) {
+        SalesOrder order = getExistingOrder(orderId);
+        TransitionContext<SalesOrderStatus, SalesOrderEvent> ctx = buildContext(orderId, operatorId);
+
+        SalesOrderStatus newStatus = salesOrderStateMachine.fireEvent(
+                order.getStatus(), SalesOrderEvent.RESUBMIT, ctx);
+        order.setStatus(newStatus);
+        salesOrderRepository.updateById(order);
+
+        // 调用审批引擎
+        boolean needApproval = approvalDomainService.submitForApproval(
+                SALES_ORDER_APPROVAL_TYPE, orderId, order.getOrderNo(), operatorId);
+
+        if (!needApproval) {
+            approveOrder(orderId, operatorId);
+        }
+
+        log.info("销售订单重新提交: orderId={}, orderNo={}, needApproval={}",
+                orderId, order.getOrderNo(), needApproval);
+    }
+
+    /**
+     * 取消订单
+     * <p>
+     * 流程：
+     * <ul>
+     *   <li>DRAFT → CANCELLED（直接取消）</li>
+     *   <li>CONFIRMED → CANCELLED（释放库存预留，前提：未关联生产订单）</li>
+     * </ul>
+     * </p>
+     *
+     * @param orderId    订单ID
+     * @param operatorId 操作人ID
+     */
+    public void cancelOrder(Long orderId, Long operatorId) {
+        SalesOrder order = getExistingOrder(orderId);
+        TransitionContext<SalesOrderStatus, SalesOrderEvent> ctx = buildContext(orderId, operatorId);
+
+        SalesOrderStatus newStatus = salesOrderStateMachine.fireEvent(
+                order.getStatus(), SalesOrderEvent.CANCEL, ctx);
+        order.setStatus(newStatus);
+        salesOrderRepository.updateById(order);
+
+        log.info("销售订单已取消: orderId={}, orderNo={}", orderId, order.getOrderNo());
     }
 
     // ==================== 私有方法 ====================
@@ -335,5 +482,30 @@ public class SalesOrderDomainService {
         order.setTotalAmount(totalAmount);
         order.setDiscountAmount(discountAmount);
         order.setActualAmount(actualAmount);
+    }
+
+    /**
+     * 查询已存在的订单（不存在则抛异常）
+     *
+     * @param orderId 订单ID
+     * @return 订单实体
+     */
+    private SalesOrder getExistingOrder(Long orderId) {
+        SalesOrder order = salesOrderRepository.selectById(orderId);
+        if (order == null) {
+            throw new BizException(ErrorCode.DATA_NOT_FOUND, "销售订单不存在");
+        }
+        return order;
+    }
+
+    /**
+     * 构建状态转移上下文
+     *
+     * @param orderId    订单ID
+     * @param operatorId 操作人ID
+     * @return 转移上下文
+     */
+    private TransitionContext<SalesOrderStatus, SalesOrderEvent> buildContext(Long orderId, Long operatorId) {
+        return new TransitionContext<>(orderId, operatorId);
     }
 }

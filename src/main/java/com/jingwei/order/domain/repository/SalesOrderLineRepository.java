@@ -48,4 +48,12 @@ public interface SalesOrderLineRepository {
      * @return true=已存在
      */
     boolean existsBySpuAndColor(Long orderId, Long spuId, Long colorWayId, Long excludeLineId);
+
+    /**
+     * 检查订单是否有明细行
+     *
+     * @param orderId 订单ID
+     * @return true=有明细行
+     */
+    boolean existsByOrderId(Long orderId);
 }

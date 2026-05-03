@@ -2,8 +2,6 @@ package com.jingwei.order.domain.service;
 
 import com.jingwei.common.statemachine.StateMachine;
 import com.jingwei.common.statemachine.Transition;
-import com.jingwei.common.statemachine.TransitionContext;
-import com.jingwei.common.statemachine.TransitionListener;
 import com.jingwei.order.domain.model.SalesOrderEvent;
 import com.jingwei.order.domain.model.SalesOrderStatus;
 import lombok.extern.slf4j.Slf4j;
@@ -58,7 +56,8 @@ public class SalesOrderStateMachineConfig {
     @Bean
     public StateMachine<SalesOrderStatus, SalesOrderEvent> salesOrderStateMachine(
             SalesOrderConditionEvaluator conditionEvaluator,
-            SalesOrderActionExecutor actionExecutor) {
+            SalesOrderActionExecutor actionExecutor,
+            SalesOrderChangeLogListener changeLogListener) {
 
         StateMachine<SalesOrderStatus, SalesOrderEvent> sm =
                 StateMachine.<SalesOrderStatus, SalesOrderEvent>builder("SALES_ORDER")
@@ -160,19 +159,7 @@ public class SalesOrderStateMachineConfig {
                         .build();
 
         // 注册监听器：每次状态转移后自动记录变更日志
-        sm.addListener(new TransitionListener<SalesOrderStatus, SalesOrderEvent>() {
-            @Override
-            public void afterTransition(SalesOrderStatus from, SalesOrderStatus to,
-                                        SalesOrderEvent event, TransitionContext<SalesOrderStatus, SalesOrderEvent> ctx) {
-                // TODO: T-21 变更日志实现后，调用 changeLogService 记录
-                // changeLogService.log("SALES", ctx.getBusinessId(), ctx.getBusinessLineId(),
-                //     "STATUS_CHANGE", "status", from.name(), to.name(),
-                //     event.name(), ctx.getOperatorId());
-                log.info("[变更日志] 销售订单状态变更: orderId={}, {} → {}, event={}, operatorId={}",
-                        ctx.getBusinessId(), from.getLabel(), to.getLabel(),
-                        event.getLabel(), ctx.getOperatorId());
-            }
-        });
+        sm.addListener(changeLogListener);
 
         return sm;
     }
