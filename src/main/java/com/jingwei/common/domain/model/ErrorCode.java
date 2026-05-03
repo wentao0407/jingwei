@@ -88,6 +88,8 @@ public enum ErrorCode {
     ORDER_LINE_DUPLICATE(30003, "同一订单中不能添加重复的款式和颜色"),
     /** 订单已关联生产订单 */
     ORDER_LINKED_PRODUCTION(30004, "订单已关联生产订单"),
+    /** 订单行信息不完整 */
+    ORDER_LINE_INCOMPLETE(30005, "订单行信息不完整"),
 
     // ========== 采购管理模块 40xxx ==========
     /** BOM已引用，不可删除 */

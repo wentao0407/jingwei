@@ -2,6 +2,7 @@ package com.jingwei.order.domain.service;
 
 import com.jingwei.common.domain.model.BizException;
 import com.jingwei.common.domain.model.ErrorCode;
+import com.jingwei.common.statemachine.StateMachine;
 import com.jingwei.order.domain.model.*;
 import com.jingwei.order.domain.repository.ProductionOrderLineRepository;
 import com.jingwei.order.domain.repository.ProductionOrderRepository;
@@ -43,13 +44,15 @@ class ProductionOrderDomainServiceTest {
     private ProductionOrderRepository productionOrderRepository;
     @Mock
     private ProductionOrderLineRepository productionOrderLineRepository;
+    @Mock
+    private StateMachine<ProductionOrderStatus, ProductionOrderEvent> stateMachine;
 
     private ProductionOrderDomainService service;
 
     @BeforeEach
     void setUp() {
         service = new ProductionOrderDomainService(
-                productionOrderRepository, productionOrderLineRepository);
+                productionOrderRepository, productionOrderLineRepository, stateMachine);
     }
 
     // ==================== 辅助方法 ====================

@@ -2,7 +2,11 @@ package com.jingwei.order.domain.service;
 
 import com.jingwei.common.domain.model.BizException;
 import com.jingwei.common.domain.model.ErrorCode;
+import com.jingwei.common.statemachine.StateMachine;
+import com.jingwei.common.statemachine.TransitionContext;
+import com.jingwei.common.statemachine.Transition;
 import com.jingwei.order.domain.model.ProductionOrder;
+import com.jingwei.order.domain.model.ProductionOrderEvent;
 import com.jingwei.order.domain.model.ProductionOrderLine;
 import com.jingwei.order.domain.model.ProductionOrderStatus;
 import com.jingwei.order.domain.repository.ProductionOrderLineRepository;
@@ -11,11 +15,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 生产订单领域服务
@@ -42,6 +49,7 @@ public class ProductionOrderDomainService {
 
     private final ProductionOrderRepository productionOrderRepository;
     private final ProductionOrderLineRepository productionOrderLineRepository;
+    private final StateMachine<ProductionOrderStatus, ProductionOrderEvent> productionOrderStateMachine;
 
     /**
      * 获取仓库引用（供 ApplicationService 分页查询使用）
@@ -264,6 +272,145 @@ public class ProductionOrderDomainService {
             productionOrderRepository.updateById(order);
             log.info("生产订单主表状态更新: orderId={}, newStatus={}", orderId, mostBehind.getLabel());
         }
+    }
+
+    /**
+     * 触发主表状态转移
+     * <p>
+     * 适用于整个订单级别的状态变更（如 DRAFT → RELEASED、RELEASED → PLANNED）。
+     * 行级别的状态变更使用 {@link #fireLineEvent(Long, Long, ProductionOrderEvent, Long)}。
+     * </p>
+     *
+     * @param orderId    订单ID
+     * @param event      触发事件
+     * @param operatorId 操作人ID
+     */
+    @Transactional
+    public void fireEvent(Long orderId, ProductionOrderEvent event, Long operatorId) {
+        // 行级事件必须通过 fireLineEvent 触发，否则会破坏"主表状态取所有行最滞后"的设计
+        if (!event.isOrderLevel()) {
+            throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED,
+                    "事件[" + event.getLabel() + "]为行级事件，请通过行级别接口触发");
+        }
+
+        ProductionOrder order = productionOrderRepository.selectById(orderId);
+        if (order == null) {
+            throw new BizException(ErrorCode.DATA_NOT_FOUND, "生产订单不存在");
+        }
+
+        // 构建上下文
+        TransitionContext<ProductionOrderStatus, ProductionOrderEvent> context =
+                new TransitionContext<>(orderId, operatorId);
+
+        // 执行状态转移
+        ProductionOrderStatus newStatus = productionOrderStateMachine.fireEvent(order.getStatus(), event, context);
+
+        // 更新订单状态
+        order.setStatus(newStatus);
+        productionOrderRepository.updateById(order);
+
+        log.info("生产订单状态转移: orderId={}, {} → {}, event={}",
+                orderId, order.getStatus().getLabel(), newStatus.getLabel(), event.getLabel());
+    }
+
+    /**
+     * 触发行级别状态转移
+     * <p>
+     * 生产订单每行有独立状态，允许同一订单中不同颜色处于不同生产阶段。
+     * 行状态变更后，自动重新计算主表状态（取最滞后状态）。
+     * </p>
+     *
+     * @param orderId    订单ID
+     * @param lineId     行ID
+     * @param event      触发事件
+     * @param operatorId 操作人ID
+     */
+    @Transactional
+    public void fireLineEvent(Long orderId, Long lineId, ProductionOrderEvent event, Long operatorId) {
+        ProductionOrder order = productionOrderRepository.selectById(orderId);
+        if (order == null) {
+            throw new BizException(ErrorCode.DATA_NOT_FOUND, "生产订单不存在");
+        }
+
+        ProductionOrderLine line = productionOrderLineRepository.selectById(lineId);
+        if (line == null || !line.getOrderId().equals(orderId)) {
+            throw new BizException(ErrorCode.DATA_NOT_FOUND, "订单行不存在");
+        }
+
+        // 构建上下文，携带行ID供条件评估器使用
+        TransitionContext<ProductionOrderStatus, ProductionOrderEvent> context =
+                new TransitionContext<>(orderId, operatorId);
+        context.withParam("lineId", lineId);
+
+        // 执行状态转移
+        ProductionOrderStatus newStatus = productionOrderStateMachine.fireEvent(line.getStatus(), event, context);
+
+        // 更新行状态
+        line.setStatus(newStatus);
+        productionOrderLineRepository.updateById(line);
+
+        log.info("生产订单行状态转移: orderId={}, lineId={}, {} → {}, event={}",
+                orderId, lineId, line.getStatus().getLabel(), newStatus.getLabel(), event.getLabel());
+
+        // 重新计算主表状态
+        recalculateMainStatus(orderId);
+    }
+
+    /**
+     * 查询主表当前可执行的操作
+     * <p>
+     * 前端据此渲染操作按钮，如 DRAFT 状态显示"下达"按钮。
+     * </p>
+     *
+     * @param orderId 订单ID
+     * @return 可用操作列表
+     */
+    public List<Map<String, String>> getAvailableActions(Long orderId) {
+        ProductionOrder order = productionOrderRepository.selectById(orderId);
+        if (order == null) {
+            throw new BizException(ErrorCode.DATA_NOT_FOUND, "生产订单不存在");
+        }
+
+        List<Transition<ProductionOrderStatus, ProductionOrderEvent>> transitions =
+                productionOrderStateMachine.getAvailableTransitions(order.getStatus());
+
+        return transitions.stream()
+                .map(t -> Map.of(
+                        "event", t.getEvent().name(),
+                        "label", t.getEvent().getLabel(),
+                        "description", t.getDescription() != null ? t.getDescription() : "",
+                        "targetStatus", t.getTarget().name()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 查询行当前可执行的操作
+     * <p>
+     * 前端据此渲染行级别的操作按钮。
+     * </p>
+     *
+     * @param orderId 订单ID
+     * @param lineId  行ID
+     * @return 可用操作列表
+     */
+    public List<Map<String, String>> getLineAvailableActions(Long orderId, Long lineId) {
+        ProductionOrderLine line = productionOrderLineRepository.selectById(lineId);
+        if (line == null || !line.getOrderId().equals(orderId)) {
+            throw new BizException(ErrorCode.DATA_NOT_FOUND, "订单行不存在");
+        }
+
+        List<Transition<ProductionOrderStatus, ProductionOrderEvent>> transitions =
+                productionOrderStateMachine.getAvailableTransitions(line.getStatus());
+
+        return transitions.stream()
+                .map(t -> Map.of(
+                        "event", t.getEvent().name(),
+                        "label", t.getEvent().getLabel(),
+                        "description", t.getDescription() != null ? t.getDescription() : "",
+                        "targetStatus", t.getTarget().name()
+                ))
+                .collect(Collectors.toList());
     }
 
     // ==================== 私有方法 ====================

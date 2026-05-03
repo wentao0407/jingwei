@@ -11,10 +11,13 @@ import com.jingwei.master.domain.repository.ColorWayRepository;
 import com.jingwei.master.domain.repository.SpuRepository;
 import com.jingwei.master.domain.service.CodingRuleDomainService;
 import com.jingwei.order.application.dto.CreateProductionOrderDTO;
+import com.jingwei.order.application.dto.FireProductionLineEventDTO;
+import com.jingwei.order.application.dto.FireProductionOrderEventDTO;
 import com.jingwei.order.application.dto.ProductionOrderLineCreateDTO;
 import com.jingwei.order.application.dto.ProductionOrderQueryDTO;
 import com.jingwei.order.application.dto.UpdateProductionOrderDTO;
 import com.jingwei.order.domain.model.ProductionOrder;
+import com.jingwei.order.domain.model.ProductionOrderEvent;
 import com.jingwei.order.domain.model.ProductionOrderLine;
 import com.jingwei.order.domain.model.ProductionOrderStatus;
 import com.jingwei.order.domain.model.SizeMatrix;
@@ -119,6 +122,51 @@ public class ProductionOrderApplicationService {
                         dto.getPlanDateStart(), dto.getPlanDateEnd());
 
         return orderPage.convert(this::toProductionOrderVO);
+    }
+
+    /**
+     * 触发主表状态转移
+     *
+     * @param dto 状态机事件触发 DTO
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void fireOrderEvent(FireProductionOrderEventDTO dto) {
+        Long operatorId = UserContext.getUserId();
+        ProductionOrderEvent event = ProductionOrderEvent.valueOf(dto.getEvent());
+        productionOrderDomainService.fireEvent(dto.getOrderId(), event, operatorId);
+    }
+
+    /**
+     * 触发行级别状态转移
+     *
+     * @param dto 行状态机事件触发 DTO
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void fireLineEvent(FireProductionLineEventDTO dto) {
+        Long operatorId = UserContext.getUserId();
+        ProductionOrderEvent event = ProductionOrderEvent.valueOf(dto.getEvent());
+        productionOrderDomainService.fireLineEvent(dto.getOrderId(), dto.getLineId(), event, operatorId);
+    }
+
+    /**
+     * 查询主表可用操作
+     *
+     * @param orderId 订单ID
+     * @return 可用操作列表
+     */
+    public List<Map<String, String>> getAvailableActions(Long orderId) {
+        return productionOrderDomainService.getAvailableActions(orderId);
+    }
+
+    /**
+     * 查询行可用操作
+     *
+     * @param orderId 订单ID
+     * @param lineId  行ID
+     * @return 可用操作列表
+     */
+    public List<Map<String, String>> getLineAvailableActions(Long orderId, Long lineId) {
+        return productionOrderDomainService.getLineAvailableActions(orderId, lineId);
     }
 
     // ==================== 私有方法 ====================
