@@ -295,7 +295,6 @@ class ApprovalDomainServiceTest {
             config.setConfigName("测试");
             config.setApprovalMode(ApprovalMode.SINGLE);
             config.setApproverRoleIds(List.of(1L, 2L));
-            when(configRepository.existsByBusinessType("TEST")).thenReturn(false);
 
             BizException ex = assertThrows(BizException.class, () ->
                     domainService.validateConfigOnCreate(config));

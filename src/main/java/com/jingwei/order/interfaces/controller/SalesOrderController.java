@@ -1,0 +1,96 @@
+package com.jingwei.order.interfaces.controller;
+
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.jingwei.common.config.RequirePermission;
+import com.jingwei.common.domain.model.R;
+import com.jingwei.order.application.dto.CreateSalesOrderDTO;
+import com.jingwei.order.application.dto.SalesOrderQueryDTO;
+import com.jingwei.order.application.dto.UpdateSalesOrderDTO;
+import com.jingwei.order.application.service.SalesOrderApplicationService;
+import com.jingwei.order.interfaces.vo.SalesOrderVO;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 销售订单 Controller
+ * <p>
+ * 提供销售订单的 CRUD 接口。
+ * 所有接口统一使用 POST 方法。
+ * </p>
+ *
+ * @author JingWei
+ */
+@Slf4j
+@RestController
+@RequiredArgsConstructor
+public class SalesOrderController {
+
+    private final SalesOrderApplicationService salesOrderApplicationService;
+
+    /**
+     * 创建销售订单
+     * <p>
+     * 订单编号由编码规则引擎自动生成（格式：SO-年月-5位流水号），
+     * 状态默认 DRAFT，收款状态默认 UNPAID。
+     * </p>
+     */
+    @RequirePermission("order:sales:create")
+    @PostMapping("/order/sales/create")
+    public R<SalesOrderVO> createSalesOrder(@Valid @RequestBody CreateSalesOrderDTO dto) {
+        return R.ok(salesOrderApplicationService.createSalesOrder(dto));
+    }
+
+    /**
+     * 编辑草稿订单
+     * <p>
+     * 仅 DRAFT 状态的订单允许编辑，采用全量替换策略。
+     * </p>
+     */
+    @RequirePermission("order:sales:update")
+    @PostMapping("/order/sales/update")
+    public R<SalesOrderVO> updateSalesOrder(@RequestParam Long orderId,
+                                             @Valid @RequestBody UpdateSalesOrderDTO dto) {
+        return R.ok(salesOrderApplicationService.updateSalesOrder(orderId, dto));
+    }
+
+    /**
+     * 删除草稿订单
+     * <p>
+     * 仅 DRAFT 状态的订单允许删除。
+     * </p>
+     */
+    @RequirePermission("order:sales:delete")
+    @PostMapping("/order/sales/delete")
+    public R<Void> deleteSalesOrder(@RequestParam Long orderId) {
+        salesOrderApplicationService.deleteSalesOrder(orderId);
+        return R.ok();
+    }
+
+    /**
+     * 查询订单详情（含矩阵展开）
+     * <p>
+     * 返回订单主表信息、订单行列表及尺码矩阵数据，
+     * 同时补充客户名称、季节名称、款式名称等冗余展示信息。
+     * </p>
+     */
+    @PostMapping("/order/sales/detail")
+    public R<SalesOrderVO> getSalesOrderDetail(@RequestParam Long orderId) {
+        return R.ok(salesOrderApplicationService.getSalesOrderDetail(orderId));
+    }
+
+    /**
+     * 分页查询销售订单
+     * <p>
+     * 支持按状态、客户、季节、订单编号、订单日期范围筛选。
+     * </p>
+     */
+    @PostMapping("/order/sales/page")
+    public R<IPage<SalesOrderVO>> pageQuery(@Valid @RequestBody SalesOrderQueryDTO dto) {
+        return R.ok(salesOrderApplicationService.pageQuery(dto));
+    }
+}

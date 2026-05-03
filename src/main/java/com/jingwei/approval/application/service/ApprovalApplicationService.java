@@ -127,7 +127,7 @@ public class ApprovalApplicationService {
      */
     @Transactional
     public boolean submitForApproval(SubmitApprovalDTO dto) {
-        Long operatorId = UserContext.getCurrentUserId();
+        Long operatorId = UserContext.getUserId();
         return domainService.submitForApproval(
                 dto.getBusinessType(), dto.getBusinessId(),
                 dto.getBusinessNo(), operatorId);
@@ -138,7 +138,7 @@ public class ApprovalApplicationService {
      */
     @Transactional
     public void approve(ApproveDTO dto) {
-        Long operatorId = UserContext.getCurrentUserId();
+        Long operatorId = UserContext.getUserId();
         domainService.approve(dto.getTaskId(), dto.getApproved(), dto.getOpinion(), operatorId);
     }
 
@@ -148,7 +148,7 @@ public class ApprovalApplicationService {
      * 查询当前用户的待办审批列表
      */
     public List<ApprovalTaskVO> listMyPendingTasks() {
-        Long currentUserId = UserContext.getCurrentUserId();
+        Long currentUserId = UserContext.getUserId();
         return taskRepository.selectPendingByApproverId(currentUserId).stream()
                 .map(this::toTaskVO)
                 .toList();
