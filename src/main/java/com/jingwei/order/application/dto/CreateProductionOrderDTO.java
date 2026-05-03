@@ -1,6 +1,7 @@
 package com.jingwei.order.application.dto;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -22,6 +23,7 @@ public class CreateProductionOrderDTO {
 
     /** 来源类型：MANUAL=独立创建，SALES_ORDER=从销售订单转化 */
     @NotNull(message = "来源类型不能为空")
+    @Pattern(regexp = "^(MANUAL|SALES_ORDER)$", message = "来源类型只能是 MANUAL 或 SALES_ORDER")
     private String sourceType;
 
     /** 车间ID */

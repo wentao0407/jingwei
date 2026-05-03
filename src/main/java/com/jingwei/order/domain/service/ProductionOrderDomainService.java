@@ -95,8 +95,8 @@ public class ProductionOrderDomainService {
             }
         }
 
-        // 4. 计算订单汇总
-        calculateOrderSummary(order, lines);
+        // 4. 初始化订单汇总（创建时进度字段归零）
+        initOrderSummary(order, lines);
 
         // 5. 主表状态默认 DRAFT
         order.setStatus(ProductionOrderStatus.DRAFT);
@@ -169,7 +169,8 @@ public class ProductionOrderDomainService {
             }
         }
 
-        calculateOrderSummary(order, lines);
+        // 编辑时只重算总数量，保留已完成/已入库进度
+        recalculateTotalQuantity(order, lines);
 
         // 保留不可修改的字段
         order.setId(orderId);
@@ -281,14 +282,24 @@ public class ProductionOrderDomainService {
     }
 
     /**
-     * 计算订单汇总字段
+     * 初始化订单汇总（创建时使用，进度字段归零）
      */
-    private void calculateOrderSummary(ProductionOrder order, List<ProductionOrderLine> lines) {
+    private void initOrderSummary(ProductionOrder order, List<ProductionOrderLine> lines) {
         int totalQuantity = lines.stream()
                 .mapToInt(ProductionOrderLine::getTotalQuantity)
                 .sum();
         order.setTotalQuantity(totalQuantity);
         order.setCompletedQuantity(0);
         order.setStockedQuantity(0);
+    }
+
+    /**
+     * 重算总数量（编辑时使用，保留已完成/已入库进度）
+     */
+    private void recalculateTotalQuantity(ProductionOrder order, List<ProductionOrderLine> lines) {
+        int totalQuantity = lines.stream()
+                .mapToInt(ProductionOrderLine::getTotalQuantity)
+                .sum();
+        order.setTotalQuantity(totalQuantity);
     }
 }
