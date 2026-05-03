@@ -13,14 +13,20 @@ import com.jingwei.master.domain.repository.SeasonRepository;
 import com.jingwei.master.domain.repository.SpuRepository;
 import com.jingwei.master.domain.service.CodingRuleDomainService;
 import com.jingwei.order.application.dto.CreateSalesOrderDTO;
+import com.jingwei.order.application.dto.QuantityChangeCreateDTO;
 import com.jingwei.order.application.dto.SalesOrderLineCreateDTO;
 import com.jingwei.order.application.dto.SalesOrderQueryDTO;
 import com.jingwei.order.application.dto.UpdateSalesOrderDTO;
+import com.jingwei.order.domain.model.OrderChangeLog;
+import com.jingwei.order.domain.model.OrderQuantityChange;
 import com.jingwei.order.domain.model.SalesOrder;
 import com.jingwei.order.domain.model.SalesOrderLine;
 
 import com.jingwei.order.domain.model.SizeMatrix;
+import com.jingwei.order.domain.repository.OrderChangeLogRepository;
 import com.jingwei.order.domain.service.SalesOrderDomainService;
+import com.jingwei.order.interfaces.vo.OrderTimelineVO;
+import com.jingwei.order.interfaces.vo.QuantityChangeVO;
 import com.jingwei.order.interfaces.vo.SalesOrderLineVO;
 import com.jingwei.order.interfaces.vo.SalesOrderVO;
 import lombok.RequiredArgsConstructor;
@@ -56,6 +62,7 @@ public class SalesOrderApplicationService {
     private final SeasonRepository seasonRepository;
     private final SpuRepository spuRepository;
     private final ColorWayRepository colorWayRepository;
+    private final OrderChangeLogRepository orderChangeLogRepository;
 
     /**
      * 创建销售订单
@@ -125,6 +132,8 @@ public class SalesOrderApplicationService {
      */
     @Transactional(rollbackFor = Exception.class)
     public SalesOrderVO updateSalesOrder(Long orderId, UpdateSalesOrderDTO dto) {
+        Long operatorId = UserContext.getUserId();
+
         // 校验客户
         Customer customer = customerRepository.selectById(dto.getCustomerId());
         if (customer == null) {
@@ -148,7 +157,7 @@ public class SalesOrderApplicationService {
         // 组装订单行
         List<SalesOrderLine> lines = buildOrderLines(dto.getLines());
 
-        SalesOrder updated = salesOrderDomainService.updateOrder(orderId, order, lines);
+        SalesOrder updated = salesOrderDomainService.updateOrder(orderId, order, lines, operatorId);
         return toSalesOrderVO(updated, customer, season);
     }
 
@@ -230,6 +239,69 @@ public class SalesOrderApplicationService {
                         dto.getOrderNo(), dto.getOrderDateStart(), dto.getOrderDateEnd());
 
         return orderPage.convert(this::toSalesOrderVO);
+    }
+
+    /**
+     * 查询订单变更时间线
+     * <p>
+     * 按时间倒序排列，包含状态变更、字段变更、数量变更等所有变更记录。
+     * </p>
+     *
+     * @param orderId 订单ID
+     * @return 时间线列表
+     */
+    public List<OrderTimelineVO> getTimeline(Long orderId) {
+        List<OrderChangeLog> logs = orderChangeLogRepository.selectByOrder("SALES", orderId);
+        return logs.stream().map(log -> {
+            OrderTimelineVO vo = new OrderTimelineVO();
+            vo.setId(log.getId());
+            vo.setChangeType(log.getChangeType());
+            vo.setFieldName(log.getFieldName());
+            vo.setOldValue(log.getOldValue());
+            vo.setNewValue(log.getNewValue());
+            vo.setChangeReason(log.getChangeReason());
+            vo.setOperatedBy(log.getOperatedBy());
+            vo.setOperatedAt(log.getOperatedAt());
+            return vo;
+        }).toList();
+    }
+
+    /**
+     * 创建数量变更单（提交审批）
+     * <p>
+     * 已确认的订单修改数量需走变更单审批流程。
+     * </p>
+     *
+     * @param dto 创建请求
+     * @return 变更单 VO
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public QuantityChangeVO createQuantityChange(QuantityChangeCreateDTO dto) {
+        Long operatorId = UserContext.getUserId();
+
+        // 构建新的尺码矩阵
+        List<SizeMatrix.SizeEntry> sizes = dto.getSizes().stream()
+                .map(s -> new SizeMatrix.SizeEntry(s.getSizeId(), s.getCode(), s.getQuantity()))
+                .toList();
+        SizeMatrix newMatrix = new SizeMatrix(dto.getSizeGroupId(), sizes);
+
+        OrderQuantityChange change = salesOrderDomainService.createQuantityChange(
+                dto.getOrderId(), dto.getOrderLineId(), newMatrix, dto.getReason(), operatorId);
+
+        return toQuantityChangeVO(change);
+    }
+
+    /**
+     * 查询订单的数量变更单列表
+     *
+     * @param orderId 订单ID
+     * @return 变更单列表
+     */
+    public List<QuantityChangeVO> listQuantityChanges(Long orderId) {
+        return salesOrderDomainService.getOrderQuantityChangeRepository()
+                .selectByOrderId(orderId).stream()
+                .map(this::toQuantityChangeVO)
+                .toList();
     }
 
     // ==================== 私有方法 ====================
@@ -378,6 +450,26 @@ public class SalesOrderApplicationService {
         vo.setDeliveryDate(line.getDeliveryDate() != null ? line.getDeliveryDate().toString() : null);
         vo.setRemark(line.getRemark());
 
+        return vo;
+    }
+
+    /**
+     * 将 OrderQuantityChange 实体转换为 VO
+     */
+    private QuantityChangeVO toQuantityChangeVO(OrderQuantityChange change) {
+        QuantityChangeVO vo = new QuantityChangeVO();
+        vo.setId(change.getId());
+        vo.setOrderId(change.getOrderId());
+        vo.setOrderLineId(change.getOrderLineId());
+        vo.setSizeMatrixBefore(change.getSizeMatrixBefore());
+        vo.setSizeMatrixAfter(change.getSizeMatrixAfter());
+        vo.setDiffMatrix(change.getDiffMatrix());
+        vo.setReason(change.getReason());
+        vo.setStatus(change.getStatus());
+        vo.setApprovedBy(change.getApprovedBy());
+        vo.setApprovedAt(change.getApprovedAt());
+        vo.setCreatedBy(change.getCreatedBy());
+        vo.setCreatedAt(change.getCreatedAt());
         return vo;
     }
 }

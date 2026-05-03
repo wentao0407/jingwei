@@ -38,6 +38,7 @@ import java.util.List;
 public class ApprovalApplicationService {
 
     private static final String SALES_ORDER_TYPE = "SALES_ORDER";
+    private static final String QUANTITY_CHANGE_TYPE = "ORDER_QUANTITY_CHANGE";
 
     private final ApprovalDomainService domainService;
     private final ApprovalConfigRepository configRepository;
@@ -150,13 +151,21 @@ public class ApprovalApplicationService {
         Long operatorId = UserContext.getUserId();
         domainService.approve(dto.getTaskId(), dto.getApproved(), dto.getOpinion(), operatorId);
 
-        // 审批完成后同步更新销售订单状态（临时直接调用，T-40 后改为 Outbox 事件驱动）
+        // 审批完成后同步更新业务状态（临时直接调用，T-40 后改为 Outbox 事件驱动）
         ApprovalTask task = taskRepository.selectById(dto.getTaskId());
-        if (task != null && SALES_ORDER_TYPE.equals(task.getBusinessType())) {
-            if (Boolean.TRUE.equals(dto.getApproved())) {
-                salesOrderDomainService.approveOrder(task.getBusinessId(), operatorId);
-            } else {
-                salesOrderDomainService.rejectOrder(task.getBusinessId(), operatorId);
+        if (task != null) {
+            if (SALES_ORDER_TYPE.equals(task.getBusinessType())) {
+                if (Boolean.TRUE.equals(dto.getApproved())) {
+                    salesOrderDomainService.approveOrder(task.getBusinessId(), operatorId);
+                } else {
+                    salesOrderDomainService.rejectOrder(task.getBusinessId(), operatorId);
+                }
+            } else if (QUANTITY_CHANGE_TYPE.equals(task.getBusinessType())) {
+                if (Boolean.TRUE.equals(dto.getApproved())) {
+                    salesOrderDomainService.applyQuantityChange(task.getBusinessId(), operatorId);
+                } else {
+                    salesOrderDomainService.rejectQuantityChange(task.getBusinessId(), operatorId);
+                }
             }
         }
     }

@@ -56,4 +56,20 @@ public interface SalesOrderLineRepository {
      * @return true=有明细行
      */
     boolean existsByOrderId(Long orderId);
+
+    /**
+     * 根据ID查询订单行
+     *
+     * @param id 订单行ID
+     * @return 订单行实体
+     */
+    SalesOrderLine selectById(Long id);
+
+    /**
+     * 更新订单行
+     *
+     * @param line 订单行实体
+     * @return 影响行数
+     */
+    int updateById(SalesOrderLine line);
 }

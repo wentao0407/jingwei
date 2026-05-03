@@ -67,4 +67,14 @@ public class SalesOrderLineRepositoryImpl implements SalesOrderLineRepository {
                 new LambdaQueryWrapper<SalesOrderLine>()
                         .eq(SalesOrderLine::getOrderId, orderId)) > 0;
     }
+
+    @Override
+    public SalesOrderLine selectById(Long id) {
+        return salesOrderLineMapper.selectById(id);
+    }
+
+    @Override
+    public int updateById(SalesOrderLine line) {
+        return salesOrderLineMapper.updateById(line);
+    }
 }

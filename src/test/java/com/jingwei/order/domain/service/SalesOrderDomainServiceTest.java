@@ -1,5 +1,6 @@
 package com.jingwei.order.domain.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jingwei.approval.domain.service.ApprovalDomainService;
 import com.jingwei.common.domain.model.BizException;
 import com.jingwei.common.domain.model.ErrorCode;
@@ -10,6 +11,8 @@ import com.jingwei.order.domain.model.SalesOrderLine;
 import com.jingwei.order.domain.model.SalesOrderStatus;
 import com.jingwei.order.domain.model.SizeMatrix;
 import com.jingwei.order.domain.model.SizeMatrix.SizeEntry;
+import com.jingwei.order.domain.repository.OrderChangeLogRepository;
+import com.jingwei.order.domain.repository.OrderQuantityChangeRepository;
 import com.jingwei.order.domain.repository.SalesOrderLineRepository;
 import com.jingwei.order.domain.repository.SalesOrderRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,13 +63,21 @@ class SalesOrderDomainServiceTest {
     @Mock
     private ApprovalDomainService approvalDomainService;
 
+    @Mock
+    private OrderQuantityChangeRepository orderQuantityChangeRepository;
+
+    @Mock
+    private OrderChangeLogRepository orderChangeLogRepository;
+
     private SalesOrderDomainService service;
 
     @BeforeEach
     void setUp() {
         service = new SalesOrderDomainService(
                 salesOrderRepository, salesOrderLineRepository,
-                salesOrderStateMachine, approvalDomainService);
+                salesOrderStateMachine, approvalDomainService,
+                orderQuantityChangeRepository, orderChangeLogRepository,
+                new ObjectMapper());
     }
 
     // ==================== 辅助方法 ====================
@@ -294,7 +305,7 @@ class SalesOrderDomainServiceTest {
 
             SalesOrder update = buildOrder();
             BizException ex = assertThrows(BizException.class,
-                    () -> service.updateOrder(1L, update, buildTwoLines()));
+                    () -> service.updateOrder(1L, update, buildTwoLines(), 100L));
             assertEquals(ErrorCode.OPERATION_NOT_ALLOWED.getCode(), ex.getCode());
         }
 
@@ -306,12 +317,13 @@ class SalesOrderDomainServiceTest {
             existing.setId(1L);
             when(salesOrderRepository.selectById(anyLong())).thenReturn(existing);
             when(salesOrderRepository.updateById(any())).thenReturn(1);
+            when(salesOrderLineRepository.selectByOrderId(anyLong())).thenReturn(List.of());
             when(salesOrderLineRepository.deleteByOrderId(anyLong())).thenReturn(2);
             when(salesOrderLineRepository.batchInsert(any())).thenReturn(2);
             when(salesOrderRepository.selectDetailById(anyLong())).thenReturn(existing);
 
             SalesOrder update = buildOrder();
-            assertDoesNotThrow(() -> service.updateOrder(1L, update, buildTwoLines()));
+            assertDoesNotThrow(() -> service.updateOrder(1L, update, buildTwoLines(), 100L));
         }
 
         @Test
@@ -322,12 +334,13 @@ class SalesOrderDomainServiceTest {
             existing.setId(1L);
             when(salesOrderRepository.selectById(anyLong())).thenReturn(existing);
             when(salesOrderRepository.updateById(any())).thenReturn(1);
+            when(salesOrderLineRepository.selectByOrderId(anyLong())).thenReturn(List.of());
             when(salesOrderLineRepository.deleteByOrderId(anyLong())).thenReturn(2);
             when(salesOrderLineRepository.batchInsert(any())).thenReturn(2);
             when(salesOrderRepository.selectDetailById(anyLong())).thenReturn(existing);
 
             SalesOrder update = buildOrder();
-            assertDoesNotThrow(() -> service.updateOrder(1L, update, buildTwoLines()));
+            assertDoesNotThrow(() -> service.updateOrder(1L, update, buildTwoLines(), 100L));
         }
 
         @Test
@@ -336,7 +349,7 @@ class SalesOrderDomainServiceTest {
             when(salesOrderRepository.selectById(anyLong())).thenReturn(null);
 
             assertThrows(BizException.class,
-                    () -> service.updateOrder(999L, buildOrder(), buildTwoLines()));
+                    () -> service.updateOrder(999L, buildOrder(), buildTwoLines(), 100L));
         }
     }
 

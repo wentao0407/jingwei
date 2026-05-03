@@ -1,5 +1,7 @@
 package com.jingwei.order.domain.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
 import java.math.BigDecimal;
@@ -54,7 +56,9 @@ public class SizeMatrix {
      * @param sizeGroupId 尺码组ID
      * @param sizes       尺码数量列表
      */
-    public SizeMatrix(Long sizeGroupId, List<SizeEntry> sizes) {
+    @JsonCreator
+    public SizeMatrix(@JsonProperty("sizeGroupId") Long sizeGroupId,
+                      @JsonProperty("sizes") List<SizeEntry> sizes) {
         if (sizeGroupId == null) {
             throw new IllegalArgumentException("尺码组ID不能为空");
         }
@@ -178,7 +182,10 @@ public class SizeMatrix {
          * @param code     尺码编码
          * @param quantity 数量
          */
-        public SizeEntry(Long sizeId, String code, int quantity) {
+        @JsonCreator
+        public SizeEntry(@JsonProperty("sizeId") Long sizeId,
+                         @JsonProperty("code") String code,
+                         @JsonProperty("quantity") int quantity) {
             if (sizeId == null) {
                 throw new IllegalArgumentException("尺码ID不能为空");
             }

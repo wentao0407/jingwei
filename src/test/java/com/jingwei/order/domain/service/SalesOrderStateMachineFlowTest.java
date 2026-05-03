@@ -1,5 +1,6 @@
 package com.jingwei.order.domain.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jingwei.approval.domain.service.ApprovalDomainService;
 import com.jingwei.common.domain.model.BizException;
 import com.jingwei.common.statemachine.StateMachine;
@@ -8,6 +9,7 @@ import com.jingwei.order.domain.model.OrderChangeLog;
 import com.jingwei.order.domain.model.SalesOrderEvent;
 import com.jingwei.order.domain.model.SalesOrderStatus;
 import com.jingwei.order.domain.repository.OrderChangeLogRepository;
+import com.jingwei.order.domain.repository.OrderQuantityChangeRepository;
 import com.jingwei.order.domain.repository.SalesOrderLineRepository;
 import com.jingwei.order.domain.repository.SalesOrderRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,6 +63,9 @@ class SalesOrderStateMachineFlowTest {
     @Mock
     private OrderChangeLogRepository orderChangeLogRepository;
 
+    @Mock
+    private OrderQuantityChangeRepository orderQuantityChangeRepository;
+
     private SalesOrderDomainService service;
 
     @BeforeEach
@@ -75,7 +80,9 @@ class SalesOrderStateMachineFlowTest {
 
         service = new SalesOrderDomainService(
                 salesOrderRepository, salesOrderLineRepository,
-                stateMachine, approvalDomainService);
+                stateMachine, approvalDomainService,
+                orderQuantityChangeRepository, orderChangeLogRepository,
+                new ObjectMapper());
     }
 
     private StateMachine<SalesOrderStatus, SalesOrderEvent> buildStateMachine(

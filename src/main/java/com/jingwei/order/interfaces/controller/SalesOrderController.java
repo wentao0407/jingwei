@@ -4,11 +4,16 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jingwei.common.config.RequirePermission;
 import com.jingwei.common.domain.model.R;
 import com.jingwei.order.application.dto.CreateSalesOrderDTO;
+import com.jingwei.order.application.dto.QuantityChangeCreateDTO;
 import com.jingwei.order.application.dto.SalesOrderQueryDTO;
 import com.jingwei.order.application.dto.UpdateSalesOrderDTO;
 import com.jingwei.order.application.service.SalesOrderApplicationService;
+import com.jingwei.order.interfaces.vo.OrderTimelineVO;
+import com.jingwei.order.interfaces.vo.QuantityChangeVO;
 import com.jingwei.order.interfaces.vo.SalesOrderVO;
 import jakarta.validation.Valid;
+
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -133,5 +138,41 @@ public class SalesOrderController {
     @PostMapping("/order/sales/page")
     public R<IPage<SalesOrderVO>> pageQuery(@Valid @RequestBody SalesOrderQueryDTO dto) {
         return R.ok(salesOrderApplicationService.pageQuery(dto));
+    }
+
+    /**
+     * 查询订单变更时间线
+     * <p>
+     * 按时间倒序返回订单的完整变更历史，包含状态变更、字段变更、数量变更等。
+     * </p>
+     */
+    @RequirePermission("order:sales:timeline")
+    @PostMapping("/order/sales/timeline")
+    public R<List<OrderTimelineVO>> getTimeline(@RequestParam Long orderId) {
+        return R.ok(salesOrderApplicationService.getTimeline(orderId));
+    }
+
+    /**
+     * 创建数量变更单
+     * <p>
+     * 已确认的订单修改数量需走变更单审批流程。
+     * 系统自动计算差异矩阵，提交后等待审批。
+     * </p>
+     */
+    @RequirePermission("order:sales:quantity-change")
+    @PostMapping("/order/sales/quantity-change")
+    public R<QuantityChangeVO> createQuantityChange(@Valid @RequestBody QuantityChangeCreateDTO dto) {
+        return R.ok(salesOrderApplicationService.createQuantityChange(dto));
+    }
+
+    /**
+     * 查询订单的数量变更单列表
+     * <p>
+     * 返回指定订单的所有数量变更单，含差异矩阵。
+     * </p>
+     */
+    @PostMapping("/order/sales/quantity-change/list")
+    public R<List<QuantityChangeVO>> listQuantityChanges(@RequestParam Long orderId) {
+        return R.ok(salesOrderApplicationService.listQuantityChanges(orderId));
     }
 }
