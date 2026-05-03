@@ -11,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -88,7 +89,7 @@ class ApprovalDomainServiceTest {
         }
 
         @Test
-        @DisplayName("单人审批模式 → 为第一个用户创建一条待办，返回 true")
+        @DisplayName("单人审批模式 → 为角色下所有用户各创建一条待办，返回 true")
         void shouldCreateSingleTaskForSingleMode() {
             ApprovalConfig config = new ApprovalConfig();
             config.setEnabled(true);
@@ -102,10 +103,13 @@ class ApprovalDomainServiceTest {
                     "SALES_ORDER", 1L, "SO-001", 100L);
 
             assertTrue(result, "有审批配置应需要人工审批");
-            // 单人模式只为第一个用户生成待办
-            verify(taskRepository, times(1)).insert(argThat(task ->
-                    task.getApproverId().equals(10L)
-                            && task.getApprovalMode() == ApprovalMode.SINGLE
+            // 单人模式为该角色下所有用户生成待办，任一用户审批即可
+            ArgumentCaptor<ApprovalTask> taskCaptor = ArgumentCaptor.forClass(ApprovalTask.class);
+            verify(taskRepository, times(2)).insert(taskCaptor.capture());
+            List<ApprovalTask> tasks = taskCaptor.getAllValues();
+            assertEquals(List.of(10L, 20L), tasks.stream().map(ApprovalTask::getApproverId).toList());
+            assertTrue(tasks.stream().allMatch(task ->
+                    task.getApprovalMode() == ApprovalMode.SINGLE
                             && task.getStatus() == ApprovalTaskStatus.PENDING));
         }
 
@@ -160,6 +164,7 @@ class ApprovalDomainServiceTest {
             ApprovalTask task = createPendingTask(1L, ApprovalMode.SINGLE, 10L);
             when(taskRepository.selectById(1L)).thenReturn(task);
             when(taskRepository.updateById(any())).thenReturn(1);
+            when(taskRepository.cancelOtherPendingTasks("SALES_ORDER", 1L, 1L)).thenReturn(0);
 
             domainService.approve(1L, true, "同意", 10L);
 
@@ -175,6 +180,7 @@ class ApprovalDomainServiceTest {
             ApprovalTask task = createPendingTask(1L, ApprovalMode.SINGLE, 10L);
             when(taskRepository.selectById(1L)).thenReturn(task);
             when(taskRepository.updateById(any())).thenReturn(1);
+            when(taskRepository.cancelOtherPendingTasks("SALES_ORDER", 1L, 1L)).thenReturn(0);
 
             domainService.approve(1L, false, "价格不合理", 10L);
 
@@ -199,15 +205,16 @@ class ApprovalDomainServiceTest {
         }
 
         @Test
-        @DisplayName("单人审批模式 → 不取消其他待办")
-        void shouldNotCancelOtherTasksInSingleMode() {
+        @DisplayName("单人审批模式 → 一人审批后，其他待办自动取消")
+        void shouldCancelOtherPendingTasksInSingleMode() {
             ApprovalTask task = createPendingTask(1L, ApprovalMode.SINGLE, 10L);
             when(taskRepository.selectById(1L)).thenReturn(task);
             when(taskRepository.updateById(any())).thenReturn(1);
+            when(taskRepository.cancelOtherPendingTasks("SALES_ORDER", 1L, 1L)).thenReturn(1);
 
             domainService.approve(1L, true, "同意", 10L);
 
-            verify(taskRepository, never()).cancelOtherPendingTasks(any(), any(), any());
+            verify(taskRepository).cancelOtherPendingTasks("SALES_ORDER", 1L, 1L);
         }
 
         @Test

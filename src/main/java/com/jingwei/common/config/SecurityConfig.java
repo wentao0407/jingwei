@@ -1,6 +1,8 @@
 package com.jingwei.common.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jingwei.common.domain.model.ErrorCode;
+import com.jingwei.common.domain.model.R;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -15,8 +17,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
-import java.util.Map;
 
 /**
  * Spring Security 配置类
@@ -34,6 +34,7 @@ import java.util.Map;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ObjectMapper objectMapper;
 
     /**
      * 安全过滤链配置
@@ -68,16 +69,14 @@ public class SecurityConfig {
                         response.setHeader("WWW-Authenticate", "");
                         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                         response.setCharacterEncoding("UTF-8");
-                        new ObjectMapper().writeValue(response.getOutputStream(),
-                                Map.of("code", 401, "message", "未认证，请先登录", "success", false));
+                        objectMapper.writeValue(response.getOutputStream(), R.fail(ErrorCode.UNAUTHORIZED));
                     })
                     // 权限不足返回 403
                     .accessDeniedHandler((request, response, accessDeniedException) -> {
                         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                         response.setCharacterEncoding("UTF-8");
-                        new ObjectMapper().writeValue(response.getOutputStream(),
-                                Map.of("code", 403, "message", "无权限访问该资源", "success", false));
+                        objectMapper.writeValue(response.getOutputStream(), R.fail(ErrorCode.ACCESS_DENIED));
                     })
             )
             // 在 UsernamePasswordAuthenticationFilter 之前插入 JWT Filter

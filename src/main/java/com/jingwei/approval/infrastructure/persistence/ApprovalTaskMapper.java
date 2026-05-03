@@ -15,7 +15,7 @@ import org.apache.ibatis.annotations.Update;
 public interface ApprovalTaskMapper extends BaseMapper<ApprovalTask> {
 
     /**
-     * 取消同一业务的其他待办任务（或签模式使用）
+     * 取消同一业务的其他待办任务
      *
      * @param businessType  业务类型
      * @param businessId    业务单据ID

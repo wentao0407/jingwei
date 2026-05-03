@@ -1,5 +1,8 @@
 package com.jingwei.common.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jingwei.common.domain.model.ErrorCode;
+import com.jingwei.common.domain.model.R;
 import com.jingwei.common.domain.model.UserContext;
 import com.jingwei.system.application.service.MenuApplicationService;
 import com.jingwei.system.domain.model.SysUser;
@@ -40,6 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final SysUserRepository sysUserRepository;
     private final MenuApplicationService menuApplicationService;
+    private final ObjectMapper objectMapper;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -66,8 +70,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // 直接返回 401，不继续过滤器链
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType("application/json;charset=UTF-8");
-                response.getWriter().write(
-                        "{\"code\":91003,\"message\":\"用户已停用，无法访问\",\"data\":null}");
+                objectMapper.writeValue(response.getOutputStream(),
+                        R.fail(ErrorCode.USER_INACTIVE.getCode(), "用户已停用，无法访问"));
                 return;
             }
 

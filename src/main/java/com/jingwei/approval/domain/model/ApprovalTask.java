@@ -11,12 +11,12 @@ import java.time.LocalDateTime;
  * 审批任务实体
  * <p>
  * 对应数据库表 t_sys_approval_task，每次业务单据提交审批时生成。
- * 单人审批模式只生成一条任务；或签模式为每个符合角色的审批人生成一条任务，
+ * 单人审批模式为指定角色下每个用户生成一条任务；或签模式为每个符合角色的审批人生成一条任务，
  * 任一人审批后其他待办自动取消。
  * </p>
  * <p>
  * 任务状态流转：PENDING → APPROVED / REJECTED / CANCELLED
- * CANCELLED 仅在或签模式下使用，当其他审批人先处理时自动取消。
+ * CANCELLED 用于任一审批人先处理后自动取消其他待办。
  * </p>
  *
  * @author JingWei

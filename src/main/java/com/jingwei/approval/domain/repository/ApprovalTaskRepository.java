@@ -56,9 +56,9 @@ public interface ApprovalTaskRepository {
     List<ApprovalTask> selectByBusiness(String businessType, Long businessId);
 
     /**
-     * 取消同一业务的其他待办任务（或签模式使用）
+     * 取消同一业务的其他待办任务
      * <p>
-     * 当或签模式下某一审批人审批后，其他待办任务需要自动取消。
+     * 单人审批和或签都可能生成多条待办，某一审批人处理后，其他待办任务需要自动取消。
      * </p>
      *
      * @param businessType 业务类型

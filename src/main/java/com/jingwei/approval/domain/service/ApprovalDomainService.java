@@ -18,7 +18,7 @@ import java.util.List;
  * 审批引擎的核心业务逻辑，负责：
  * <ul>
  *   <li>提交审批 — 根据审批配置为业务单据创建审批任务</li>
- *   <li>审批操作 — 审批人通过或驳回，或签模式下自动取消其他待办</li>
+ *   <li>审批操作 — 审批人通过或驳回，任一待办处理后自动取消其他待办</li>
  *   <li>审批配置校验 — 业务类型唯一性、审批模式规则等</li>
  * </ul>
  * </p>
@@ -45,7 +45,7 @@ public class ApprovalDomainService {
      * <ol>
      *   <li>查询业务类型对应的审批配置</li>
      *   <li>无配置或配置未启用 → 自动通过（发布 ApprovalPassed 事件）</li>
-     *   <li>单人审批模式 → 找到该角色下任一用户，创建一条待办</li>
+     *   <li>单人审批模式 → 找到该角色下所有用户，每人创建一条待办</li>
      *   <li>或签模式 → 找到所有角色下的用户，每人创建一条待办</li>
      * </ol>
      * </p>
@@ -75,7 +75,7 @@ public class ApprovalDomainService {
         }
 
         if (config.getApprovalMode() == ApprovalMode.SINGLE) {
-            // 单人审批：取第一个角色，找该角色下任一用户
+            // 单人审批：取第一个角色，为该角色下所有用户生成待办
             Long roleId = approverRoleIds.get(0);
             List<Long> userIds = userRoleRepository.selectUserIdsByRoleId(roleId);
             if (userIds.isEmpty()) {
@@ -83,9 +83,10 @@ public class ApprovalDomainService {
                 logApprovalAutoPassed(businessType, businessId, businessNo);
                 return false;
             }
-            // 单人审批只为第一个用户生成待办（任一用户审批即可）
-            createTask(businessType, businessId, businessNo, ApprovalMode.SINGLE,
-                    userIds.get(0), roleId, submitterId);
+            for (Long userId : userIds) {
+                createTask(businessType, businessId, businessNo, ApprovalMode.SINGLE,
+                        userId, roleId, submitterId);
+            }
         } else {
             // 或签：为每个角色下的每个用户生成待办
             for (Long roleId : approverRoleIds) {
@@ -107,11 +108,11 @@ public class ApprovalDomainService {
      * <p>
      * 流程：
      * <ol>
-     *   <li>校验审批人权限（只有指定的审批人能审批）</li>
+     *   <li>校验审批人权限（只有持有该待办的审批人能审批）</li>
      *   <li>校验任务状态（必须是 PENDING）</li>
      *   <li>校验审批意见（必填）</li>
      *   <li>更新任务状态和审批信息</li>
-     *   <li>或签模式：取消同一业务的其他待办</li>
+     *   <li>取消同一业务的其他待办</li>
      *   <li>发布审批结果领域事件</li>
      * </ol>
      * </p>
@@ -148,14 +149,12 @@ public class ApprovalDomainService {
         task.setApprovedAt(LocalDateTime.now());
         taskRepository.updateById(task);
 
-        // 或签模式：取消同一业务的其他待办
-        if (task.getApprovalMode() == ApprovalMode.OR_SIGN) {
-            int cancelled = taskRepository.cancelOtherPendingTasks(
-                    task.getBusinessType(), task.getBusinessId(), task.getId());
-            if (cancelled > 0) {
-                log.info("或签模式：已取消{}条其他待办, businessType={}, businessId={}",
-                        cancelled, task.getBusinessType(), task.getBusinessId());
-            }
+        // 单人审批和或签都可能为多个用户生成待办，任一人处理后取消其余待办
+        int cancelled = taskRepository.cancelOtherPendingTasks(
+                task.getBusinessType(), task.getBusinessId(), task.getId());
+        if (cancelled > 0) {
+            log.info("审批已处理：已取消{}条其他待办, businessType={}, businessId={}, mode={}",
+                    cancelled, task.getBusinessType(), task.getBusinessId(), task.getApprovalMode());
         }
 
         // 发布审批结果领域事件（Outbox 预留钩子）

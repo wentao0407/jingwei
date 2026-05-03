@@ -135,3 +135,44 @@ com.jingwei
 - outputs/经纬-系统架构图.html — 可视化架构图（Mermaid 图）
 - AI协作开发策略指南.md — AI 辅助开发的完整策略
 - 开发任务分解与验收标准.md — 51个原子任务拆解（后端T-01~T-43 + 前端T-44~T-51）+ 验收标准 + 自审Checklist
+
+## gstack
+
+所有网页浏览必须使用 gstack 的 `/browse` 技能。切勿使用 `mcp__claude-in-chrome__*` 工具。
+
+### 可用技能
+
+- `/office-hours` - 办公时间
+- `/plan-ceo-review` - CEO 审查计划
+- `/plan-eng-review` - 工程审查计划
+- `/plan-design-review` - 设计审查计划
+- `/design-consultation` - 设计咨询
+- `/design-shotgun` - 设计快速迭代
+- `/design-html` - HTML 设计
+- `/review` - 代码审查
+- `/ship` - 发布
+- `/land-and-deploy` - 合并并部署
+- `/canary` - 金丝雀发布
+- `/benchmark` - 基准测试
+- `/browse` - 网页浏览
+- `/connect-chrome` - 连接 Chrome
+- `/qa` - QA 测试
+- `/qa-only` - 仅 QA
+- `/design-review` - 设计审查
+- `/setup-browser-cookies` - 设置浏览器 Cookie
+- `/setup-deploy` - 设置部署
+- `/setup-gbrain` - 设置 gbrain
+- `/retro` - 回顾
+- `/investigate` - 调查
+- `/document-release` - 文档发布
+- `/codex` - Codex
+- `/cso` - CSO
+- `/autoplan` - 自动计划
+- `/plan-devex-review` - 开发者体验审查计划
+- `/devex-review` - 开发者体验审查
+- `/careful` - 谨慎模式
+- `/freeze` - 冻结
+- `/guard` - 守护
+- `/unfreeze` - 解冻
+- `/gstack-upgrade` - gstack 升级
+- `/learn` - 学习
