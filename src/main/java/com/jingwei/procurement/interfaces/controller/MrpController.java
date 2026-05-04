@@ -6,6 +6,7 @@ import com.jingwei.common.domain.model.R;
 import com.jingwei.procurement.application.dto.MrpCalculateDTO;
 import com.jingwei.procurement.application.dto.MrpQueryDTO;
 import com.jingwei.procurement.application.service.MrpApplicationService;
+import com.jingwei.procurement.interfaces.vo.MrpCalculateResultVO;
 import com.jingwei.procurement.interfaces.vo.MrpResultVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,8 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 /**
  * MRP 计算 Controller
@@ -33,7 +32,7 @@ public class MrpController {
      */
     @RequirePermission("procurement:mrp:calculate")
     @PostMapping("/procurement/mrp/calculate")
-    public R<List<MrpResultVO>> calculate(@Valid @RequestBody MrpCalculateDTO dto) {
+    public R<MrpCalculateResultVO> calculate(@Valid @RequestBody MrpCalculateDTO dto) {
         return R.ok(mrpApplicationService.calculate(dto));
     }
 

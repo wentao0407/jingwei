@@ -49,7 +49,11 @@ public class ProcurementOrderDomainService {
         order.setPaymentStatus("UNPAID");
         order.setPaidAmount(BigDecimal.ZERO);
 
-        // 计算行金额和总金额
+        // 先插入主表获取ID（ASSIGN_ID 雪花算法在 insert 时生成）
+        order.setTotalAmount(BigDecimal.ZERO);
+        procurementOrderRepository.insert(order);
+
+        // 再插入行，orderId 在主表 insert 后才有值
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (int i = 0; i < lines.size(); i++) {
             ProcurementOrderLine line = lines.get(i);
@@ -59,7 +63,6 @@ public class ProcurementOrderDomainService {
             line.setAcceptedQuantity(BigDecimal.ZERO);
             line.setRejectedQuantity(BigDecimal.ZERO);
 
-            // 自动计算行金额
             if (line.getQuantity() != null && line.getUnitPrice() != null) {
                 BigDecimal lineAmount = line.getQuantity().multiply(line.getUnitPrice())
                         .setScale(2, RoundingMode.HALF_UP);
@@ -70,8 +73,9 @@ public class ProcurementOrderDomainService {
             procurementOrderLineRepository.insert(line);
         }
 
+        // 回写总金额
         order.setTotalAmount(totalAmount);
-        procurementOrderRepository.insert(order);
+        procurementOrderRepository.updateById(order);
 
         order.setLines(lines);
         log.info("创建采购订单: id={}, orderNo={}, supplierId={}", order.getId(), orderNo, order.getSupplierId());

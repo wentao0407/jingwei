@@ -132,10 +132,16 @@ public class AsnDomainService {
             }
         }
 
-        // 更新ASN状态
+        // 更新ASN状态：判断是否全部到货
         asn.setReceiverId(receiverId);
         asn.setActualArrivalDate(LocalDate.now());
-        asn.setStatus(AsnStatus.RECEIVED);
+
+        // 查询所有行，判断是否全部到货
+        List<AsnLine> allLines = asnLineRepository.selectByAsnId(asnId);
+        boolean allReceived = allLines.stream().allMatch(l ->
+                l.getReceivedQuantity() != null
+                        && l.getReceivedQuantity().compareTo(l.getExpectedQuantity()) >= 0);
+        asn.setStatus(allReceived ? AsnStatus.RECEIVED : AsnStatus.PARTIAL_RECEIVED);
         asnRepository.updateById(asn);
 
         log.info("到货通知单收货完成: asnId={}, receiverId={}", asnId, receiverId);

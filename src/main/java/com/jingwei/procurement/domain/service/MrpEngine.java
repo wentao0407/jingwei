@@ -56,24 +56,25 @@ public class MrpEngine {
      * 执行 MRP 计算
      *
      * @param productionOrderIds 生产订单ID列表
-     * @return MRP 计算结果列表
+     * @return MRP 计算结果（含警告信息）
      */
     @Transactional(rollbackFor = Exception.class)
-    public List<MrpResult> calculate(List<Long> productionOrderIds) {
+    public MrpCalculateResult calculate(List<Long> productionOrderIds) {
         String batchNo = codingRuleDomainService.generateCode("MRP_BATCH", Collections.emptyMap());
         LocalDateTime snapshotTime = LocalDateTime.now();
+        List<String> warnings = new ArrayList<>();
 
         log.info("开始MRP计算: batchNo={}, 订单数={}", batchNo, productionOrderIds.size());
 
         // ========== 第1步：需求汇总 ==========
-        List<DemandItem> demandItems = collectDemands(productionOrderIds);
+        List<DemandItem> demandItems = collectDemands(productionOrderIds, warnings);
         if (demandItems.isEmpty()) {
             log.warn("无有效需求项，跳过MRP计算");
-            return List.of();
+            return new MrpCalculateResult(List.of(), warnings);
         }
 
         // ========== 第2步+BOM展开 + 第3步：同物料合并 ==========
-        Map<Long, MaterialDemand> mergedDemands = expandAndMerge(demandItems);
+        Map<Long, MaterialDemand> mergedDemands = expandAndMerge(demandItems, warnings);
 
         // ========== 第4步：库存抵扣 ==========
         List<MrpResult> results = deductInventory(mergedDemands, batchNo, snapshotTime);
@@ -92,7 +93,6 @@ public class MrpEngine {
         // 保存来源追溯
         List<MrpSource> allSources = buildSources(demandItems, mergedDemands, batchNo);
         for (MrpSource source : allSources) {
-            // 找到对应的 resultId
             results.stream()
                     .filter(r -> r.getMaterialId().equals(source.getMaterialId()))
                     .findFirst()
@@ -100,29 +100,34 @@ public class MrpEngine {
             mrpSourceRepository.insert(source);
         }
 
-        log.info("MRP计算完成: batchNo={}, 结果数={}", batchNo, results.size());
-        return results;
+        log.info("MRP计算完成: batchNo={}, 结果数={}, 警告数={}", batchNo, results.size(), warnings.size());
+        return new MrpCalculateResult(results, warnings);
     }
 
     /**
      * 第1步：需求汇总
      */
-    private List<DemandItem> collectDemands(List<Long> productionOrderIds) {
+    private List<DemandItem> collectDemands(List<Long> productionOrderIds, List<String> warnings) {
         List<DemandItem> demands = new ArrayList<>();
 
         for (Long orderId : productionOrderIds) {
             ProductionOrder order = productionOrderRepository.selectById(orderId);
             if (order == null) {
+                warnings.add("生产订单不存在: orderId=" + orderId);
                 continue;
             }
             List<ProductionOrderLine> lines = productionOrderLineRepository.selectByOrderId(orderId);
             for (ProductionOrderLine line : lines) {
                 if (line.getBomId() == null) {
-                    log.warn("生产订单行无BOM，跳过: orderId={}, lineId={}", orderId, line.getId());
+                    String msg = "生产订单行无BOM，已跳过: 订单=" + order.getOrderNo() + ", 行号=" + line.getLineNo();
+                    log.warn(msg);
+                    warnings.add(msg);
                     continue;
                 }
                 if (line.getSizeMatrix() == null || line.getSizeMatrix().getTotalQuantity() == 0) {
-                    log.warn("生产订单行无数量，跳过: orderId={}, lineId={}", orderId, line.getId());
+                    String msg = "生产订单行无数量，已跳过: 订单=" + order.getOrderNo() + ", 行号=" + line.getLineNo();
+                    log.warn(msg);
+                    warnings.add(msg);
                     continue;
                 }
                 demands.add(new DemandItem(
@@ -137,13 +142,15 @@ public class MrpEngine {
     /**
      * 第2步+BOM展开 + 第3步：同物料合并
      */
-    private Map<Long, MaterialDemand> expandAndMerge(List<DemandItem> demandItems) {
+    private Map<Long, MaterialDemand> expandAndMerge(List<DemandItem> demandItems, List<String> warnings) {
         Map<Long, MaterialDemand> merged = new LinkedHashMap<>();
 
         for (DemandItem demand : demandItems) {
             Bom bom = bomRepository.selectDetailById(demand.getBomId());
             if (bom == null || bom.getItems().isEmpty()) {
-                log.warn("BOM为空: bomId={}", demand.getBomId());
+                String msg = "BOM为空或无行项目，已跳过: bomId=" + demand.getBomId();
+                log.warn(msg);
+                warnings.add(msg);
                 continue;
             }
 

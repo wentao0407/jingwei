@@ -8,10 +8,12 @@ import com.jingwei.master.domain.repository.MaterialRepository;
 import com.jingwei.master.domain.repository.SupplierRepository;
 import com.jingwei.procurement.application.dto.MrpCalculateDTO;
 import com.jingwei.procurement.application.dto.MrpQueryDTO;
+import com.jingwei.procurement.domain.model.MrpCalculateResult;
 import com.jingwei.procurement.domain.model.MrpResult;
 import com.jingwei.procurement.domain.model.MrpResultStatus;
 import com.jingwei.procurement.domain.repository.MrpResultRepository;
 import com.jingwei.procurement.domain.service.MrpEngine;
+import com.jingwei.procurement.interfaces.vo.MrpCalculateResultVO;
 import com.jingwei.procurement.interfaces.vo.MrpResultVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,9 +41,14 @@ public class MrpApplicationService {
      * 执行 MRP 计算
      */
     @Transactional(rollbackFor = Exception.class)
-    public List<MrpResultVO> calculate(MrpCalculateDTO dto) {
-        List<MrpResult> results = mrpEngine.calculate(dto.getProductionOrderIds());
-        return results.stream().map(this::toMrpResultVO).toList();
+    public MrpCalculateResultVO calculate(MrpCalculateDTO dto) {
+        MrpCalculateResult calcResult = mrpEngine.calculate(dto.getProductionOrderIds());
+
+        MrpCalculateResultVO vo = new MrpCalculateResultVO();
+        vo.setResults(calcResult.getResults().stream().map(this::toMrpResultVO).toList());
+        vo.setTotalItems(calcResult.getResults().size());
+        vo.setWarnings(calcResult.getWarnings());
+        return vo;
     }
 
     /**

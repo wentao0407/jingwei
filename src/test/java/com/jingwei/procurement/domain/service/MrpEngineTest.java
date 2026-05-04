@@ -207,7 +207,8 @@ class MrpEngineTest {
             when(mrpResultRepository.insert(any())).thenReturn(1);
             when(mrpSourceRepository.insert(any())).thenReturn(1);
 
-            List<MrpResult> results = mrpEngine.calculate(List.of(1L));
+            MrpCalculateResult calcResult = mrpEngine.calculate(List.of(1L));
+            List<MrpResult> results = calcResult.getResults();
 
             assertEquals(1, results.size());
             MrpResult result = results.get(0);
@@ -238,7 +239,8 @@ class MrpEngineTest {
             when(mrpResultRepository.insert(any())).thenReturn(1);
             when(mrpSourceRepository.insert(any())).thenReturn(1);
 
-            List<MrpResult> results = mrpEngine.calculate(List.of(1L));
+            MrpCalculateResult calcResult = mrpEngine.calculate(List.of(1L));
+            List<MrpResult> results = calcResult.getResults();
 
             MrpResult result = results.get(0);
             // 毛需求: 1×600 = 600, 库存1000 → 净需求=0

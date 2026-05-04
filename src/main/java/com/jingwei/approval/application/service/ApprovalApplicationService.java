@@ -16,6 +16,8 @@ import com.jingwei.common.domain.model.BizException;
 import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.common.domain.model.UserContext;
 import com.jingwei.order.domain.service.SalesOrderDomainService;
+import com.jingwei.procurement.domain.model.ProcurementOrderEvent;
+import com.jingwei.procurement.domain.service.ProcurementOrderDomainService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,11 +41,13 @@ public class ApprovalApplicationService {
 
     private static final String SALES_ORDER_TYPE = "SALES_ORDER";
     private static final String QUANTITY_CHANGE_TYPE = "ORDER_QUANTITY_CHANGE";
+    private static final String PROCUREMENT_ORDER_TYPE = "PROCUREMENT_ORDER";
 
     private final ApprovalDomainService domainService;
     private final ApprovalConfigRepository configRepository;
     private final ApprovalTaskRepository taskRepository;
     private final SalesOrderDomainService salesOrderDomainService;
+    private final ProcurementOrderDomainService procurementOrderDomainService;
 
     // ========== 审批配置 CRUD ==========
 
@@ -142,8 +146,8 @@ public class ApprovalApplicationService {
      * 审批操作（通过或驳回）
      * <p>
      * 审批完成后，同步更新业务单据状态。
-     * 当前仅处理 SALES_ORDER 类型，其他类型忽略。
-     * TODO: T-40 Outbox 实现后，改为事件驱动，移除对 SalesOrderDomainService 的直接依赖
+     * 支持 SALES_ORDER、ORDER_QUANTITY_CHANGE、PROCUREMENT_ORDER 三种类型。
+     * TODO: T-40 Outbox 实现后，改为事件驱动，移除对 DomainService 的直接依赖
      * </p>
      */
     @Transactional
@@ -165,6 +169,14 @@ public class ApprovalApplicationService {
                     salesOrderDomainService.applyQuantityChange(task.getBusinessId(), operatorId);
                 } else {
                     salesOrderDomainService.rejectQuantityChange(task.getBusinessId(), operatorId);
+                }
+            } else if (PROCUREMENT_ORDER_TYPE.equals(task.getBusinessType())) {
+                if (Boolean.TRUE.equals(dto.getApproved())) {
+                    procurementOrderDomainService.fireEvent(
+                            task.getBusinessId(), ProcurementOrderEvent.APPROVE, operatorId);
+                } else {
+                    procurementOrderDomainService.fireEvent(
+                            task.getBusinessId(), ProcurementOrderEvent.REJECT, operatorId);
                 }
             }
         }
