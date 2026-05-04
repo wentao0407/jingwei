@@ -98,6 +98,12 @@ public enum ErrorCode {
     BOM_VERSION_CONFLICT(40002, "BOM版本冲突"),
     /** 采购数量不足MOQ */
     PROCUREMENT_MOQ_NOT_MET(40003, "采购数量不足最小起订量"),
+    /** 到货数量超过剩余可收数量 */
+    ASN_QUANTITY_EXCEEDED(40004, "到货数量超过剩余可收数量"),
+    /** ASN状态不允许此操作 */
+    ASN_STATUS_INVALID(40005, "到货通知单状态不允许此操作"),
+    /** 检验已完成，不可重复提交 */
+    QC_ALREADY_COMPLETED(40006, "检验已完成，不可重复提交"),
 
     // ========== 库存管理模块 50xxx ==========
     /** 库存不足 */
