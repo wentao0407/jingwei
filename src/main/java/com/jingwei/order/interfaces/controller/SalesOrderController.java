@@ -3,11 +3,14 @@ package com.jingwei.order.interfaces.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jingwei.common.config.RequirePermission;
 import com.jingwei.common.domain.model.R;
+import com.jingwei.order.application.dto.ConvertToProductionDTO;
 import com.jingwei.order.application.dto.CreateSalesOrderDTO;
 import com.jingwei.order.application.dto.QuantityChangeCreateDTO;
 import com.jingwei.order.application.dto.SalesOrderQueryDTO;
 import com.jingwei.order.application.dto.UpdateSalesOrderDTO;
+import com.jingwei.order.application.service.OrderConvertApplicationService;
 import com.jingwei.order.application.service.SalesOrderApplicationService;
+import com.jingwei.order.interfaces.vo.ConvertResultVO;
 import com.jingwei.order.interfaces.vo.OrderTimelineVO;
 import com.jingwei.order.interfaces.vo.QuantityChangeVO;
 import com.jingwei.order.interfaces.vo.SalesOrderVO;
@@ -36,6 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class SalesOrderController {
 
     private final SalesOrderApplicationService salesOrderApplicationService;
+    private final OrderConvertApplicationService orderConvertApplicationService;
 
     /**
      * 创建销售订单
@@ -174,5 +178,32 @@ public class SalesOrderController {
     @PostMapping("/order/sales/quantity-change/list")
     public R<List<QuantityChangeVO>> listQuantityChanges(@RequestParam Long orderId) {
         return R.ok(salesOrderApplicationService.listQuantityChanges(orderId));
+    }
+
+    // ==================== 订单转化接口（T-24） ====================
+
+    /**
+     * 从销售订单生成生产订单
+     * <p>
+     * 仅 CONFIRMED 状态的销售订单允许转化。
+     * 用户选择若干行后，系统按款式分组合并，自动关联 BOM，生成生产订单。
+     * 转化后销售订单状态自动变为 PRODUCING。
+     * </p>
+     * <p>
+     * 业务规则：
+     * <ul>
+     *   <li>只有 CONFIRMED 状态的订单允许转化</li>
+     *   <li>选中的行必须属于该销售订单</li>
+     *   <li>同一行不可重复全额转化</li>
+     *   <li>同款不同颜色的行合并为一张生产订单</li>
+     *   <li>自动关联 SPU 的已审批 BOM</li>
+     *   <li>转化后建立 order_production_source 多对多关联</li>
+     * </ul>
+     * </p>
+     */
+    @RequirePermission("order:sales:convert")
+    @PostMapping("/order/sales/convert-to-production")
+    public R<ConvertResultVO> convertToProduction(@Valid @RequestBody ConvertToProductionDTO dto) {
+        return R.ok(orderConvertApplicationService.convertToProduction(dto));
     }
 }

@@ -10,6 +10,7 @@ import com.jingwei.order.domain.model.SalesOrderEvent;
 import com.jingwei.order.domain.model.SalesOrderStatus;
 import com.jingwei.order.domain.repository.OrderChangeLogRepository;
 import com.jingwei.order.domain.repository.OrderQuantityChangeRepository;
+import com.jingwei.order.domain.repository.ProductionOrderSourceRepository;
 import com.jingwei.order.domain.repository.SalesOrderLineRepository;
 import com.jingwei.order.domain.repository.SalesOrderRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +59,9 @@ class SalesOrderStateMachineFlowTest {
     private SalesOrderLineRepository salesOrderLineRepository;
 
     @Mock
+    private ProductionOrderSourceRepository productionOrderSourceRepository;
+
+    @Mock
     private ApprovalDomainService approvalDomainService;
 
     @Mock
@@ -71,7 +75,7 @@ class SalesOrderStateMachineFlowTest {
     @BeforeEach
     void setUp() {
         // 构建真实状态机（与 Spring 配置一致）
-        SalesOrderConditionEvaluator evaluator = new SalesOrderConditionEvaluator(salesOrderLineRepository);
+        SalesOrderConditionEvaluator evaluator = new SalesOrderConditionEvaluator(salesOrderLineRepository, productionOrderSourceRepository);
         SalesOrderActionExecutor executor = new SalesOrderActionExecutor();
         SalesOrderChangeLogListener changeLogListener = new SalesOrderChangeLogListener(orderChangeLogRepository);
         StateMachine<SalesOrderStatus, SalesOrderEvent> stateMachine =

@@ -5,6 +5,7 @@ import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.common.statemachine.TransitionContext;
 import com.jingwei.order.domain.model.SalesOrderEvent;
 import com.jingwei.order.domain.model.SalesOrderStatus;
+import com.jingwei.order.domain.repository.ProductionOrderSourceRepository;
 import com.jingwei.order.domain.repository.SalesOrderLineRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,8 +22,8 @@ import org.springframework.stereotype.Component;
  * 条件实现状态：
  * <ul>
  *   <li>hasOrderLines — 已实现，查询 SalesOrderLineRepository</li>
- *   <li>hasLinkedProductionOrder — 预留，待 T-24 订单转化实现</li>
- *   <li>hasNoLinkedProductionOrder — 预留，待 T-24 订单转化实现</li>
+ *   <li>hasLinkedProductionOrder — 已实现（T-24），查询 ProductionOrderSourceRepository</li>
+ *   <li>hasNoLinkedProductionOrder — 已实现（T-24），查询 ProductionOrderSourceRepository</li>
  *   <li>allStockFulfilled — 预留，待 T-29/T-30 库存管理实现</li>
  *   <li>partialStockFulfilled — 预留，待 T-29/T-30 库存管理实现</li>
  *   <li>hasOutboundOrder — 预留，待 T-31 出入库单实现</li>
@@ -37,6 +38,7 @@ import org.springframework.stereotype.Component;
 public class SalesOrderConditionEvaluator {
 
     private final SalesOrderLineRepository salesOrderLineRepository;
+    private final ProductionOrderSourceRepository productionOrderSourceRepository;
 
     /**
      * 检查订单是否有明细行
@@ -63,22 +65,17 @@ public class SalesOrderConditionEvaluator {
      * 用于：CONFIRMED → PRODUCING（开始排产）的前置条件。
      * 只有已关联生产订单的销售订单才能进入生产中状态。
      * </p>
-     * <p>
-     * TODO: T-24 订单转化实现后替换为 ProductionOrderRepository 查询
-     * </p>
      *
      * @param context 转移上下文，businessId 为订单ID
      * @return true 表示已关联生产订单
      * @throws BizException 未关联生产订单时抛出
      */
     public boolean hasLinkedProductionOrder(TransitionContext<SalesOrderStatus, SalesOrderEvent> context) {
-        // 预留钩子：T-24 订单转化实现后，检查是否有关联的生产订单
-        // boolean linked = productionOrderRepository.existsBySalesOrderId(context.getBusinessId());
-        // if (!linked) {
-        //     throw new BizException(ErrorCode.ORDER_LINKED_PRODUCTION,
-        //         "订单未关联生产订单，无法开始排产");
-        // }
-        log.debug("[预留] hasLinkedProductionOrder 检查, orderId={}", context.getBusinessId());
+        boolean linked = productionOrderSourceRepository.existsBySalesOrderId(context.getBusinessId());
+        if (!linked) {
+            throw new BizException(ErrorCode.ORDER_LINKED_PRODUCTION,
+                    "订单未关联生产订单，无法开始排产");
+        }
         return true;
     }
 
@@ -88,22 +85,17 @@ public class SalesOrderConditionEvaluator {
      * 用于：CONFIRMED → CANCELLED（取消订单）的前置条件。
      * 已关联生产订单的确认订单不允许直接取消，需先解除关联。
      * </p>
-     * <p>
-     * TODO: T-24 订单转化实现后替换为真实逻辑
-     * </p>
      *
      * @param context 转移上下文，businessId 为订单ID
      * @return true 表示未关联生产订单
      * @throws BizException 已关联生产订单时抛出
      */
     public boolean hasNoLinkedProductionOrder(TransitionContext<SalesOrderStatus, SalesOrderEvent> context) {
-        // 预留钩子：与 hasLinkedProductionOrder 互斥
-        // boolean linked = productionOrderRepository.existsBySalesOrderId(context.getBusinessId());
-        // if (linked) {
-        //     throw new BizException(ErrorCode.ORDER_LINKED_PRODUCTION,
-        //         "订单已关联生产订单，无法直接取消");
-        // }
-        log.debug("[预留] hasNoLinkedProductionOrder 检查, orderId={}", context.getBusinessId());
+        boolean linked = productionOrderSourceRepository.existsBySalesOrderId(context.getBusinessId());
+        if (linked) {
+            throw new BizException(ErrorCode.ORDER_LINKED_PRODUCTION,
+                    "订单已关联生产订单，无法直接取消");
+        }
         return true;
     }
 

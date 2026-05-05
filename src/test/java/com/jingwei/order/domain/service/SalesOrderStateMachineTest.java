@@ -6,6 +6,7 @@ import com.jingwei.common.statemachine.Transition;
 import com.jingwei.common.statemachine.TransitionContext;
 import com.jingwei.order.domain.model.SalesOrderEvent;
 import com.jingwei.order.domain.model.SalesOrderStatus;
+import com.jingwei.order.domain.repository.ProductionOrderSourceRepository;
 import com.jingwei.order.domain.repository.SalesOrderLineRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -44,6 +45,7 @@ import static org.mockito.Mockito.when;
 class SalesOrderStateMachineTest {
 
     private StateMachine<SalesOrderStatus, SalesOrderEvent> stateMachine;
+    private ProductionOrderSourceRepository productionOrderSourceRepository;
 
     @BeforeEach
     void setUp() {
@@ -51,7 +53,10 @@ class SalesOrderStateMachineTest {
         // 但不依赖 Spring 容器，直接构造 ConditionEvaluator 和 ActionExecutor
         SalesOrderLineRepository lineRepository = mock(SalesOrderLineRepository.class);
         when(lineRepository.existsByOrderId(any())).thenReturn(true);
-        SalesOrderConditionEvaluator evaluator = new SalesOrderConditionEvaluator(lineRepository);
+        productionOrderSourceRepository = mock(ProductionOrderSourceRepository.class);
+        // 默认未关联生产订单，需要时在具体测试中覆盖
+        when(productionOrderSourceRepository.existsBySalesOrderId(any())).thenReturn(false);
+        SalesOrderConditionEvaluator evaluator = new SalesOrderConditionEvaluator(lineRepository, productionOrderSourceRepository);
         SalesOrderActionExecutor executor = new SalesOrderActionExecutor();
 
         stateMachine = buildSalesOrderStateMachine(evaluator, executor);
@@ -191,6 +196,9 @@ class SalesOrderStateMachineTest {
         @Test
         @DisplayName("CONFIRMED + START_PRODUCE → PRODUCING")
         void shouldTransitionFromConfirmedToProducing() {
+            // 需要关联生产订单才能从 CONFIRMED 转移到 PRODUCING
+            when(productionOrderSourceRepository.existsBySalesOrderId(any())).thenReturn(true);
+
             SalesOrderStatus result = stateMachine.fireEvent(
                     SalesOrderStatus.CONFIRMED, SalesOrderEvent.START_PRODUCE, new TransitionContext<>());
             assertEquals(SalesOrderStatus.PRODUCING, result);
@@ -246,6 +254,9 @@ class SalesOrderStateMachineTest {
         @Test
         @DisplayName("正常生命周期：DRAFT → PENDING_APPROVAL → CONFIRMED → PRODUCING → READY → SHIPPED → COMPLETED")
         void shouldCompleteFullLifecycle() {
+            // 需要关联生产订单才能从 CONFIRMED 转移到 PRODUCING
+            when(productionOrderSourceRepository.existsBySalesOrderId(any())).thenReturn(true);
+
             TransitionContext<SalesOrderStatus, SalesOrderEvent> ctx = new TransitionContext<>(1L, 100L);
 
             SalesOrderStatus status = SalesOrderStatus.DRAFT;
@@ -555,6 +566,9 @@ class SalesOrderStateMachineTest {
         @Test
         @DisplayName("完整生命周期中监听器被回调6次")
         void shouldCallListenerForEntireLifecycle() {
+            // 需要关联生产订单才能从 CONFIRMED 转移到 PRODUCING
+            when(productionOrderSourceRepository.existsBySalesOrderId(any())).thenReturn(true);
+
             AtomicInteger afterCount = new AtomicInteger(0);
 
             stateMachine.addListener(new com.jingwei.common.statemachine.TransitionListener<>() {

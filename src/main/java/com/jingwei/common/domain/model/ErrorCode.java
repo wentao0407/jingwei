@@ -90,6 +90,14 @@ public enum ErrorCode {
     ORDER_LINKED_PRODUCTION(30004, "订单已关联生产订单"),
     /** 订单行信息不完整 */
     ORDER_LINE_INCOMPLETE(30005, "订单行信息不完整"),
+    /** 订单行已全部转化，不可重复转化 */
+    ORDER_ALREADY_CONVERTED(30006, "该订单行已全部转化，不可重复转化"),
+    /** 只有已确认的订单允许转化生产订单 */
+    ORDER_NOT_CONFIRMED(30007, "只有已确认的订单允许转化生产订单"),
+    /** 款式未配置已审批的BOM */
+    ORDER_SPU_NO_BOM(30008, "该款式未配置已审批的BOM，无法生成生产订单"),
+    /** 所选订单行不属于该销售订单 */
+    ORDER_LINE_NOT_BELONG(30009, "所选订单行不属于该销售订单"),
 
     // ========== 采购管理模块 40xxx ==========
     /** BOM已引用，不可删除 */

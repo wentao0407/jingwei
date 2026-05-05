@@ -54,4 +54,18 @@ public class ProductionOrderSourceRepositoryImpl implements ProductionOrderSourc
                 new LambdaQueryWrapper<ProductionOrderSource>()
                         .eq(ProductionOrderSource::getProductionOrderId, productionOrderId));
     }
+
+    @Override
+    public boolean existsBySalesOrderId(Long salesOrderId) {
+        return productionOrderSourceMapper.selectCount(
+                new LambdaQueryWrapper<ProductionOrderSource>()
+                        .eq(ProductionOrderSource::getSalesOrderId, salesOrderId)) > 0;
+    }
+
+    @Override
+    public List<ProductionOrderSource> selectBySalesLineId(Long salesLineId) {
+        return productionOrderSourceMapper.selectList(
+                new LambdaQueryWrapper<ProductionOrderSource>()
+                        .eq(ProductionOrderSource::getSalesLineId, salesLineId));
+    }
 }
