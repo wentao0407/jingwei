@@ -37,6 +37,7 @@ import java.sql.SQLException;
 @MappedJdbcTypes(JdbcType.OTHER)
 public class JsonbTypeHandler<T> extends BaseTypeHandler<T> {
 
+    /** Jackson 序列化/反序列化器（线程安全，全局复用） */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final Class<T> type;

@@ -35,6 +35,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MaterialApplicationService {
 
+    /** 编码规则键：物料编码，与 t_md_coding_rule 的 rule_code 对应 */
     private static final String MATERIAL_CODE_RULE = "MATERIAL_CODE";
 
     private final MaterialDomainService materialDomainService;

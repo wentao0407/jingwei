@@ -44,6 +44,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ProductionOrderApplicationService {
 
+    /** 编码规则键：生产订单编号（格式 MO-年月-5位流水号） */
     private static final String PRODUCTION_ORDER_CODE_RULE = "PRODUCTION_ORDER";
 
     private final ProductionOrderDomainService productionOrderDomainService;

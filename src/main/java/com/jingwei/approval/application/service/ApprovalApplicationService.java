@@ -39,8 +39,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ApprovalApplicationService {
 
+    /** 审批业务类型标识：销售订单审批，与 ApprovalConfig.businessType 匹配 */
     private static final String SALES_ORDER_TYPE = "SALES_ORDER";
+    /** 审批业务类型标识：订单数量变更审批 */
     private static final String QUANTITY_CHANGE_TYPE = "ORDER_QUANTITY_CHANGE";
+    /** 审批业务类型标识：采购订单审批（或签模式） */
     private static final String PROCUREMENT_ORDER_TYPE = "PROCUREMENT_ORDER";
 
     private final ApprovalDomainService domainService;

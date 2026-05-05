@@ -30,6 +30,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProcurementOrderDomainService {
 
+    /** 编码规则键：采购订单编号（格式 PO-年月-5位流水号），与 t_md_coding_rule 的 rule_code 对应 */
     private static final String PROCUREMENT_ORDER_CODE_RULE = "PROCUREMENT_ORDER";
 
     private final ProcurementOrderRepository procurementOrderRepository;

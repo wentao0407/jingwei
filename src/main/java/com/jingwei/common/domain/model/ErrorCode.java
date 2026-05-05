@@ -120,6 +120,16 @@ public enum ErrorCode {
     ALLOCATION_EXPIRED(50002, "库存预留已过期"),
     /** 盘点进行中 */
     STOCKTAKING_IN_PROGRESS(50003, "该库位正在盘点，禁止出入库操作"),
+    /** 锁定库存不足（出库时） */
+    LOCKED_INVENTORY_INSUFFICIENT(50004, "锁定库存不足，无法出库"),
+    /** 质检库存不足 */
+    QC_INVENTORY_INSUFFICIENT(50005, "质检库存不足"),
+    /** 库存记录不存在 */
+    INVENTORY_NOT_FOUND(50006, "库存记录不存在"),
+    /** 预留记录不存在 */
+    ALLOCATION_NOT_FOUND(50007, "预留记录不存在"),
+    /** 预留状态不允许此操作 */
+    ALLOCATION_STATUS_INVALID(50008, "预留状态不允许此操作"),
 
     // ========== 出入库作业模块 60xxx ==========
     /** 波次未完成 */

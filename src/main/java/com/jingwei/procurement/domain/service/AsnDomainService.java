@@ -33,6 +33,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AsnDomainService {
 
+    /** 编码规则键：到货通知单编号（格式 ASN-年月日-4位流水号），与 t_md_coding_rule 的 rule_code 对应 */
     private static final String ASN_CODE_RULE = "ASN";
 
     private final AsnRepository asnRepository;

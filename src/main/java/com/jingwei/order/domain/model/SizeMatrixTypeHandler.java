@@ -44,6 +44,7 @@ import java.util.Map;
 @MappedJdbcTypes(JdbcType.OTHER)
 public class SizeMatrixTypeHandler extends BaseTypeHandler<SizeMatrix> {
 
+    /** Jackson 序列化/反序列化器（线程安全，全局复用） */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override

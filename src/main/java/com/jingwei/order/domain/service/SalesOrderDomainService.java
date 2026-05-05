@@ -64,7 +64,9 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class SalesOrderDomainService {
 
+    /** 审批业务类型标识：销售订单审批 */
     private static final String SALES_ORDER_APPROVAL_TYPE = "SALES_ORDER";
+    /** 审批业务类型标识：订单数量变更审批 */
     private static final String QUANTITY_CHANGE_APPROVAL_TYPE = "ORDER_QUANTITY_CHANGE";
 
     private final SalesOrderRepository salesOrderRepository;
@@ -395,8 +397,11 @@ public class SalesOrderDomainService {
 
     // ==================== 数量变更 ====================
 
+    /** 数量变更单状态：待审批 */
     private static final String QC_PENDING = "PENDING";
+    /** 数量变更单状态：已通过 */
     private static final String QC_APPROVED = "APPROVED";
+    /** 数量变更单状态：已驳回 */
     private static final String QC_REJECTED = "REJECTED";
 
     /**

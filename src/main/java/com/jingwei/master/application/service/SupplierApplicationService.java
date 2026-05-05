@@ -31,6 +31,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SupplierApplicationService {
 
+    /** 编码规则键：供应商编码（格式 SUP-6位流水号），与 t_md_coding_rule 的 rule_code 对应 */
     private static final String SUPPLIER_CODE_RULE = "SUPPLIER_CODE";
 
     private final SupplierDomainService supplierDomainService;

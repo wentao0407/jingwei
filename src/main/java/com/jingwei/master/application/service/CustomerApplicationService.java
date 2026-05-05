@@ -31,6 +31,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CustomerApplicationService {
 
+    /** 编码规则键：客户编码（格式 CUS-6位流水号），与 t_md_coding_rule 的 rule_code 对应 */
     private static final String CUSTOMER_CODE_RULE = "CUSTOMER_CODE";
 
     private final CustomerDomainService customerDomainService;

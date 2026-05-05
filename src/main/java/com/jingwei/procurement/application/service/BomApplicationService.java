@@ -43,6 +43,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BomApplicationService {
 
+    /** 编码规则键：BOM 物料清单编号，与 t_md_coding_rule 的 rule_code 对应 */
     private static final String BOM_CODE_RULE = "BOM";
 
     private final BomDomainService bomDomainService;
