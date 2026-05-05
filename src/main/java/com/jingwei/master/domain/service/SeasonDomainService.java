@@ -8,6 +8,9 @@ import com.jingwei.master.domain.model.SeasonType;
 import com.jingwei.master.domain.model.Wave;
 import com.jingwei.master.domain.repository.SeasonRepository;
 import com.jingwei.master.domain.repository.WaveRepository;
+import com.jingwei.master.infrastructure.persistence.SpuMapper;
+import com.jingwei.master.domain.model.Spu;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -44,6 +47,7 @@ public class SeasonDomainService {
 
     private final SeasonRepository seasonRepository;
     private final WaveRepository waveRepository;
+    private final SpuMapper spuMapper;
 
     // ==================== 季节 CRUD ====================
 
@@ -392,7 +396,10 @@ public class SeasonDomainService {
      * @return 引用该季节的订单数量
      */
     private long countOrderReferences(Long seasonId) {
-        // TODO: 订单模块实现后，注入订单 Mapper 并查询真实引用数量
-        return 0;
+        // 检查是否有款式（SPU）引用了该季节
+        // 如果有 SPU 引用，则认为该季节正在被使用
+        return spuMapper.selectCount(
+                new LambdaQueryWrapper<Spu>()
+                        .eq(Spu::getSeasonId, seasonId));
     }
 }

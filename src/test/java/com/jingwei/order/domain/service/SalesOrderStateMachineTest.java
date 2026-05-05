@@ -9,21 +9,29 @@ import com.jingwei.order.domain.model.SalesOrderStatus;
 import com.jingwei.order.domain.repository.ProductionOrderSourceRepository;
 import com.jingwei.order.domain.repository.SalesOrderLineRepository;
 import com.jingwei.order.domain.repository.SalesOrderRepository;
+import com.jingwei.inventory.domain.model.InventoryAllocation;
 import com.jingwei.inventory.domain.repository.InventoryAllocationRepository;
 import com.jingwei.inventory.domain.repository.InventorySkuRepository;
 import com.jingwei.inventory.domain.service.AllocationDomainService;
+import com.jingwei.inventory.infrastructure.persistence.OutboundOrderMapper;
 import com.jingwei.master.domain.repository.SkuRepository;
+import com.jingwei.common.domain.service.DomainEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -61,16 +69,28 @@ class SalesOrderStateMachineTest {
         productionOrderSourceRepository = mock(ProductionOrderSourceRepository.class);
         // 默认未关联生产订单，需要时在具体测试中覆盖
         when(productionOrderSourceRepository.existsBySalesOrderId(any())).thenReturn(false);
-        SalesOrderConditionEvaluator evaluator = new SalesOrderConditionEvaluator(lineRepository, productionOrderSourceRepository);
+        InventoryAllocationRepository inventoryAllocationRepository = mock(InventoryAllocationRepository.class);
+        OutboundOrderMapper outboundOrderMapper = mock(OutboundOrderMapper.class);
+
+        // 为条件评估器设置默认 mock：库存预留已完成、出库单已创建
+        com.jingwei.inventory.domain.model.InventoryAllocation fulfilledAllocation =
+                new com.jingwei.inventory.domain.model.InventoryAllocation();
+        fulfilledAllocation.setAllocatedQty(new BigDecimal("100"));
+        fulfilledAllocation.setFulfilledQty(new BigDecimal("100"));
+        lenient().when(inventoryAllocationRepository.selectByOrder(anyString(), nullable(Long.class)))
+                .thenReturn(List.of(fulfilledAllocation));
+        lenient().when(outboundOrderMapper.selectCount(any())).thenReturn(1L);
+
+        SalesOrderConditionEvaluator evaluator = new SalesOrderConditionEvaluator(lineRepository, productionOrderSourceRepository, inventoryAllocationRepository, outboundOrderMapper);
         SalesOrderRepository salesOrderRepository = mock(SalesOrderRepository.class);
         AllocationDomainService allocationDomainService = mock(AllocationDomainService.class);
-        InventoryAllocationRepository inventoryAllocationRepository = mock(InventoryAllocationRepository.class);
         InventorySkuRepository inventorySkuRepository = mock(InventorySkuRepository.class);
         SkuRepository skuRepository = mock(SkuRepository.class);
+        DomainEventPublisher domainEventPublisher = mock(DomainEventPublisher.class);
         SalesOrderActionExecutor executor = new SalesOrderActionExecutor(
                 salesOrderRepository, lineRepository,
                 allocationDomainService, inventoryAllocationRepository,
-                inventorySkuRepository, skuRepository);
+                inventorySkuRepository, skuRepository, domainEventPublisher);
 
         stateMachine = buildSalesOrderStateMachine(evaluator, executor);
     }
@@ -212,8 +232,9 @@ class SalesOrderStateMachineTest {
             // 需要关联生产订单才能从 CONFIRMED 转移到 PRODUCING
             when(productionOrderSourceRepository.existsBySalesOrderId(any())).thenReturn(true);
 
+            TransitionContext<SalesOrderStatus, SalesOrderEvent> ctx = new TransitionContext<>(1L, 100L);
             SalesOrderStatus result = stateMachine.fireEvent(
-                    SalesOrderStatus.CONFIRMED, SalesOrderEvent.START_PRODUCE, new TransitionContext<>());
+                    SalesOrderStatus.CONFIRMED, SalesOrderEvent.START_PRODUCE, ctx);
             assertEquals(SalesOrderStatus.PRODUCING, result);
         }
 
@@ -228,24 +249,27 @@ class SalesOrderStateMachineTest {
         @Test
         @DisplayName("PRODUCING + READY_STOCK → READY")
         void shouldTransitionFromProducingToReady() {
+            TransitionContext<SalesOrderStatus, SalesOrderEvent> ctx = new TransitionContext<>(1L, 100L);
             SalesOrderStatus result = stateMachine.fireEvent(
-                    SalesOrderStatus.PRODUCING, SalesOrderEvent.READY_STOCK, new TransitionContext<>());
+                    SalesOrderStatus.PRODUCING, SalesOrderEvent.READY_STOCK, ctx);
             assertEquals(SalesOrderStatus.READY, result);
         }
 
         @Test
         @DisplayName("PRODUCING + SHIP → SHIPPED（部分发货）")
         void shouldTransitionFromProducingToShipped() {
+            TransitionContext<SalesOrderStatus, SalesOrderEvent> ctx = new TransitionContext<>(1L, 100L);
             SalesOrderStatus result = stateMachine.fireEvent(
-                    SalesOrderStatus.PRODUCING, SalesOrderEvent.SHIP, new TransitionContext<>());
+                    SalesOrderStatus.PRODUCING, SalesOrderEvent.SHIP, ctx);
             assertEquals(SalesOrderStatus.SHIPPED, result);
         }
 
         @Test
         @DisplayName("READY + SHIP → SHIPPED")
         void shouldTransitionFromReadyToShipped() {
+            TransitionContext<SalesOrderStatus, SalesOrderEvent> ctx = new TransitionContext<>(1L, 100L);
             SalesOrderStatus result = stateMachine.fireEvent(
-                    SalesOrderStatus.READY, SalesOrderEvent.SHIP, new TransitionContext<>());
+                    SalesOrderStatus.READY, SalesOrderEvent.SHIP, ctx);
             assertEquals(SalesOrderStatus.SHIPPED, result);
         }
 

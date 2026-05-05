@@ -14,6 +14,11 @@ import com.jingwei.master.domain.repository.SizeGroupRepository;
 import com.jingwei.master.domain.repository.SizeRepository;
 import com.jingwei.master.domain.repository.SkuRepository;
 import com.jingwei.master.domain.repository.SpuRepository;
+import com.jingwei.inventory.infrastructure.persistence.InventorySkuMapper;
+import com.jingwei.inventory.domain.model.InventorySku;
+import com.jingwei.order.infrastructure.persistence.SalesOrderLineMapper;
+import com.jingwei.order.domain.model.SalesOrderLine;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -56,6 +61,8 @@ public class SpuDomainService {
     private final SkuRepository skuRepository;
     private final SizeGroupRepository sizeGroupRepository;
     private final SizeRepository sizeRepository;
+    private final InventorySkuMapper inventorySkuMapper;
+    private final SalesOrderLineMapper salesOrderLineMapper;
 
     // ==================== SPU CRUD ====================
 
@@ -491,7 +498,27 @@ public class SpuDomainService {
      * </p>
      */
     private long countReferencedSkus(Long spuId) {
-        // TODO: 库存/订单模块实现后，替换为真实查询
-        return 0;
+        // 查询该款式下所有 SKU 的 ID
+        List<Sku> skus = skuRepository.selectBySpuId(spuId);
+        if (skus.isEmpty()) {
+            return 0;
+        }
+        List<Long> skuIds = skus.stream().map(Sku::getId).toList();
+
+        // 检查是否有 SKU 被库存引用
+        long inventoryCount = inventorySkuMapper.selectCount(
+                new LambdaQueryWrapper<InventorySku>()
+                        .in(InventorySku::getSkuId, skuIds));
+
+        if (inventoryCount > 0) {
+            return inventoryCount;
+        }
+
+        // 检查是否有销售订单行引用该 SPU（销售订单行按 SPU 维度，不按 SKU）
+        long orderLineCount = salesOrderLineMapper.selectCount(
+                new LambdaQueryWrapper<SalesOrderLine>()
+                        .eq(SalesOrderLine::getSpuId, spuId));
+
+        return orderLineCount;
     }
 }

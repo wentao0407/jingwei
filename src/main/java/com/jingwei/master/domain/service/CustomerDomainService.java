@@ -5,6 +5,9 @@ import com.jingwei.common.domain.model.CommonStatus;
 import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.master.domain.model.Customer;
 import com.jingwei.master.domain.repository.CustomerRepository;
+import com.jingwei.order.infrastructure.persistence.SalesOrderMapper;
+import com.jingwei.order.domain.model.SalesOrder;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -40,6 +43,7 @@ import org.springframework.stereotype.Service;
 public class CustomerDomainService {
 
     private final CustomerRepository customerRepository;
+    private final SalesOrderMapper salesOrderMapper;
 
     /**
      * 获取客户仓库引用（供 ApplicationService 分页查询使用）
@@ -244,7 +248,9 @@ public class CustomerDomainService {
      * @return 引用该客户的销售订单数量
      */
     private long countOrderReferences(Long customerId) {
-        // TODO: 订单模块实现后，注入销售订单 Mapper 并查询真实引用数量
-        return 0;
+        // 查询引用该客户的销售订单数量
+        return salesOrderMapper.selectCount(
+                new LambdaQueryWrapper<SalesOrder>()
+                        .eq(SalesOrder::getCustomerId, customerId));
     }
 }

@@ -6,6 +6,9 @@ import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.master.domain.model.Supplier;
 import com.jingwei.master.domain.model.SupplierQualificationStatus;
 import com.jingwei.master.domain.repository.SupplierRepository;
+import com.jingwei.procurement.infrastructure.persistence.ProcurementOrderMapper;
+import com.jingwei.procurement.domain.model.ProcurementOrder;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -41,6 +44,7 @@ import org.springframework.stereotype.Service;
 public class SupplierDomainService {
 
     private final SupplierRepository supplierRepository;
+    private final ProcurementOrderMapper procurementOrderMapper;
 
     /**
      * 获取供应商仓库引用（供 ApplicationService 分页查询使用）
@@ -248,7 +252,9 @@ public class SupplierDomainService {
      * @return 引用该供应商的采购订单数量
      */
     private long countProcurementReferences(Long supplierId) {
-        // TODO: 采购模块实现后，注入采购订单 Mapper 并查询真实引用数量
-        return 0;
+        // 查询引用该供应商的采购订单数量
+        return procurementOrderMapper.selectCount(
+                new LambdaQueryWrapper<ProcurementOrder>()
+                        .eq(ProcurementOrder::getSupplierId, supplierId));
     }
 }

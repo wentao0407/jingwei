@@ -8,6 +8,11 @@ import com.jingwei.master.domain.model.LocationStatus;
 import com.jingwei.master.domain.model.Warehouse;
 import com.jingwei.master.domain.repository.LocationRepository;
 import com.jingwei.master.domain.repository.WarehouseRepository;
+import com.jingwei.inventory.infrastructure.persistence.InventorySkuMapper;
+import com.jingwei.inventory.infrastructure.persistence.InventoryMaterialMapper;
+import com.jingwei.inventory.domain.model.InventorySku;
+import com.jingwei.inventory.domain.model.InventoryMaterial;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -46,6 +51,8 @@ public class WarehouseDomainService {
 
     private final WarehouseRepository warehouseRepository;
     private final LocationRepository locationRepository;
+    private final InventorySkuMapper inventorySkuMapper;
+    private final InventoryMaterialMapper inventoryMaterialMapper;
 
     // ==================== 仓库 CRUD ====================
 
@@ -471,7 +478,13 @@ public class WarehouseDomainService {
      * @return 库存数量
      */
     private long countInventoryReferences(Long warehouseId) {
-        // TODO: 库存模块实现后，注入库存 Mapper 并查询真实数量
-        return 0;
+        // 查询成品库存和原料库存中该仓库的记录数
+        long skuCount = inventorySkuMapper.selectCount(
+                new LambdaQueryWrapper<InventorySku>()
+                        .eq(InventorySku::getWarehouseId, warehouseId));
+        long materialCount = inventoryMaterialMapper.selectCount(
+                new LambdaQueryWrapper<InventoryMaterial>()
+                        .eq(InventoryMaterial::getWarehouseId, warehouseId));
+        return skuCount + materialCount;
     }
 }

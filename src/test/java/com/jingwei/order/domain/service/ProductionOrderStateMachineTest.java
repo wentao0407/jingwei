@@ -9,6 +9,7 @@ import com.jingwei.order.domain.model.*;
 import com.jingwei.order.domain.repository.OrderChangeLogRepository;
 import com.jingwei.order.domain.repository.ProductionOrderLineRepository;
 import com.jingwei.order.domain.repository.ProductionOrderRepository;
+import com.jingwei.common.domain.service.DomainEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -62,7 +63,7 @@ class ProductionOrderStateMachineTest {
     @BeforeEach
     void setUp() {
         conditionEvaluator = new ProductionOrderConditionEvaluator(productionOrderLineRepository);
-        actionExecutor = new ProductionOrderActionExecutor();
+        actionExecutor = new ProductionOrderActionExecutor(mock(DomainEventPublisher.class));
         changeLogListener = new ProductionOrderChangeLogListener(orderChangeLogRepository);
 
         ProductionOrderStateMachineConfig config = new ProductionOrderStateMachineConfig();
@@ -152,6 +153,7 @@ class ProductionOrderStateMachineTest {
         void shouldTransitionFromCompletedToStocked() {
             ProductionOrder order = buildOrder(1L, ProductionOrderStatus.COMPLETED);
             ProductionOrderLine line = buildLine(10L, 1L, ProductionOrderStatus.COMPLETED, false);
+            line.setStockedQuantity(600);
 
             when(productionOrderRepository.selectById(1L)).thenReturn(order);
             when(productionOrderLineRepository.selectById(10L)).thenReturn(line);
@@ -280,6 +282,7 @@ class ProductionOrderStateMachineTest {
         void shouldTransitionLineFromCompletedToStocked() {
             ProductionOrder order = buildOrder(1L, ProductionOrderStatus.COMPLETED);
             ProductionOrderLine line = buildLine(10L, 1L, ProductionOrderStatus.COMPLETED, false);
+            line.setStockedQuantity(600);
 
             when(productionOrderRepository.selectById(1L)).thenReturn(order);
             when(productionOrderLineRepository.selectById(10L)).thenReturn(line);

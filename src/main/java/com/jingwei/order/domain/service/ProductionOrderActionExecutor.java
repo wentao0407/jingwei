@@ -1,10 +1,15 @@
 package com.jingwei.order.domain.service;
 
+import com.jingwei.common.domain.model.DomainEvent;
+import com.jingwei.common.domain.service.DomainEventPublisher;
 import com.jingwei.common.statemachine.TransitionContext;
 import com.jingwei.order.domain.model.ProductionOrderEvent;
 import com.jingwei.order.domain.model.ProductionOrderStatus;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+
+import java.util.Map;
 
 /**
  * 生产订单状态机动作执行器
@@ -14,8 +19,8 @@ import org.springframework.stereotype.Component;
  * 如发布领域事件、通知其他模块等。
  * </p>
  * <p>
- * 当前阶段跨模块通信用 Outbox + Spring Event，但 Outbox 模块尚未实现（T-40），
- * 因此动作方法暂时只打日志。待 T-40 实现后替换为 Outbox 写入。
+ * 跨模块通信用领域事件（Outbox），通过 {@link DomainEventPublisher} 写入 Outbox 表，
+ * 由 OutboxEventRelay 投递到 Spring Event Bus。
  * </p>
  * <p>
  * 重要：动作在状态机 fireEvent 内执行，调用方通常在 @Transactional 事务内调用 fireEvent，
@@ -26,7 +31,10 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class ProductionOrderActionExecutor {
+
+    private final DomainEventPublisher domainEventPublisher;
 
     /**
      * 生产完工后的动作
@@ -34,21 +42,16 @@ public class ProductionOrderActionExecutor {
      * 通知库存模块：生产订单已完工，准备接收入库。
      * 领域事件：ProductionCompletedEvent
      * </p>
-     * <p>
-     * TODO: T-40 Outbox 实现后替换为 Outbox 写入
-     * </p>
      *
      * @param context 转移上下文，businessId 为订单ID
      */
     public void onProductionCompleted(TransitionContext<ProductionOrderStatus, ProductionOrderEvent> context) {
-        // TODO: T-40 Outbox 实现后替换
-        // outboxRepository.save(DomainEvent.of(
-        //     "ProductionCompleted",
-        //     context.getBusinessId(),
-        //     Map.of("productionOrderId", context.getBusinessId(),
-        //            "operatorId", context.getOperatorId())
-        // ));
-        log.info("[动作] 生产完工, 通知库存准备入库, orderId={}, operatorId={}",
+        domainEventPublisher.publish(DomainEvent.of("ProductionCompleted", "PRODUCTION_ORDER",
+                context.getBusinessId(), Map.of(
+                        "productionOrderId", context.getBusinessId(),
+                        "operatorId", context.getOperatorId()
+                )));
+        log.info("生产完工事件已发布, orderId={}, operatorId={}",
                 context.getBusinessId(), context.getOperatorId());
     }
 
@@ -58,21 +61,16 @@ public class ProductionOrderActionExecutor {
      * 通知销售订单：关联的生产订单已入库，销售订单可以准备发货。
      * 领域事件：ProductionStockedEvent
      * </p>
-     * <p>
-     * TODO: T-40 Outbox 实现后替换为 Outbox 写入
-     * </p>
      *
      * @param context 转移上下文，businessId 为订单ID
      */
     public void onProductionStocked(TransitionContext<ProductionOrderStatus, ProductionOrderEvent> context) {
-        // TODO: T-40 Outbox 实现后替换
-        // outboxRepository.save(DomainEvent.of(
-        //     "ProductionStocked",
-        //     context.getBusinessId(),
-        //     Map.of("productionOrderId", context.getBusinessId(),
-        //            "operatorId", context.getOperatorId())
-        // ));
-        log.info("[动作] 入库完成, 通知销售订单可发货, orderId={}, operatorId={}",
+        domainEventPublisher.publish(DomainEvent.of("ProductionStocked", "PRODUCTION_ORDER",
+                context.getBusinessId(), Map.of(
+                        "productionOrderId", context.getBusinessId(),
+                        "operatorId", context.getOperatorId()
+                )));
+        log.info("入库完成事件已发布, orderId={}, operatorId={}",
                 context.getBusinessId(), context.getOperatorId());
     }
 }

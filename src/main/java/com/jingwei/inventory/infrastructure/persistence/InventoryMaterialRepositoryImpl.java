@@ -51,6 +51,11 @@ public class InventoryMaterialRepositoryImpl implements InventoryMaterialReposit
     }
 
     @Override
+    public List<InventoryMaterial> selectAll() {
+        return inventoryMaterialMapper.selectList(new LambdaQueryWrapper<>());
+    }
+
+    @Override
     public int insert(InventoryMaterial record) {
         return inventoryMaterialMapper.insert(record);
     }

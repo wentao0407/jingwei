@@ -9,6 +9,7 @@ import com.jingwei.master.domain.model.SupplierQualificationStatus;
 import com.jingwei.master.domain.model.SupplierType;
 import com.jingwei.master.domain.repository.SupplierRepository;
 import com.jingwei.master.domain.service.SupplierDomainService;
+import com.jingwei.procurement.infrastructure.persistence.ProcurementOrderMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +41,9 @@ class SupplierDomainServiceTest {
 
     @Mock
     private SupplierRepository supplierRepository;
+
+    @Mock
+    private ProcurementOrderMapper procurementOrderMapper;
 
     @InjectMocks
     private SupplierDomainService supplierDomainService;

@@ -1,5 +1,7 @@
 package com.jingwei.order.domain.service;
 
+import com.jingwei.common.domain.model.DomainEvent;
+import com.jingwei.common.domain.service.DomainEventPublisher;
 import com.jingwei.common.statemachine.TransitionContext;
 import com.jingwei.inventory.domain.model.InventoryAllocation;
 import com.jingwei.inventory.domain.model.InventorySku;
@@ -30,8 +32,8 @@ import java.util.stream.Collectors;
  * 如发布领域事件、触发库存预留等。
  * </p>
  * <p>
- * 当前阶段（T-17）跨模块通信用 Outbox + Spring Event，但 Outbox 模块尚未实现（T-40），
- * 因此动作方法暂时只打日志。待 T-40 实现后替换为 Outbox 写入。
+ * 跨模块通信用领域事件（Outbox），通过 {@link DomainEventPublisher} 写入 Outbox 表，
+ * 由 OutboxEventRelay 投递到 Spring Event Bus。
  * </p>
  * <p>
  * 重要：动作在状态机 fireEvent 内执行，调用方通常在 @Transactional 事务内调用 fireEvent，
@@ -51,6 +53,7 @@ public class SalesOrderActionExecutor {
     private final InventoryAllocationRepository inventoryAllocationRepository;
     private final InventorySkuRepository inventorySkuRepository;
     private final SkuRepository skuRepository;
+    private final DomainEventPublisher domainEventPublisher;
 
     /**
      * 订单审批通过后的动作
@@ -155,22 +158,16 @@ public class SalesOrderActionExecutor {
      * 通知采购模块：销售订单已进入排产，采购模块可据此准备物料采购。
      * 领域事件：SalesOrderProducingEvent
      * </p>
-     * <p>
-     * TODO: T-20/T-25 实现后，通过 Outbox 发布 SalesOrderProducingEvent，
-     *       采购模块订阅该事件触发 MRP 计算
-     * </p>
      *
      * @param context 转移上下文，businessId 为订单ID
      */
     public void onOrderProducing(TransitionContext<SalesOrderStatus, SalesOrderEvent> context) {
-        // TODO: T-40 Outbox 实现后替换
-        // outboxRepository.save(DomainEvent.of(
-        //     "SalesOrderProducing",
-        //     context.getBusinessId(),
-        //     Map.of("salesOrderId", context.getBusinessId(),
-        //            "operatorId", context.getOperatorId())
-        // ));
-        log.info("[预留] 销售订单开始排产, 通知采购模块, orderId={}, operatorId={}",
+        domainEventPublisher.publish(DomainEvent.of("SalesOrderProducing", "SALES_ORDER",
+                context.getBusinessId(), Map.of(
+                        "salesOrderId", context.getBusinessId(),
+                        "operatorId", context.getOperatorId()
+                )));
+        log.info("销售订单排产事件已发布, orderId={}, operatorId={}",
                 context.getBusinessId(), context.getOperatorId());
     }
 

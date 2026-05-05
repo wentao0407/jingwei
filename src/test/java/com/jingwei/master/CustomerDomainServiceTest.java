@@ -6,6 +6,7 @@ import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.master.domain.model.*;
 import com.jingwei.master.domain.repository.CustomerRepository;
 import com.jingwei.master.domain.service.CustomerDomainService;
+import com.jingwei.order.infrastructure.persistence.SalesOrderMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +40,9 @@ class CustomerDomainServiceTest {
 
     @Mock
     private CustomerRepository customerRepository;
+
+    @Mock
+    private SalesOrderMapper salesOrderMapper;
 
     @InjectMocks
     private CustomerDomainService customerDomainService;

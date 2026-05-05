@@ -19,6 +19,11 @@ public interface InventoryMaterialRepository {
 
     List<InventoryMaterial> selectByMaterialAndWarehouse(Long materialId, Long warehouseId);
 
+    /**
+     * 查询所有原料库存记录（对账扫描用）
+     */
+    List<InventoryMaterial> selectAll();
+
     int insert(InventoryMaterial record);
 
     int updateById(InventoryMaterial record);

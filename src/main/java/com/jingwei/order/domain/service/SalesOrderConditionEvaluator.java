@@ -3,10 +3,18 @@ package com.jingwei.order.domain.service;
 import com.jingwei.common.domain.model.BizException;
 import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.common.statemachine.TransitionContext;
+
+import java.math.BigDecimal;
+import java.util.List;
 import com.jingwei.order.domain.model.SalesOrderEvent;
 import com.jingwei.order.domain.model.SalesOrderStatus;
 import com.jingwei.order.domain.repository.ProductionOrderSourceRepository;
 import com.jingwei.order.domain.repository.SalesOrderLineRepository;
+import com.jingwei.inventory.domain.repository.InventoryAllocationRepository;
+import com.jingwei.inventory.domain.model.InventoryAllocation;
+import com.jingwei.inventory.infrastructure.persistence.OutboundOrderMapper;
+import com.jingwei.inventory.domain.model.OutboundOrder;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -24,9 +32,9 @@ import org.springframework.stereotype.Component;
  *   <li>hasOrderLines — 已实现，查询 SalesOrderLineRepository</li>
  *   <li>hasLinkedProductionOrder — 已实现（T-24），查询 ProductionOrderSourceRepository</li>
  *   <li>hasNoLinkedProductionOrder — 已实现（T-24），查询 ProductionOrderSourceRepository</li>
- *   <li>allStockFulfilled — 预留，待 T-29/T-30 库存管理实现</li>
- *   <li>partialStockFulfilled — 预留，待 T-29/T-30 库存管理实现</li>
- *   <li>hasOutboundOrder — 预留，待 T-31 出入库单实现</li>
+ *   <li>allStockFulfilled — 已实现，查询 InventoryAllocationRepository 检查所有预留是否完成</li>
+ *   <li>partialStockFulfilled — 已实现，查询 InventoryAllocationRepository 检查是否有部分出库</li>
+ *   <li>hasOutboundOrder — 已实现，查询 OutboundOrderMapper 检查是否有关联出库单</li>
  * </ul>
  * </p>
  *
@@ -39,6 +47,8 @@ public class SalesOrderConditionEvaluator {
 
     private final SalesOrderLineRepository salesOrderLineRepository;
     private final ProductionOrderSourceRepository productionOrderSourceRepository;
+    private final InventoryAllocationRepository inventoryAllocationRepository;
+    private final OutboundOrderMapper outboundOrderMapper;
 
     /**
      * 检查订单是否有明细行
@@ -105,16 +115,30 @@ public class SalesOrderConditionEvaluator {
      * 用于：PRODUCING → READY（备货完成）的前置条件。
      * 所有订单行SKU的可用库存均满足订单数量时才能进入备货完成状态。
      * </p>
-     * <p>
-     * TODO: T-29/T-30 库存管理实现后替换为真实逻辑
-     * </p>
-     *
      * @param context 转移上下文，businessId 为订单ID
      * @return true 表示所有SKU库存满足
      */
     public boolean allStockFulfilled(TransitionContext<SalesOrderStatus, SalesOrderEvent> context) {
-        // 预留钩子：T-29/T-30 实现后，查询库存满足率
-        log.debug("[预留] allStockFulfilled 检查, orderId={}", context.getBusinessId());
+        Long orderId = context.getBusinessId();
+
+        // 查询订单是否有活跃的库存预留记录
+        List<InventoryAllocation> allocations = inventoryAllocationRepository.selectByOrder("SALES_ORDER", orderId);
+        if (allocations.isEmpty()) {
+            throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED,
+                    "订单未完成库存预留，无法进入备货完成状态");
+        }
+
+        // 检查是否所有预留记录都已分配完成（fulfilled_qty >= allocated_qty）
+        boolean allFulfilled = allocations.stream()
+                .allMatch(a -> a.getFulfilledQty() != null
+                        && a.getFulfilledQty().compareTo(a.getAllocatedQty()) >= 0);
+
+        if (!allFulfilled) {
+            throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED,
+                    "订单存在未完成的库存预留，无法进入备货完成状态");
+        }
+
+        log.debug("allStockFulfilled 检查通过, orderId={}, allocationCount={}", orderId, allocations.size());
         return true;
     }
 
@@ -124,16 +148,29 @@ public class SalesOrderConditionEvaluator {
      * 用于：PRODUCING → SHIPPED（部分发货）的前置条件。
      * 至少部分SKU库存满足时允许部分发货。
      * </p>
-     * <p>
-     * TODO: T-29/T-30 库存管理实现后替换为真实逻辑
-     * </p>
-     *
      * @param context 转移上下文，businessId 为订单ID
      * @return true 表示有部分库存满足
      */
     public boolean partialStockFulfilled(TransitionContext<SalesOrderStatus, SalesOrderEvent> context) {
-        // 预留钩子：部分发货场景，检查是否有部分SKU库存满足
-        log.debug("[预留] partialStockFulfilled 检查, orderId={}", context.getBusinessId());
+        Long orderId = context.getBusinessId();
+
+        // 查询订单是否有活跃的库存预留记录（至少有一条即可）
+        List<InventoryAllocation> allocations = inventoryAllocationRepository.selectByOrder("SALES_ORDER", orderId);
+        if (allocations.isEmpty()) {
+            throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED,
+                    "订单未完成库存预留，无法进行部分发货");
+        }
+
+        // 检查是否至少有一条预留记录有已出库数量
+        boolean hasPartialFulfillment = allocations.stream()
+                .anyMatch(a -> a.getFulfilledQty() != null && a.getFulfilledQty().compareTo(BigDecimal.ZERO) > 0);
+
+        if (!hasPartialFulfillment) {
+            throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED,
+                    "订单尚无出库记录，无法进行部分发货");
+        }
+
+        log.debug("partialStockFulfilled 检查通过, orderId={}, allocationCount={}", orderId, allocations.size());
         return true;
     }
 
@@ -143,16 +180,24 @@ public class SalesOrderConditionEvaluator {
      * 用于：READY → SHIPPED（发货）的前置条件。
      * 发货前必须已创建出库单，确保仓库作业流程完整。
      * </p>
-     * <p>
-     * TODO: T-31 出入库单实现后替换为真实逻辑
-     * </p>
-     *
      * @param context 转移上下文，businessId 为订单ID
      * @return true 表示已创建出库单
      */
     public boolean hasOutboundOrder(TransitionContext<SalesOrderStatus, SalesOrderEvent> context) {
-        // 预留钩子：T-31 实现后，查询是否有关联的出库单
-        log.debug("[预留] hasOutboundOrder 检查, orderId={}", context.getBusinessId());
+        Long orderId = context.getBusinessId();
+
+        // 查询是否有关联的出库单（sourceType=SALES_ORDER, sourceId=orderId）
+        long count = outboundOrderMapper.selectCount(
+                new LambdaQueryWrapper<OutboundOrder>()
+                        .eq(OutboundOrder::getSourceType, "SALES_ORDER")
+                        .eq(OutboundOrder::getSourceId, orderId));
+
+        if (count == 0) {
+            throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED,
+                    "订单未创建出库单，无法发货");
+        }
+
+        log.debug("hasOutboundOrder 检查通过, orderId={}, outboundCount={}", orderId, count);
         return true;
     }
 }

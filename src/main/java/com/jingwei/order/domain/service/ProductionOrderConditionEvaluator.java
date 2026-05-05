@@ -25,7 +25,7 @@ import java.util.List;
  * <ul>
  *   <li>hasBomAndQuantity — 已实现，检查每行是否有BOM和数量</li>
  *   <li>skipCutting — 已实现，检查行是否配置跳过裁剪</li>
- *   <li>allStockedIn — 预留，待 T-29/T-30 库存管理实现</li>
+ *   <li>allStockedIn — 已实现，检查所有行已入库数量是否等于总数量</li>
  * </ul>
  * </p>
  *
@@ -112,16 +112,30 @@ public class ProductionOrderConditionEvaluator {
      * 用于：COMPLETED → STOCKED（入库完成）的前置条件。
      * 所有行的已入库数量必须等于总数量。
      * </p>
-     * <p>
-     * TODO: T-29/T-30 库存管理实现后替换为真实逻辑
-     * </p>
-     *
      * @param context 转移上下文，businessId 为订单ID
      * @return true 表示全部入库
      */
     public boolean allStockedIn(TransitionContext<ProductionOrderStatus, ProductionOrderEvent> context) {
-        // 预留钩子：T-29/T-30 实现后，检查入库单是否全部完成
-        log.debug("[预留] allStockedIn 检查, orderId={}", context.getBusinessId());
+        Long orderId = context.getBusinessId();
+
+        // 查询所有生产订单行
+        List<ProductionOrderLine> lines = productionOrderLineRepository.selectByOrderId(orderId);
+        if (lines.isEmpty()) {
+            throw new BizException(ErrorCode.ORDER_LINE_EMPTY);
+        }
+
+        // 检查每行的已入库数量是否等于总数量
+        for (ProductionOrderLine line : lines) {
+            int total = line.getTotalQuantity() != null ? line.getTotalQuantity() : 0;
+            int stocked = line.getStockedQuantity() != null ? line.getStockedQuantity() : 0;
+
+            if (stocked < total) {
+                throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED,
+                        "第" + line.getLineNo() + "行尚未全部入库（已入库" + stocked + "/" + total + "），无法完成入库");
+            }
+        }
+
+        log.debug("allStockedIn 检查通过, orderId={}, lineCount={}", orderId, lines.size());
         return true;
     }
 }

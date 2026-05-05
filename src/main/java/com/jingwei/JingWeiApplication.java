@@ -3,6 +3,7 @@ package com.jingwei;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 经纬服装生产管理系统主启动类
@@ -14,6 +15,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  */
 @SpringBootApplication
 @MapperScan("com.jingwei.**.infrastructure.persistence")
+@EnableScheduling
 public class JingWeiApplication {
 
     /**

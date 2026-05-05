@@ -4,13 +4,16 @@ import com.jingwei.approval.domain.model.*;
 import com.jingwei.approval.domain.repository.ApprovalConfigRepository;
 import com.jingwei.approval.domain.repository.ApprovalTaskRepository;
 import com.jingwei.common.domain.model.BizException;
+import com.jingwei.common.domain.model.DomainEvent;
 import com.jingwei.common.domain.model.ErrorCode;
+import com.jingwei.common.domain.service.DomainEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 审批领域服务
@@ -24,7 +27,7 @@ import java.util.List;
  * </p>
  * <p>
  * 跨模块通信用领域事件（Outbox），不直接调用业务模块的方法，保证松耦合。
- * Outbox 模块尚未实现（T-40），当前使用日志占位。
+ * 事件通过 {@link DomainEventPublisher} 写入 Outbox 表，由 OutboxEventRelay 投递到 Spring Event Bus。
  * </p>
  *
  * @author JingWei
@@ -37,6 +40,7 @@ public class ApprovalDomainService {
     private final ApprovalConfigRepository configRepository;
     private final ApprovalTaskRepository taskRepository;
     private final com.jingwei.system.domain.repository.SysUserRoleRepository userRoleRepository;
+    private final DomainEventPublisher domainEventPublisher;
 
     /**
      * 提交审批 — 为业务单据创建审批任务
@@ -62,7 +66,7 @@ public class ApprovalDomainService {
         ApprovalConfig config = configRepository.selectByBusinessType(businessType);
         if (config == null || !Boolean.TRUE.equals(config.getEnabled())) {
             // 无审批配置或未启用 → 自动通过
-            logApprovalAutoPassed(businessType, businessId, businessNo);
+            publishApprovalAutoPassed(businessType, businessId, businessNo);
             return false;
         }
 
@@ -70,7 +74,7 @@ public class ApprovalDomainService {
         List<Long> approverRoleIds = config.getApproverRoleIds();
         if (approverRoleIds == null || approverRoleIds.isEmpty()) {
             log.warn("审批配置[{}]未配置审批角色，自动通过, businessType={}", config.getId(), businessType);
-            logApprovalAutoPassed(businessType, businessId, businessNo);
+            publishApprovalAutoPassed(businessType, businessId, businessNo);
             return false;
         }
 
@@ -80,7 +84,7 @@ public class ApprovalDomainService {
             List<Long> userIds = userRoleRepository.selectUserIdsByRoleId(roleId);
             if (userIds.isEmpty()) {
                 log.warn("审批角色[{}]下无用户，自动通过, businessType={}", roleId, businessType);
-                logApprovalAutoPassed(businessType, businessId, businessNo);
+                publishApprovalAutoPassed(businessType, businessId, businessNo);
                 return false;
             }
             for (Long userId : userIds) {
@@ -157,9 +161,18 @@ public class ApprovalDomainService {
                     cancelled, task.getBusinessType(), task.getBusinessId(), task.getApprovalMode());
         }
 
-        // 发布审批结果领域事件（Outbox 预留钩子）
+        // 发布审批结果领域事件（写入 Outbox 表，与业务操作同事务）
         String eventType = approved ? "ApprovalPassed" : "ApprovalRejected";
-        logApprovalEvent(eventType, task);
+        domainEventPublisher.publish(DomainEvent.of(eventType, task.getBusinessType(),
+                task.getBusinessId(), Map.of(
+                        "taskId", task.getId(),
+                        "businessType", task.getBusinessType(),
+                        "businessId", task.getBusinessId(),
+                        "businessNo", task.getBusinessNo(),
+                        "approverId", task.getApproverId(),
+                        "approved", approved,
+                        "opinion", opinion
+                )));
     }
 
     /**
@@ -243,25 +256,20 @@ public class ApprovalDomainService {
     }
 
     /**
-     * 记录自动通过日志（Outbox 预留钩子）
-     * <p>
-     * TODO: T-40 Outbox 实现后，替换为 outboxRepository.save()
-     * </p>
+     * 发布审批自动通过领域事件（写入 Outbox 表）
+     *
+     * @param businessType 业务类型
+     * @param businessId   业务单据ID
+     * @param businessNo   业务单据编号
      */
-    private void logApprovalAutoPassed(String businessType, Long businessId, String businessNo) {
-        log.info("[预留] 审批自动通过: businessType={}, businessId={}, businessNo={}",
+    private void publishApprovalAutoPassed(String businessType, Long businessId, String businessNo) {
+        domainEventPublisher.publish(DomainEvent.of("ApprovalAutoPassed", businessType,
+                businessId, Map.of(
+                        "businessType", businessType,
+                        "businessId", businessId,
+                        "businessNo", businessNo != null ? businessNo : ""
+                )));
+        log.info("审批自动通过事件已发布: businessType={}, businessId={}, businessNo={}",
                 businessType, businessId, businessNo);
-    }
-
-    /**
-     * 记录审批结果领域事件日志（Outbox 预留钩子）
-     * <p>
-     * TODO: T-40 Outbox 实现后，替换为 outboxRepository.save()
-     * </p>
-     */
-    private void logApprovalEvent(String eventType, ApprovalTask task) {
-        log.info("[预留] 审批领域事件: type={}, businessType={}, businessId={}, businessNo={}, taskId={}, approverId={}",
-                eventType, task.getBusinessType(), task.getBusinessId(),
-                task.getBusinessNo(), task.getId(), task.getApproverId());
     }
 }

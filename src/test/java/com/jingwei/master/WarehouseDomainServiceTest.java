@@ -7,6 +7,8 @@ import com.jingwei.master.domain.model.*;
 import com.jingwei.master.domain.repository.LocationRepository;
 import com.jingwei.master.domain.repository.WarehouseRepository;
 import com.jingwei.master.domain.service.WarehouseDomainService;
+import com.jingwei.inventory.infrastructure.persistence.InventorySkuMapper;
+import com.jingwei.inventory.infrastructure.persistence.InventoryMaterialMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,12 @@ class WarehouseDomainServiceTest {
 
     @Mock
     private LocationRepository locationRepository;
+
+    @Mock
+    private InventorySkuMapper inventorySkuMapper;
+
+    @Mock
+    private InventoryMaterialMapper inventoryMaterialMapper;
 
     @InjectMocks
     private WarehouseDomainService warehouseDomainService;

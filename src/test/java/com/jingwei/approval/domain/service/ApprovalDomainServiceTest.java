@@ -6,6 +6,7 @@ import com.jingwei.approval.domain.repository.ApprovalTaskRepository;
 import com.jingwei.common.domain.model.BizException;
 import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.system.domain.repository.SysUserRoleRepository;
+import com.jingwei.common.domain.service.DomainEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -49,11 +50,14 @@ class ApprovalDomainServiceTest {
     @Mock
     private SysUserRoleRepository userRoleRepository;
 
+    @Mock
+    private DomainEventPublisher domainEventPublisher;
+
     private ApprovalDomainService domainService;
 
     @BeforeEach
     void setUp() {
-        domainService = new ApprovalDomainService(configRepository, taskRepository, userRoleRepository);
+        domainService = new ApprovalDomainService(configRepository, taskRepository, userRoleRepository, domainEventPublisher);
     }
 
     // ========== 提交审批测试 ==========
