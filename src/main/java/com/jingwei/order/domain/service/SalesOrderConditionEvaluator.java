@@ -122,7 +122,7 @@ public class SalesOrderConditionEvaluator {
         Long orderId = context.getBusinessId();
 
         // 查询订单是否有活跃的库存预留记录
-        List<InventoryAllocation> allocations = inventoryAllocationRepository.selectByOrder("SALES_ORDER", orderId);
+        List<InventoryAllocation> allocations = inventoryAllocationRepository.selectByOrder("SALES", orderId);
         if (allocations.isEmpty()) {
             throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED,
                     "订单未完成库存预留，无法进入备货完成状态");
@@ -155,7 +155,7 @@ public class SalesOrderConditionEvaluator {
         Long orderId = context.getBusinessId();
 
         // 查询订单是否有活跃的库存预留记录（至少有一条即可）
-        List<InventoryAllocation> allocations = inventoryAllocationRepository.selectByOrder("SALES_ORDER", orderId);
+        List<InventoryAllocation> allocations = inventoryAllocationRepository.selectByOrder("SALES", orderId);
         if (allocations.isEmpty()) {
             throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED,
                     "订单未完成库存预留，无法进行部分发货");

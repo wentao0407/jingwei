@@ -6,6 +6,7 @@ import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.inventory.domain.repository.InventorySkuRepository;
 import com.jingwei.inventory.domain.service.InventoryDomainService;
 import com.jingwei.master.domain.repository.SkuRepository;
+import com.jingwei.master.domain.repository.WarehouseRepository;
 import com.jingwei.master.domain.service.CodingRuleDomainService;
 import com.jingwei.order.domain.repository.SalesOrderLineRepository;
 import com.jingwei.order.domain.model.*;
@@ -59,6 +60,8 @@ class ReturnOrderDomainServiceTest {
     private SalesOrderLineRepository salesOrderLineRepository;
     @Mock
     private SkuRepository skuRepository;
+    @Mock
+    private WarehouseRepository warehouseRepository;
 
     private ReturnOrderDomainService service;
 
@@ -69,7 +72,8 @@ class ReturnOrderDomainServiceTest {
                 returnOrderRepository, returnOrderLineRepository,
                 approvalDomainService, codingRuleDomainService,
                 inventoryDomainService, inventorySkuRepository,
-                salesOrderLineRepository, skuRepository);
+                salesOrderLineRepository, skuRepository,
+                warehouseRepository);
     }
 
     // ==================== 辅助方法 ====================

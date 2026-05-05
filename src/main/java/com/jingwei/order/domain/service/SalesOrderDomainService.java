@@ -401,6 +401,28 @@ public class SalesOrderDomainService {
         log.info("销售订单已取消: orderId={}, orderNo={}", orderId, order.getOrderNo());
     }
 
+    /**
+     * 备货完成（由生产入库事件驱动）
+     * <p>
+     * 流程：PRODUCING → READY，由状态机条件评估器判断是否满足备货完成条件。
+     * 由 {@link OrderEventListener#onProductionStocked} 在收到生产入库事件后调用。
+     * </p>
+     *
+     * @param orderId    订单ID
+     * @param operatorId 操作人ID
+     */
+    public void fireReadyStock(Long orderId, Long operatorId) {
+        SalesOrder order = getExistingOrder(orderId);
+        TransitionContext<SalesOrderStatus, SalesOrderEvent> ctx = buildContext(orderId, operatorId);
+
+        SalesOrderStatus newStatus = salesOrderStateMachine.fireEvent(
+                order.getStatus(), SalesOrderEvent.READY_STOCK, ctx);
+        order.setStatus(newStatus);
+        salesOrderRepository.updateById(order);
+
+        log.info("销售订单备货完成: orderId={}, orderNo={}", orderId, order.getOrderNo());
+    }
+
     // ==================== 数量变更 ====================
 
     /**

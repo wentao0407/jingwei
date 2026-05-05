@@ -37,6 +37,7 @@ public class CostEventListener {
     public void onMaterialIssued(DomainEvent event) {
         Map<String, Object> payload = event.getPayload();
         Long productionOrderId = event.getAggregateId();
+        Long productionLineId = getLong(payload, "productionLineId");
         Long materialId = getLong(payload, "materialId");
         BigDecimal issueQty = getBigDecimal(payload, "issueQty");
         BigDecimal unitCost = getBigDecimal(payload, "unitCost");
@@ -48,7 +49,7 @@ public class CostEventListener {
 
         try {
             costDomainService.recordMaterialIssue(
-                    productionOrderId, null, materialId, MaterialType.MATERIAL,
+                    productionOrderId, productionLineId, materialId, MaterialType.MATERIAL,
                     issueQty, unitCost, null);
             log.debug("领料成本已记录: productionOrderId={}, materialId={}, qty={}",
                     productionOrderId, materialId, issueQty);
@@ -65,6 +66,7 @@ public class CostEventListener {
     public void onProductionInbound(DomainEvent event) {
         Map<String, Object> payload = event.getPayload();
         Long productionOrderId = event.getAggregateId();
+        Long productionLineId = getLong(payload, "productionLineId");
         BigDecimal inboundQty = getBigDecimal(payload, "inboundQty");
 
         if (productionOrderId == null || inboundQty == null || inboundQty.intValue() <= 0) {
@@ -73,7 +75,7 @@ public class CostEventListener {
         }
 
         try {
-            costDomainService.calculateUnitCost(productionOrderId, null, inboundQty.intValue());
+            costDomainService.calculateUnitCost(productionOrderId, productionLineId, inboundQty.intValue());
             log.debug("成品单位成本已计算: productionOrderId={}, qty={}", productionOrderId, inboundQty);
         } catch (Exception e) {
             log.error("成品成本计算失败（不影响库存事务）: productionOrderId={}, error={}",

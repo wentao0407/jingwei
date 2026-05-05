@@ -326,6 +326,7 @@ class ApprovalDomainServiceTest {
         task.setStatus(ApprovalTaskStatus.PENDING);
         task.setApproverId(approverId);
         task.setApproverRoleId(2L);
+        task.setCreatedBy(5L);  // 提交人ID
         return task;
     }
 }

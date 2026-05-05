@@ -68,7 +68,8 @@
     </div>
     <div class="section-desc">
         经纬系统采用模块化单体（Modular Monolith）架构，物理上是一个部署单元，代码层面严格按限界上下文划分模块。模块之间通过领域事件+Outbox通信，不直接调用。<br/><br/>
-        <b>v2 变更点：</b>① 移除 Spring Cloud Gateway，改用 Nginx 直连（<20人并发不需要网关层）；② 新增审批引擎、通知中心、退货管理、成本核算四个模块；③ 部署层移除 RabbitMQ 和 MinIO，初期不需要。
+        <b>v2 变更点：</b>① 移除 Spring Cloud Gateway，改用 Nginx 直连（<20人并发不需要网关层）；② 新增审批引擎、通知中心、退货管理、成本核算四个模块；③ 部署层移除 RabbitMQ 和 MinIO，初期不需要。<br/>
+        <b>当前实现补充：</b>审批结果、生产入库、成本归集和库存对账通知均走 Outbox + Spring Event；数据权限由角色 data_scope 与用户仓库授权驱动查询过滤。
     </div>
     <div class="diagram-wrap">
         <div class="mermaid">
@@ -125,6 +126,7 @@ graph TB
             SYS2["权限/RBAC"]
             SYS3["操作日志"]
             SYS4["系统配置"]
+            SYS5["数据权限<br/>data_scope + 用户仓库"]
         end
 
         BUS["🔄 领域事件总线 + Outbox<br/>(Spring ApplicationEvent → domain_event_outbox)"]
@@ -377,7 +379,7 @@ flowchart LR
         E9["InventoryInsufficient"]
         E10["AllocationExpired"]
         E11["ReturnRequested 🆕"]
-        E12["ApprovalApproved 🆕"]
+        E12["ApprovalPassed / AutoPassed 🆕"]
         E13["ApprovalRejected 🆕"]
     end
 
@@ -430,8 +432,11 @@ flowchart LR
             <div class="legend-item" style="width:45%"><b>InventoryInsufficient</b> → 标记订单缺货</div>
             <div class="legend-item" style="width:45%"><b>AllocationExpired</b> → 自动释放预留</div>
             <div class="legend-item" style="width:45%"><b>ReturnRequested 🆕</b> → 退货入库预留</div>
-            <div class="legend-item" style="width:45%"><b>ApprovalApproved 🆕</b> → 通知业务模块</div>
+            <div class="legend-item" style="width:45%"><b>ApprovalPassed / AutoPassed 🆕</b> → 业务状态推进</div>
             <div class="legend-item" style="width:45%"><b>ApprovalRejected 🆕</b> → 退回草稿</div>
+            <div class="legend-item" style="width:45%"><b>ProductionStocked</b> → 销售订单备货完成检查</div>
+            <div class="legend-item" style="width:45%"><b>MaterialIssued / ProductionInbound</b> → 行级成本归集</div>
+            <div class="legend-item" style="width:45%"><b>Reconciliation异常</b> → INVENTORY_ALERT 通知管理员</div>
         </div>
     </div>
 </div>
@@ -683,7 +688,7 @@ erDiagram
     sys_approval_config ||--o{ sys_approval_task : "生成审批任务"
     sys_approval_config {
         bigint id PK
-        varchar business_type "SALES_ORDER/PURCHASE_ORDER/..."
+        varchar business_type "SALES_ORDER/PROCUREMENT_ORDER/..."
         varchar approval_mode "SINGLE/OR_SIGN"
         jsonb approver_role_ids "审批人角色列表"
     }

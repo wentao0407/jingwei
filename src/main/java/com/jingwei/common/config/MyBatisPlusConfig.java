@@ -37,10 +37,15 @@ public class MyBatisPlusConfig {
         return interceptor;
     }
 
-    // 数据权限拦截器暂时禁用：delegate 属性访问与当前 MyBatis 版本不兼容
-    // 待修复后重新启用
-    // @Bean
-    // public Interceptor dataPermissionInterceptor() {
-    //     return new DataPermissionInterceptor();
-    // }
+    /**
+     * 数据权限拦截器
+     * <p>
+     * 拦截标注了 @DataPermission 的 Mapper 方法，自动追加数据过滤条件。
+     * 需要配合 t_sys_role.data_scope 和 t_sys_user_warehouse 表使用。
+     * </p>
+     */
+    @Bean
+    public Interceptor dataPermissionInterceptor() {
+        return new DataPermissionInterceptor();
+    }
 }

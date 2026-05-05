@@ -198,7 +198,7 @@ public class SeasonDomainService {
             throw new BizException(ErrorCode.DATA_NOT_FOUND, "季节不存在");
         }
 
-        // 检查是否被业务单据引用（当前订单模块尚未实现，预留钩子）
+        // 检查是否有款式（SPU）引用了该季节
         long orderCount = countOrderReferences(seasonId);
         if (orderCount > 0) {
             throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED,
@@ -386,14 +386,10 @@ public class SeasonDomainService {
     }
 
     /**
-     * 统计引用该季节的订单数量
-     * <p>
-     * 当前订单模块尚未实现，返回 0。
-     * 订单模块实现后，应替换为真实查询。
-     * </p>
+     * 统计引用该季节的款式（SPU）数量
      *
      * @param seasonId 季节ID
-     * @return 引用该季节的订单数量
+     * @return 引用该季节的SPU数量
      */
     private long countOrderReferences(Long seasonId) {
         // 检查是否有款式（SPU）引用了该季节

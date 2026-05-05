@@ -14,6 +14,7 @@ import com.jingwei.order.domain.model.SalesOrder;
 import com.jingwei.order.domain.model.SalesOrderEvent;
 import com.jingwei.order.domain.model.SalesOrderLine;
 import com.jingwei.order.domain.model.SalesOrderStatus;
+import com.jingwei.order.domain.model.SizeMatrix;
 import com.jingwei.order.domain.repository.SalesOrderLineRepository;
 import com.jingwei.order.domain.repository.SalesOrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -80,46 +81,73 @@ public class SalesOrderActionExecutor {
 
         List<SalesOrderLine> lines = salesOrderLineRepository.selectByOrderId(salesOrderId);
         for (SalesOrderLine line : lines) {
-            int demandQty = line.getTotalQuantity();
-            if (demandQty <= 0) continue;
+            if (line.getSizeMatrix() != null && line.getSizeMatrix().getSizes() != null) {
+                // 按尺码矩阵精确定位 SKU 并预留，每个尺码独立处理
+                List<Sku> spuSkus = skuRepository.selectBySpuId(line.getSpuId());
+                for (SizeMatrix.SizeEntry sizeEntry : line.getSizeMatrix().getSizes()) {
+                    int qty = sizeEntry.getQuantity();
+                    if (qty <= 0) continue;
 
-            // 通过 SPU 查找关联的 SKU 列表，逐 SKU 预留
-            List<Sku> skus = skuRepository.selectBySpuId(line.getSpuId());
-            if (skus.isEmpty()) {
-                log.warn("SPU 下无 SKU, 跳过预留: salesOrderId={}, spuId={}", salesOrderId, line.getSpuId());
-                continue;
-            }
+                    // 通过 (spuId, colorWayId, sizeId) 精确匹配 SKU
+                    Long skuId = spuSkus.stream()
+                            .filter(s -> line.getColorWayId().equals(s.getColorWayId())
+                                    && sizeEntry.getSizeId().equals(s.getSizeId()))
+                            .map(Sku::getId)
+                            .findFirst().orElse(null);
+                    if (skuId == null) {
+                        log.warn("SKU不存在, 跳过预留: spuId={}, colorWayId={}, sizeId={}",
+                                line.getSpuId(), line.getColorWayId(), sizeEntry.getSizeId());
+                        continue;
+                    }
 
-            int remaining = demandQty;
-            for (Sku sku : skus) {
-                if (remaining <= 0) break;
-
-                List<InventorySku> allInventory = inventorySkuRepository.selectBySkuId(sku.getId());
-                Map<Long, List<InventorySku>> byWarehouse = allInventory.stream()
-                        .filter(inv -> inv.getAvailableQty() > 0)
-                        .collect(Collectors.groupingBy(InventorySku::getWarehouseId));
-
-                for (Map.Entry<Long, List<InventorySku>> entry : byWarehouse.entrySet()) {
-                    if (remaining <= 0) break;
-                    Long warehouseId = entry.getKey();
-                    int warehouseAvailable = entry.getValue().stream().mapToInt(InventorySku::getAvailableQty).sum();
-                    int toReserve = Math.min(remaining, warehouseAvailable);
-                    if (toReserve <= 0) continue;
-
-                    AllocationDomainService.AllocationResult result = allocationDomainService.allocate(
-                            sku.getId(), warehouseId, toReserve,
-                            "SALES", salesOrderId, line.getId(), operatorId);
-                    remaining -= result.getAllocatedQty();
+                    reserveForSku(skuId, qty, salesOrderId, line.getId(), operatorId);
                 }
-            }
-
-            if (remaining > 0) {
-                log.warn("库存部分预留: salesOrderId={}, spuId={}, 需求={}, 缺口={}",
-                        salesOrderId, line.getSpuId(), demandQty, remaining);
+            } else {
+                // 尺码矩阵为空时的兜底：按总数量从该 SPU 下所有 SKU 中预留
+                log.warn("销售行尺码矩阵为空, 按SPU兜底预留: lineId={}, spuId={}", line.getId(), line.getSpuId());
+                int demandQty = line.getTotalQuantity();
+                if (demandQty <= 0) continue;
+                List<Sku> skus = skuRepository.selectBySpuId(line.getSpuId());
+                int remaining = demandQty;
+                for (Sku sku : skus) {
+                    if (remaining <= 0) break;
+                    remaining -= reserveForSku(sku.getId(), remaining, salesOrderId, line.getId(), operatorId);
+                }
+                if (remaining > 0) {
+                    log.warn("库存部分预留: salesOrderId={}, lineId={}, 需求={}, 缺口={}",
+                            salesOrderId, line.getId(), demandQty, remaining);
+                }
             }
         }
 
         log.info("销售订单库存预留完成: salesOrderId={}, 行数={}", salesOrderId, lines.size());
+    }
+
+    /**
+     * 为指定 SKU 预留库存，按仓库可用量依次锁定
+     *
+     * @return 实际预留数量
+     */
+    private int reserveForSku(Long skuId, int demandQty, Long salesOrderId, Long lineId, Long operatorId) {
+        List<InventorySku> allInventory = inventorySkuRepository.selectBySkuId(skuId);
+        Map<Long, List<InventorySku>> byWarehouse = allInventory.stream()
+                .filter(inv -> inv.getAvailableQty() > 0)
+                .collect(Collectors.groupingBy(InventorySku::getWarehouseId));
+
+        int remaining = demandQty;
+        for (Map.Entry<Long, List<InventorySku>> entry : byWarehouse.entrySet()) {
+            if (remaining <= 0) break;
+            Long warehouseId = entry.getKey();
+            int warehouseAvailable = entry.getValue().stream().mapToInt(InventorySku::getAvailableQty).sum();
+            int toReserve = Math.min(remaining, warehouseAvailable);
+            if (toReserve <= 0) continue;
+
+            AllocationDomainService.AllocationResult result = allocationDomainService.allocate(
+                    skuId, warehouseId, toReserve,
+                    "SALES", salesOrderId, lineId, operatorId);
+            remaining -= result.getAllocatedQty();
+        }
+        return demandQty - remaining;
     }
 
     /**

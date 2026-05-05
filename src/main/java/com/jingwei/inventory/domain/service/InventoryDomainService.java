@@ -504,6 +504,7 @@ public class InventoryDomainService {
             domainEventPublisher.publish(DomainEvent.of("MaterialIssued", "PRODUCTION_ORDER",
                     cmd.getSourceId(), Map.of(
                             "productionOrderId", cmd.getSourceId(),
+                            "productionLineId", cmd.getSourceLineId(),
                             "materialId", cmd.getMaterialId() != null ? cmd.getMaterialId() : cmd.getSkuId(),
                             "issueQty", cmd.getQuantity(),
                             "unitCost", cmd.getUnitCost() != null ? cmd.getUnitCost() : BigDecimal.ZERO
@@ -512,6 +513,7 @@ public class InventoryDomainService {
             domainEventPublisher.publish(DomainEvent.of("ProductionInbound", "PRODUCTION_ORDER",
                     cmd.getSourceId(), Map.of(
                             "productionOrderId", cmd.getSourceId(),
+                            "productionLineId", cmd.getSourceLineId(),
                             "skuId", cmd.getSkuId() != null ? cmd.getSkuId() : 0L,
                             "inboundQty", cmd.getQuantity(),
                             "unitCost", cmd.getUnitCost() != null ? cmd.getUnitCost() : BigDecimal.ZERO

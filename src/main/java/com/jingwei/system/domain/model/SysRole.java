@@ -31,4 +31,7 @@ public class SysRole extends BaseEntity {
 
     /** 状态：ACTIVE/INACTIVE */
     private UserStatus status;
+
+    /** 数据范围：ALL=全部可见 / WAREHOUSE=按仓库过滤 */
+    private String dataScope;
 }

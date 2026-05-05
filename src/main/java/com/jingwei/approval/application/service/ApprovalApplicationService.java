@@ -15,9 +15,6 @@ import com.jingwei.approval.interfaces.vo.ApprovalTaskVO;
 import com.jingwei.common.domain.model.BizException;
 import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.common.domain.model.UserContext;
-import com.jingwei.order.domain.service.SalesOrderDomainService;
-import com.jingwei.procurement.domain.model.ProcurementOrderEvent;
-import com.jingwei.procurement.domain.service.ProcurementOrderDomainService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,27 +36,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ApprovalApplicationService {
 
-    /**
-     * 审批业务类型标识：销售订单审批。
-     * 与 t_sys_approval_config.business_type 字段匹配，用于加载销售订单的审批配置（单人审批/或签模式）。
-     */
-    private static final String SALES_ORDER_TYPE = "SALES_ORDER";
-    /**
-     * 审批业务类型标识：订单数量变更审批。
-     * 与 t_sys_approval_config.business_type 字段匹配，销售订单发生数量变更时触发的独立审批流程。
-     */
-    private static final String QUANTITY_CHANGE_TYPE = "ORDER_QUANTITY_CHANGE";
-    /**
-     * 审批业务类型标识：采购订单审批（或签模式）。
-     * 与 t_sys_approval_config.business_type 字段匹配，采购订单通常采用或签模式（任一审批人通过即生效）。
-     */
-    private static final String PROCUREMENT_ORDER_TYPE = "PROCUREMENT_ORDER";
-
     private final ApprovalDomainService domainService;
     private final ApprovalConfigRepository configRepository;
     private final ApprovalTaskRepository taskRepository;
-    private final SalesOrderDomainService salesOrderDomainService;
-    private final ProcurementOrderDomainService procurementOrderDomainService;
 
     // ========== 审批配置 CRUD ==========
 
@@ -157,41 +136,15 @@ public class ApprovalApplicationService {
     /**
      * 审批操作（通过或驳回）
      * <p>
-     * 审批完成后，同步更新业务单据状态。
+     * 审批完成后，审批领域服务通过 Outbox 发布领域事件（ApprovalPassed/ApprovalRejected/ApprovalAutoPassed），
+     * 由 {@link com.jingwei.order.domain.service.OrderEventListener} 消费事件并驱动业务单据状态流转。
      * 支持 SALES_ORDER、ORDER_QUANTITY_CHANGE、PROCUREMENT_ORDER 三种类型。
-     * TODO: T-40 Outbox 实现后，改为事件驱动，移除对 DomainService 的直接依赖
      * </p>
      */
     @Transactional
     public void approve(ApproveDTO dto) {
         Long operatorId = UserContext.getUserId();
         domainService.approve(dto.getTaskId(), dto.getApproved(), dto.getOpinion(), operatorId);
-
-        // 审批完成后同步更新业务状态（临时直接调用，T-40 后改为 Outbox 事件驱动）
-        ApprovalTask task = taskRepository.selectById(dto.getTaskId());
-        if (task != null) {
-            if (SALES_ORDER_TYPE.equals(task.getBusinessType())) {
-                if (Boolean.TRUE.equals(dto.getApproved())) {
-                    salesOrderDomainService.approveOrder(task.getBusinessId(), operatorId);
-                } else {
-                    salesOrderDomainService.rejectOrder(task.getBusinessId(), operatorId);
-                }
-            } else if (QUANTITY_CHANGE_TYPE.equals(task.getBusinessType())) {
-                if (Boolean.TRUE.equals(dto.getApproved())) {
-                    salesOrderDomainService.applyQuantityChange(task.getBusinessId(), operatorId);
-                } else {
-                    salesOrderDomainService.rejectQuantityChange(task.getBusinessId(), operatorId);
-                }
-            } else if (PROCUREMENT_ORDER_TYPE.equals(task.getBusinessType())) {
-                if (Boolean.TRUE.equals(dto.getApproved())) {
-                    procurementOrderDomainService.fireEvent(
-                            task.getBusinessId(), ProcurementOrderEvent.APPROVE, operatorId);
-                } else {
-                    procurementOrderDomainService.fireEvent(
-                            task.getBusinessId(), ProcurementOrderEvent.REJECT, operatorId);
-                }
-            }
-        }
     }
 
     // ========== 审批查询 ==========

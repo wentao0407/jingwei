@@ -203,7 +203,6 @@ public class SupplierDomainService {
      * 删除供应商
      * <p>
      * 仅允许删除未被业务单据引用的供应商。
-     * 当前采购模块尚未实现，预留引用检查钩子。
      * </p>
      *
      * @param supplierId 供应商ID
@@ -214,7 +213,7 @@ public class SupplierDomainService {
             throw new BizException(ErrorCode.DATA_NOT_FOUND, "供应商不存在");
         }
 
-        // 检查是否被采购订单引用（当前采购模块尚未实现，预留钩子）
+        // 检查是否被采购订单引用
         long procurementCount = countProcurementReferences(supplierId);
         if (procurementCount > 0) {
             throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED,
@@ -243,10 +242,6 @@ public class SupplierDomainService {
 
     /**
      * 统计引用该供应商的采购订单数量
-     * <p>
-     * 当前采购模块尚未实现，返回 0。
-     * 采购模块实现后，应替换为真实查询。
-     * </p>
      *
      * @param supplierId 供应商ID
      * @return 引用该供应商的采购订单数量

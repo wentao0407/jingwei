@@ -46,8 +46,11 @@ public class DataPermissionInterceptor implements Interceptor {
         StatementHandler handler = (StatementHandler) invocation.getTarget();
         MetaObject metaObject = SystemMetaObject.forObject(handler);
 
-        // 获取 MappedStatement
-        MappedStatement ms = (MappedStatement) metaObject.getValue("delegate.mappedStatement");
+        // 获取 MappedStatement - 兼容 JDK 17
+        MappedStatement ms = getMappedStatement(metaObject, handler);
+        if (ms == null) {
+            return invocation.proceed();
+        }
 
         // 检查是否有 @DataPermission 注解
         DataPermission permission = getDataPermissionAnnotation(ms);
@@ -67,11 +70,62 @@ public class DataPermissionInterceptor implements Interceptor {
         String originalSql = boundSql.getSql();
         String modifiedSql = appendCondition(originalSql, permission, allowedValues);
 
-        // 替换 SQL
-        metaObject.setValue("delegate.boundSql.sql", modifiedSql);
+        // 替换 SQL - 兼容 JDK 17
+        setModifiedSql(metaObject, handler, modifiedSql);
         log.debug("数据权限已注入: column={}, values={}, sql={}", permission.column(), allowedValues.size(), modifiedSql);
 
         return invocation.proceed();
+    }
+
+    /**
+     * 获取 MappedStatement - 兼容 JDK 17
+     */
+    private MappedStatement getMappedStatement(MetaObject metaObject, StatementHandler handler) {
+        try {
+            // 方式1：直接从 metaObject 获取
+            if (metaObject.hasGetter("delegate.mappedStatement")) {
+                return (MappedStatement) metaObject.getValue("delegate.mappedStatement");
+            }
+            // 方式2：通过反射获取
+            java.lang.reflect.Field field = handler.getClass().getDeclaredField("delegate");
+            field.setAccessible(true);
+            Object delegate = field.get(handler);
+            if (delegate != null) {
+                java.lang.reflect.Field msField = delegate.getClass().getDeclaredField("mappedStatement");
+                msField.setAccessible(true);
+                return (MappedStatement) msField.get(delegate);
+            }
+        } catch (Exception e) {
+            log.debug("获取 MappedStatement 失败: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 设置修改后的 SQL - 兼容 JDK 17
+     */
+    private void setModifiedSql(MetaObject metaObject, StatementHandler handler, String modifiedSql) {
+        try {
+            // 方式1：直接通过 metaObject 设置
+            if (metaObject.hasSetter("delegate.boundSql.sql")) {
+                metaObject.setValue("delegate.boundSql.sql", modifiedSql);
+                return;
+            }
+            // 方式2：通过反射设置
+            java.lang.reflect.Field field = handler.getClass().getDeclaredField("delegate");
+            field.setAccessible(true);
+            Object delegate = field.get(handler);
+            if (delegate != null) {
+                java.lang.reflect.Field bsField = delegate.getClass().getDeclaredField("boundSql");
+                bsField.setAccessible(true);
+                BoundSql boundSql = (BoundSql) bsField.get(delegate);
+                java.lang.reflect.Field sqlField = BoundSql.class.getDeclaredField("sql");
+                sqlField.setAccessible(true);
+                sqlField.set(boundSql, modifiedSql);
+            }
+        } catch (Exception e) {
+            log.warn("设置修改后的 SQL 失败: {}", e.getMessage());
+        }
     }
 
     /**
@@ -100,14 +154,8 @@ public class DataPermissionInterceptor implements Interceptor {
     /**
      * 获取当前用户允许的数据范围值
      * <p>
-     * 当前实现：从 UserContext 获取用户ID，查询其角色的 data_scope。
+     * 从 UserContext 获取用户ID，通过 {@link DataPermissionHelper} 查询其角色的 data_scope。
      * 如果 data_scope=ALL 返回 null（不过滤），否则返回允许的仓库ID列表。
-     * </p>
-     * <p>
-     * 注：具体仓库权限查询需要配合 t_sys_user_warehouse 表使用。
-     * 当前为基础设施搭建阶段，返回 null 表示不过滤。
-     * 后续在 t_sys_role 增加 data_scope 字段 + t_sys_user_warehouse 表后，
-     * 可在此处实现完整的权限查询逻辑。
      * </p>
      */
     private List<Long> getAllowedValues(DataPermission permission) {
@@ -115,12 +163,7 @@ public class DataPermissionInterceptor implements Interceptor {
         if (userId == null) {
             return null;
         }
-
-        // TODO: 查询用户角色的 data_scope 字段
-        // 如果 data_scope = "ALL"，返回 null（不过滤）
-        // 如果 data_scope = "WAREHOUSE"，查询 t_sys_user_warehouse 获取允许的仓库ID列表
-        // 当前阶段返回 null，表示不注入过滤条件，等权限表完善后在此补充
-        return null;
+        return DataPermissionHelper.getAllowedWarehouseIds(userId);
     }
 
     /**

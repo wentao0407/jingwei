@@ -1,6 +1,8 @@
 package com.jingwei.procurement.infrastructure.service;
 
+import com.jingwei.inventory.domain.model.InventoryInTransit;
 import com.jingwei.inventory.domain.model.InventoryMaterial;
+import com.jingwei.inventory.domain.repository.InventoryInTransitRepository;
 import com.jingwei.inventory.domain.repository.InventoryMaterialRepository;
 import com.jingwei.procurement.domain.service.InventoryQueryService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ import java.util.List;
 public class PlaceholderInventoryQueryService implements InventoryQueryService {
 
     private final InventoryMaterialRepository inventoryMaterialRepository;
+    private final InventoryInTransitRepository inventoryInTransitRepository;
 
     @Override
     public BigDecimal getAvailableStock(Long materialId) {
@@ -37,8 +40,11 @@ public class PlaceholderInventoryQueryService implements InventoryQueryService {
 
     @Override
     public BigDecimal getInTransitQuantity(Long materialId) {
-        // TODO: InventoryInTransitRepository 需增加 selectByMaterialId 方法后替换
-        log.debug("查询在途数量: materialId={}, 暂返回0（在途查询待完善）", materialId);
-        return BigDecimal.ZERO;
+        List<InventoryInTransit> records = inventoryInTransitRepository.selectByMaterialId(materialId);
+        BigDecimal total = records.stream()
+                .map(r -> r.getRemainingQty() != null ? r.getRemainingQty() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        log.debug("查询在途数量: materialId={}, inTransit={}", materialId, total);
+        return total;
     }
 }

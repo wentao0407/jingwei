@@ -66,7 +66,7 @@ public class ApprovalDomainService {
         ApprovalConfig config = configRepository.selectByBusinessType(businessType);
         if (config == null || !Boolean.TRUE.equals(config.getEnabled())) {
             // 无审批配置或未启用 → 自动通过
-            publishApprovalAutoPassed(businessType, businessId, businessNo);
+            publishApprovalAutoPassed(businessType, businessId, businessNo, submitterId);
             return false;
         }
 
@@ -74,7 +74,7 @@ public class ApprovalDomainService {
         List<Long> approverRoleIds = config.getApproverRoleIds();
         if (approverRoleIds == null || approverRoleIds.isEmpty()) {
             log.warn("审批配置[{}]未配置审批角色，自动通过, businessType={}", config.getId(), businessType);
-            publishApprovalAutoPassed(businessType, businessId, businessNo);
+            publishApprovalAutoPassed(businessType, businessId, businessNo, submitterId);
             return false;
         }
 
@@ -84,7 +84,7 @@ public class ApprovalDomainService {
             List<Long> userIds = userRoleRepository.selectUserIdsByRoleId(roleId);
             if (userIds.isEmpty()) {
                 log.warn("审批角色[{}]下无用户，自动通过, businessType={}", roleId, businessType);
-                publishApprovalAutoPassed(businessType, businessId, businessNo);
+                publishApprovalAutoPassed(businessType, businessId, businessNo, submitterId);
                 return false;
             }
             for (Long userId : userIds) {
@@ -162,6 +162,7 @@ public class ApprovalDomainService {
         }
 
         // 发布审批结果领域事件（写入 Outbox 表，与业务操作同事务）
+        // createdBy 即为提交人ID（createTask 时 setCreatedBy(submitterId)）
         String eventType = approved ? "ApprovalPassed" : "ApprovalRejected";
         domainEventPublisher.publish(DomainEvent.of(eventType, task.getBusinessType(),
                 task.getBusinessId(), Map.of(
@@ -171,7 +172,8 @@ public class ApprovalDomainService {
                         "businessNo", task.getBusinessNo(),
                         "approverId", task.getApproverId(),
                         "approved", approved,
-                        "opinion", opinion
+                        "opinion", opinion,
+                        "submitterId", task.getCreatedBy()
                 )));
     }
 
@@ -262,12 +264,13 @@ public class ApprovalDomainService {
      * @param businessId   业务单据ID
      * @param businessNo   业务单据编号
      */
-    private void publishApprovalAutoPassed(String businessType, Long businessId, String businessNo) {
+    private void publishApprovalAutoPassed(String businessType, Long businessId, String businessNo, Long submitterId) {
         domainEventPublisher.publish(DomainEvent.of("ApprovalAutoPassed", businessType,
                 businessId, Map.of(
                         "businessType", businessType,
                         "businessId", businessId,
-                        "businessNo", businessNo != null ? businessNo : ""
+                        "businessNo", businessNo != null ? businessNo : "",
+                        "submitterId", submitterId
                 )));
         log.info("审批自动通过事件已发布: businessType={}, businessId={}, businessNo={}",
                 businessType, businessId, businessNo);

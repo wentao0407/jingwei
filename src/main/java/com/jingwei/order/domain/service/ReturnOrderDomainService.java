@@ -9,7 +9,9 @@ import com.jingwei.inventory.domain.model.OperationType;
 import com.jingwei.inventory.domain.service.InventoryDomainService;
 import com.jingwei.inventory.domain.repository.InventorySkuRepository;
 import com.jingwei.master.domain.model.Sku;
+import com.jingwei.master.domain.model.Warehouse;
 import com.jingwei.master.domain.repository.SkuRepository;
+import com.jingwei.master.domain.repository.WarehouseRepository;
 import com.jingwei.master.domain.service.CodingRuleDomainService;
 import com.jingwei.order.domain.model.*;
 import com.jingwei.order.domain.repository.ReturnOrderLineRepository;
@@ -64,6 +66,7 @@ public class ReturnOrderDomainService {
     private final InventorySkuRepository inventorySkuRepository;
     private final SalesOrderLineRepository salesOrderLineRepository;
     private final SkuRepository skuRepository;
+    private final WarehouseRepository warehouseRepository;
 
     /**
      * 创建退货单
@@ -354,11 +357,26 @@ public class ReturnOrderDomainService {
 
             // 查询该 SKU 的库存记录（取第一条可用记录）
             List<InventorySku> inventoryList = inventorySkuRepository.selectBySkuId(skuId);
+            InventorySku inventorySku;
             if (inventoryList.isEmpty()) {
-                log.warn("退货SKU库存记录不存在: skuId={}, 跳过", skuId);
-                continue;
+                // 首次退货入库，该 SKU 从未有过库存记录，自动创建
+                Warehouse warehouse = findFirstActiveWarehouse();
+                if (warehouse == null) {
+                    log.warn("无可用仓库, 退货入库跳过: skuId={}", skuId);
+                    continue;
+                }
+                inventorySku = new InventorySku();
+                inventorySku.setSkuId(skuId);
+                inventorySku.setWarehouseId(warehouse.getId());
+                inventorySku.setAvailableQty(0);
+                inventorySku.setLockedQty(0);
+                inventorySku.setQcQty(0);
+                inventorySku.setTotalQty(0);
+                inventorySkuRepository.insert(inventorySku);
+                log.info("退货入库自动创建库存记录: skuId={}, warehouseId={}", skuId, warehouse.getId());
+            } else {
+                inventorySku = inventoryList.get(0);
             }
-            InventorySku inventorySku = inventoryList.get(0);
 
             // 执行 INBOUND_RETURN 操作（质检库存增加）
             ChangeInventoryCommand cmd = ChangeInventoryCommand.forSku(
@@ -478,6 +496,14 @@ public class ReturnOrderDomainService {
                 .map(Sku::getId)
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * 查找第一个可用仓库（退货入库时若无库存记录，需要一个仓库来创建记录）
+     */
+    private Warehouse findFirstActiveWarehouse() {
+        List<Warehouse> warehouses = warehouseRepository.selectByCondition(null, "ACTIVE");
+        return warehouses.isEmpty() ? null : warehouses.get(0);
     }
 
     /**

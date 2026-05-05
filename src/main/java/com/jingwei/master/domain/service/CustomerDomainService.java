@@ -199,7 +199,6 @@ public class CustomerDomainService {
      * 删除客户
      * <p>
      * 仅允许删除未被业务单据引用的客户。
-     * 当前销售订单模块尚未实现，预留引用检查钩子。
      * </p>
      *
      * @param customerId 客户ID
@@ -210,7 +209,7 @@ public class CustomerDomainService {
             throw new BizException(ErrorCode.DATA_NOT_FOUND, "客户不存在");
         }
 
-        // 检查是否被销售订单引用（当前订单模块尚未实现，预留钩子）
+        // 检查是否被销售订单引用
         long orderCount = countOrderReferences(customerId);
         if (orderCount > 0) {
             throw new BizException(ErrorCode.OPERATION_NOT_ALLOWED,
@@ -239,10 +238,6 @@ public class CustomerDomainService {
 
     /**
      * 统计引用该客户的销售订单数量
-     * <p>
-     * 当前订单模块尚未实现，返回 0。
-     * 订单模块实现后，应替换为真实查询。
-     * </p>
      *
      * @param customerId 客户ID
      * @return 引用该客户的销售订单数量

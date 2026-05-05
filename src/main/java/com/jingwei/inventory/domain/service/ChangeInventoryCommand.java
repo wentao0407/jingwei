@@ -53,6 +53,9 @@ public class ChangeInventoryCommand {
     /** 来源单据ID */
     private Long sourceId;
 
+    /** 来源单据行ID（如生产订单行ID，用于成本行级归集） */
+    private Long sourceLineId;
+
     /** 来源单据编号 */
     private String sourceNo;
 

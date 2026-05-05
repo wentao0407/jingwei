@@ -34,6 +34,14 @@ public class InventoryInTransitRepositoryImpl implements InventoryInTransitRepos
     }
 
     @Override
+    public List<InventoryInTransit> selectByMaterialId(Long materialId) {
+        return inventoryInTransitMapper.selectList(
+                new LambdaQueryWrapper<InventoryInTransit>()
+                        .eq(InventoryInTransit::getMaterialId, materialId)
+                        .gt(InventoryInTransit::getRemainingQty, 0));
+    }
+
+    @Override
     public int insert(InventoryInTransit record) {
         return inventoryInTransitMapper.insert(record);
     }
