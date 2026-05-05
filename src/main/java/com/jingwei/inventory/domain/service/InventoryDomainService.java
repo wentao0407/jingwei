@@ -93,6 +93,14 @@ public class InventoryDomainService {
                 // 4. 执行变更
                 applySkuChange(record, cmd.getOperationType(), cmd.getQuantity().intValue());
 
+                // 4.1 生产入库时计算加权平均成本
+                if (cmd.getOperationType() == OperationType.INBOUND_PRODUCTION && cmd.getUnitCost() != null) {
+                    BigDecimal newCost = calculateWeightedAverageCost(
+                            totalBefore, record.getUnitCost(),
+                            cmd.getQuantity().intValue(), cmd.getUnitCost());
+                    record.setUnitCost(newCost);
+                }
+
                 // 5. 重算 total
                 record.setTotalQty(record.getAvailableQty() + record.getLockedQty() + record.getQcQty());
 
@@ -356,6 +364,40 @@ public class InventoryDomainService {
         } else if (opType == OperationType.OUTBOUND_SALES || opType == OperationType.OUTBOUND_MATERIAL) {
             record.setLastOutboundDate(java.time.LocalDate.now());
         }
+    }
+
+    // ==================== 成本计算 ====================
+
+    /**
+     * 移动加权平均法计算新单位成本
+     * <p>
+     * 新单位成本 = (原库存金额 + 本次入库金额) / (原库存数量 + 本次入库数量)
+     * </p>
+     *
+     * @param originalQty   原库存数量
+     * @param originalCost  原单位成本
+     * @param inboundQty    本次入库数量
+     * @param inboundCost   本次入库单位成本
+     * @return 新的加权平均单位成本
+     */
+    private BigDecimal calculateWeightedAverageCost(int originalQty, BigDecimal originalCost,
+                                                     int inboundQty, BigDecimal inboundCost) {
+        if (originalCost == null) {
+            originalCost = BigDecimal.ZERO;
+        }
+        if (inboundCost == null) {
+            inboundCost = BigDecimal.ZERO;
+        }
+        if (originalQty + inboundQty <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal originalAmount = originalCost.multiply(BigDecimal.valueOf(originalQty));
+        BigDecimal inboundAmount = inboundCost.multiply(BigDecimal.valueOf(inboundQty));
+        BigDecimal totalAmount = originalAmount.add(inboundAmount);
+        int totalQty = originalQty + inboundQty;
+
+        return totalAmount.divide(BigDecimal.valueOf(totalQty), 2, java.math.RoundingMode.HALF_UP);
     }
 
     // ==================== 操作流水构建 ====================

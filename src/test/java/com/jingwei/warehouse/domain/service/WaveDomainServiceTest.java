@@ -90,7 +90,7 @@ class WaveDomainServiceTest {
         @DisplayName("出库单不存在 → 抛异常")
         void create_outboundNotFound_shouldThrow() {
             Wave wave = new Wave();
-            when(waveRepository.insert(any())).thenReturn(1);
+            lenient().when(waveRepository.insert(any())).thenReturn(1);
             when(outboundOrderRepository.selectDetailById(999L)).thenReturn(null);
 
             assertThrows(BizException.class, () -> service.createWave(wave, List.of(999L)));

@@ -98,6 +98,10 @@ public enum ErrorCode {
     ORDER_SPU_NO_BOM(30008, "该款式未配置已审批的BOM，无法生成生产订单"),
     /** 所选订单行不属于该销售订单 */
     ORDER_LINE_NOT_BELONG(30009, "所选订单行不属于该销售订单"),
+    /** 退货数量超过已发货数量 */
+    ORDER_RETURN_QUANTITY_EXCEEDED(30010, "退货数量超过原订单已发货数量"),
+    /** 退货单状态不允许此操作 */
+    RETURN_STATUS_INVALID(30011, "退货单状态不允许此操作"),
 
     // ========== 采购管理模块 40xxx ==========
     /** BOM已引用，不可删除 */
@@ -156,6 +160,12 @@ public enum ErrorCode {
     // ========== 通知中心模块 80xxx ==========
     /** 通知推送失败 */
     NOTIFICATION_PUSH_FAILED(80001, "通知推送失败"),
+    /** 通知不存在 */
+    NOTIFICATION_NOT_FOUND(80002, "通知不存在"),
+    /** 通知分类无效 */
+    NOTIFICATION_CATEGORY_INVALID(80003, "通知分类无效"),
+    /** 通知偏好更新失败 */
+    NOTIFICATION_PREFERENCE_UPDATE_FAILED(80004, "通知偏好更新失败"),
 
     // ========== 成本核算模块 90xxx ==========
     /** 成本计算异常 */

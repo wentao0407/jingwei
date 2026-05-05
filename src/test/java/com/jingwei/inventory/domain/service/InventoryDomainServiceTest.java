@@ -52,7 +52,7 @@ class InventoryDomainServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(codingRuleDomainService.generateCode(any(), any())).thenReturn("OP-TEST-0001");
+        lenient().when(codingRuleDomainService.generateCode(any(), any())).thenReturn("OP-TEST-0001");
         service = new InventoryDomainService(
                 inventorySkuRepository, inventoryMaterialRepository,
                 inventoryOperationRepository, codingRuleDomainService);
