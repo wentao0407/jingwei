@@ -71,9 +71,14 @@ ON CONFLICT (id) DO NOTHING;
 
 -- 为管理员角色分配供应商按钮权限
 INSERT INTO t_sys_role_menu (id, role_id, menu_id)
-VALUES
+SELECT v.id, v.role_id, v.menu_id
+FROM (VALUES
     (20080, 1, 230),
     (20081, 1, 231),
     (20082, 1, 232),
     (20083, 1, 233)
-ON CONFLICT (id) DO NOTHING;
+) AS v(id, role_id, menu_id)
+WHERE NOT EXISTS (
+    SELECT 1 FROM t_sys_role_menu rm
+    WHERE rm.role_id = v.role_id AND rm.menu_id = v.menu_id AND rm.deleted = FALSE
+);

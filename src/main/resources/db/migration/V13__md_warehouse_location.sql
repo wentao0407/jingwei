@@ -87,9 +87,14 @@ ON CONFLICT (id) DO NOTHING;
 
 -- 为管理员角色分配仓库菜单及按钮权限
 INSERT INTO t_sys_role_menu (id, role_id, menu_id)
-VALUES
+SELECT v.id, v.role_id, v.menu_id
+FROM (VALUES
     (20100, 1, 250),
     (20101, 1, 251),
     (20102, 1, 252),
     (20103, 1, 253)
-ON CONFLICT (id) DO NOTHING;
+) AS v(id, role_id, menu_id)
+WHERE NOT EXISTS (
+    SELECT 1 FROM t_sys_role_menu rm
+    WHERE rm.role_id = v.role_id AND rm.menu_id = v.menu_id AND rm.deleted = FALSE
+);

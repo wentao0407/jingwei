@@ -42,11 +42,16 @@ CREATE INDEX idx_change_log_operator
 -- ============================================================
 
 INSERT INTO t_sys_menu (id, parent_id, name, type, path, component, permission, icon, sort_order, visible, status)
-VALUES
+SELECT v.id, v.parent_id, v.name, v.type, v.path, v.component, v.permission, v.icon, v.sort_order, v.visible, v.status
+FROM (VALUES
     (317, 310, '提交审批', 'BUTTON', '', '', 'order:sales:submit', '', 7, TRUE, 'ACTIVE'),
     (318, 310, '重新提交', 'BUTTON', '', '', 'order:sales:resubmit', '', 8, TRUE, 'ACTIVE'),
     (319, 310, '取消订单', 'BUTTON', '', '', 'order:sales:cancel', '', 9, TRUE, 'ACTIVE')
-ON CONFLICT (id) DO NOTHING;
+) AS v(id, parent_id, name, type, path, component, permission, icon, sort_order, visible, status)
+WHERE NOT EXISTS (
+    SELECT 1 FROM t_sys_menu m
+    WHERE m.permission = v.permission AND m.deleted = FALSE AND v.permission != ''
+);
 
 -- 管理员角色分配新按钮权限
 INSERT INTO t_sys_role_menu (id, role_id, menu_id)

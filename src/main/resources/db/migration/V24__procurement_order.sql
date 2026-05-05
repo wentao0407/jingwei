@@ -93,33 +93,57 @@ CREATE INDEX idx_procurement_order_line_material
 -- ============================================================
 
 INSERT INTO t_md_coding_rule (id, code, name, business_type, description, status, used)
-VALUES (12, 'PROCUREMENT_ORDER', '采购订单编号', 'PROCUREMENT', '格式：PO-年月-5位流水号，按月重置', 'ACTIVE', FALSE)
-ON CONFLICT (id) DO NOTHING;
+SELECT v.id, v.code, v.name, v.business_type, v.description, v.status, v.used
+FROM (VALUES
+    (12, 'PROCUREMENT_ORDER', '采购订单编号', 'PROCUREMENT', '格式：PO-年月-5位流水号，按月重置', 'ACTIVE', FALSE)
+) AS v(id, code, name, business_type, description, status, used)
+WHERE NOT EXISTS (
+    SELECT 1 FROM t_md_coding_rule cr
+    WHERE cr.code = v.code AND cr.deleted = FALSE
+);
 
-INSERT INTO t_md_coding_rule_segment (id, rule_id, segment_type, segment_value, seq_length, seq_reset_type, connector, sort_order) VALUES
-(1201, 12, 'FIXED', 'PO',     0, 'NEVER',    '',  1),
-(1202, 12, 'DATE',  'YYYYMM', 0, 'NEVER',    '-', 2),
-(1203, 12, 'SEQUENCE', '',     5, 'MONTHLY',  '-', 3)
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO t_md_coding_rule_segment (id, rule_id, segment_type, segment_value, seq_length, seq_reset_type, connector, sort_order)
+SELECT v.id, v.rule_id, v.segment_type, v.segment_value, v.seq_length, v.seq_reset_type, v.connector, v.sort_order
+FROM (VALUES
+    (1201, 12, 'FIXED', 'PO',     0, 'NEVER',    '',  1),
+    (1202, 12, 'DATE',  'YYYYMM', 0, 'NEVER',    '-', 2),
+    (1203, 12, 'SEQUENCE', '',     5, 'MONTHLY',  '-', 3)
+) AS v(id, rule_id, segment_type, segment_value, seq_length, seq_reset_type, connector, sort_order)
+WHERE NOT EXISTS (
+    SELECT 1 FROM t_md_coding_rule_segment seg
+    WHERE seg.id = v.id
+);
 
 -- ============================================================
 -- 菜单数据：采购订单菜单 + 按钮权限
+-- 注意：采购订单主菜单 ID=430 已在 V03 预置
 -- ============================================================
 
+-- 采购订单按钮权限（使用 V03 预置的 ID=430 作为父菜单）
 INSERT INTO t_sys_menu (id, parent_id, name, type, path, component, permission, icon, sort_order, visible, status)
-VALUES
-    (410, 40, '采购订单', 'MENU', '/procurement/order', 'procurement/order/index', 'procurement:order:list', 'Shopping', 3, TRUE, 'ACTIVE')
-ON CONFLICT (id) DO NOTHING;
+SELECT v.id, v.parent_id, v.name, v.type, v.path, v.component, v.permission, v.icon, v.sort_order, v.visible, v.status
+FROM (VALUES
+    (431, 430, '创建采购订单', 'BUTTON', '', '', 'procurement:order:create', '', 1, TRUE, 'ACTIVE'),
+    (432, 430, '编辑采购订单', 'BUTTON', '', '', 'procurement:order:update', '', 2, TRUE, 'ACTIVE'),
+    (433, 430, '提交审批', 'BUTTON', '', '', 'procurement:order:submit', '', 3, TRUE, 'ACTIVE'),
+    (434, 430, '审批', 'BUTTON', '', '', 'procurement:order:approve', '', 4, TRUE, 'ACTIVE')
+) AS v(id, parent_id, name, type, path, component, permission, icon, sort_order, visible, status)
+WHERE NOT EXISTS (
+    SELECT 1 FROM t_sys_menu m
+    WHERE m.permission = v.permission AND m.deleted = FALSE AND v.permission != ''
+);
 
-INSERT INTO t_sys_menu (id, parent_id, name, type, path, component, permission, icon, sort_order, visible, status)
-VALUES
-    (411, 410, '新增采购订单', 'BUTTON', '', '', 'procurement:order:create', '', 1, TRUE, 'ACTIVE'),
-    (412, 410, '状态流转', 'BUTTON', '', '', 'procurement:order:fire-event', '', 2, TRUE, 'ACTIVE')
-ON CONFLICT (id) DO NOTHING;
-
+-- 管理员角色分配采购订单权限
 INSERT INTO t_sys_role_menu (id, role_id, menu_id)
-VALUES
-    (40008, 1, 410),
-    (40009, 1, 411),
-    (40010, 1, 412)
-ON CONFLICT DO NOTHING;
+SELECT v.id, v.role_id, v.menu_id
+FROM (VALUES
+    (40008, 1, 430),
+    (40009, 1, 431),
+    (40010, 1, 432),
+    (40011, 1, 433),
+    (40012, 1, 434)
+) AS v(id, role_id, menu_id)
+WHERE NOT EXISTS (
+    SELECT 1 FROM t_sys_role_menu rm
+    WHERE rm.role_id = v.role_id AND rm.menu_id = v.menu_id AND rm.deleted = FALSE
+);

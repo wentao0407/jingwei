@@ -60,7 +60,8 @@ ON CONFLICT (id) DO NOTHING;
 -- 为管理员角色分配新增按钮权限
 -- ============================================================
 INSERT INTO t_sys_role_menu (id, role_id, menu_id)
-VALUES
+SELECT v.id, v.role_id, v.menu_id
+FROM (VALUES
     -- 供应商补充
     (20110, 1, 234),
     (20111, 1, 235),
@@ -82,4 +83,8 @@ VALUES
     (20123, 1, 259),
     (20124, 1, 2600),
     (20125, 1, 2601)
-ON CONFLICT (id) DO NOTHING;
+) AS v(id, role_id, menu_id)
+WHERE NOT EXISTS (
+    SELECT 1 FROM t_sys_role_menu rm
+    WHERE rm.role_id = v.role_id AND rm.menu_id = v.menu_id AND rm.deleted = FALSE
+);
