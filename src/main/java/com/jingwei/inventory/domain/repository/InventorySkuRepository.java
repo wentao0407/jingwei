@@ -28,6 +28,11 @@ public interface InventorySkuRepository {
      */
     List<InventorySku> selectBySkuAndWarehouse(Long skuId, Long warehouseId);
 
+    /**
+     * 查询所有成品库存记录（预警扫描用）
+     */
+    List<InventorySku> selectAll();
+
     int insert(InventorySku record);
 
     int updateById(InventorySku record);

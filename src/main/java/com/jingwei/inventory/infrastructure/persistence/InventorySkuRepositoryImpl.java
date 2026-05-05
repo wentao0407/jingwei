@@ -51,6 +51,11 @@ public class InventorySkuRepositoryImpl implements InventorySkuRepository {
     }
 
     @Override
+    public List<InventorySku> selectAll() {
+        return inventorySkuMapper.selectList(new LambdaQueryWrapper<>());
+    }
+
+    @Override
     public int insert(InventorySku record) {
         return inventorySkuMapper.insert(record);
     }
