@@ -249,8 +249,7 @@ public class AllocationDomainService {
 
     private int getExpiryDays() {
         try {
-            var config = sysConfigDomainService.getSysConfigRepository()
-                    .selectByConfigKey(ALLOCATION_EXPIRY_CONFIG_KEY);
+            var config = sysConfigDomainService.getByConfigKeyOrNull(ALLOCATION_EXPIRY_CONFIG_KEY);
             if (config != null && config.getConfigValue() != null) {
                 return Integer.parseInt(config.getConfigValue());
             }

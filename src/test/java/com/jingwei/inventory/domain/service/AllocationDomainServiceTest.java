@@ -87,7 +87,6 @@ class AllocationDomainServiceTest {
         void fullAllocate_shouldAllocateAll() {
             InventorySku sku = buildSku(1L, 100);
             when(inventorySkuRepository.selectBySkuAndWarehouse(100L, 1L)).thenReturn(List.of(sku));
-            when(sysConfigDomainService.getSysConfigRepository()).thenReturn(sysConfigRepository);
             when(inventoryAllocationRepository.insert(any())).thenAnswer(invocation -> {
                 InventoryAllocation alloc = invocation.getArgument(0);
                 alloc.setId(1L);
@@ -110,7 +109,6 @@ class AllocationDomainServiceTest {
         void partialAllocate_shouldAllocateAvailable() {
             InventorySku sku = buildSku(1L, 30);
             when(inventorySkuRepository.selectBySkuAndWarehouse(100L, 1L)).thenReturn(List.of(sku));
-            when(sysConfigDomainService.getSysConfigRepository()).thenReturn(sysConfigRepository);
             when(inventoryAllocationRepository.insert(any())).thenAnswer(invocation -> {
                 InventoryAllocation alloc = invocation.getArgument(0);
                 alloc.setId(2L);

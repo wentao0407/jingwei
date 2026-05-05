@@ -176,7 +176,7 @@ CREATE INDEX idx_inv_alloc_sku ON t_inventory_allocation (sku_id) WHERE deleted 
 CREATE INDEX idx_inv_alloc_expire ON t_inventory_allocation (expire_at) WHERE deleted = FALSE AND status = 'ACTIVE';
 
 -- 6. 菜单权限 — 库存管理按钮级权限
-INSERT INTO t_sys_menu (id, parent_id, name, menu_type, path, component, permission, icon, sort_order, visible, status) VALUES
+INSERT INTO t_sys_menu (id, parent_id, name, type, path, component, permission, icon, sort_order, visible, status) VALUES
     -- 库存查询 (parent=510)
     (511, 510, '查看库存',  'BUTTON', '', '', 'inventory:query:view',   '', 1, TRUE, 'ACTIVE'),
     (512, 510, '导出库存',  'BUTTON', '', '', 'inventory:query:export', '', 2, TRUE, 'ACTIVE'),

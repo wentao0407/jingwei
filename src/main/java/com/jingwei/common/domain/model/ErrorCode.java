@@ -130,6 +130,14 @@ public enum ErrorCode {
     ALLOCATION_NOT_FOUND(50007, "预留记录不存在"),
     /** 预留状态不允许此操作 */
     ALLOCATION_STATUS_INVALID(50008, "预留状态不允许此操作"),
+    /** 入库单状态不允许此操作 */
+    INBOUND_STATUS_INVALID(50009, "入库单状态不允许此操作"),
+    /** 出库单状态不允许此操作 */
+    OUTBOUND_STATUS_INVALID(50010, "出库单状态不允许此操作"),
+    /** 盘点单状态不允许此操作 */
+    STOCKTAKING_STATUS_INVALID(50011, "盘点单状态不允许此操作"),
+    /** 库位已冻结 */
+    LOCATION_FROZEN_INVENTORY(50012, "该库位已冻结，禁止出入库操作"),
 
     // ========== 出入库作业模块 60xxx ==========
     /** 波次未完成 */
