@@ -53,8 +53,8 @@ class WaveDomainServiceTest {
     class CreateWaveTests {
 
         @Test
-        @DisplayName("正常创建 → 生成波次和拣货单")
-        void create_shouldGenerateWaveAndPickList() {
+        @DisplayName("正常创建 → 生成草稿波次（不含拣货单）")
+        void create_shouldGenerateDraftWave() {
             Wave wave = new Wave();
             wave.setWaveNo("WV-20260505-0001");
             wave.setWarehouseId(1L);
@@ -64,19 +64,19 @@ class WaveDomainServiceTest {
             OutboundOrder outbound = new OutboundOrder();
             outbound.setId(1L);
             outbound.setStatus(OutboundStatus.CONFIRMED);
+            outbound.setOutboundNo("OB-001");
             OutboundOrderLine line = new OutboundOrderLine();
             line.setId(10L);
             line.setSkuId(100L);
             line.setPlannedQty(BigDecimal.valueOf(30));
             outbound.setLines(List.of(line));
             when(outboundOrderRepository.selectDetailById(1L)).thenReturn(outbound);
-            when(pickListRepository.insert(any())).thenReturn(1);
-            when(pickItemRepository.batchInsert(any())).thenReturn(1);
 
             Wave result = service.createWave(wave, List.of(1L));
 
             assertEquals(WaveStatus.DRAFT, result.getStatus());
-            assertEquals(1, result.getPickLists().size());
+            // createWave 不再生成拣货单，需通过 releaseWave 生成
+            verify(pickListRepository, never()).insert(any());
         }
 
         @Test

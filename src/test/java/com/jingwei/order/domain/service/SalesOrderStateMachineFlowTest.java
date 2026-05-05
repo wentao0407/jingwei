@@ -13,6 +13,10 @@ import com.jingwei.order.domain.repository.OrderQuantityChangeRepository;
 import com.jingwei.order.domain.repository.ProductionOrderSourceRepository;
 import com.jingwei.order.domain.repository.SalesOrderLineRepository;
 import com.jingwei.order.domain.repository.SalesOrderRepository;
+import com.jingwei.inventory.domain.repository.InventoryAllocationRepository;
+import com.jingwei.inventory.domain.repository.InventorySkuRepository;
+import com.jingwei.inventory.domain.service.AllocationDomainService;
+import com.jingwei.master.domain.repository.SkuRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -70,13 +74,28 @@ class SalesOrderStateMachineFlowTest {
     @Mock
     private OrderQuantityChangeRepository orderQuantityChangeRepository;
 
+    @Mock
+    private AllocationDomainService allocationDomainService;
+
+    @Mock
+    private InventoryAllocationRepository inventoryAllocationRepository;
+
+    @Mock
+    private InventorySkuRepository inventorySkuRepository;
+
+    @Mock
+    private SkuRepository skuRepository;
+
     private SalesOrderDomainService service;
 
     @BeforeEach
     void setUp() {
         // 构建真实状态机（与 Spring 配置一致）
         SalesOrderConditionEvaluator evaluator = new SalesOrderConditionEvaluator(salesOrderLineRepository, productionOrderSourceRepository);
-        SalesOrderActionExecutor executor = new SalesOrderActionExecutor();
+        SalesOrderActionExecutor executor = new SalesOrderActionExecutor(
+                salesOrderRepository, salesOrderLineRepository,
+                allocationDomainService, inventoryAllocationRepository,
+                inventorySkuRepository, skuRepository);
         SalesOrderChangeLogListener changeLogListener = new SalesOrderChangeLogListener(orderChangeLogRepository);
         StateMachine<SalesOrderStatus, SalesOrderEvent> stateMachine =
                 buildStateMachine(evaluator, executor);

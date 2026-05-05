@@ -6,12 +6,14 @@ import com.jingwei.inventory.domain.model.*;
 import com.jingwei.inventory.domain.repository.InventoryMaterialRepository;
 import com.jingwei.inventory.domain.repository.InventoryOperationRepository;
 import com.jingwei.inventory.domain.repository.InventorySkuRepository;
+import com.jingwei.master.domain.service.CodingRuleDomainService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -46,10 +48,13 @@ public class InventoryDomainService {
     private static final int MIN_BACKOFF_MS = 50;
     /** 重试退避最大等待时间（毫秒） */
     private static final int MAX_BACKOFF_MS = 150;
+    /** 库存操作流水编码规则 */
+    private static final String OPERATION_CODE_RULE = "INVENTORY_OPERATION";
 
     private final InventorySkuRepository inventorySkuRepository;
     private final InventoryMaterialRepository inventoryMaterialRepository;
     private final InventoryOperationRepository inventoryOperationRepository;
+    private final CodingRuleDomainService codingRuleDomainService;
 
     /**
      * 通用库存变更方法 — 所有库存操作的唯一入口
@@ -359,6 +364,7 @@ public class InventoryDomainService {
                                                   int availableBefore, int lockedBefore,
                                                   int qcBefore, int totalBefore) {
         InventoryOperation op = new InventoryOperation();
+        op.setOperationNo(codingRuleDomainService.generateCode(OPERATION_CODE_RULE, Collections.emptyMap()));
         op.setOperationType(cmd.getOperationType());
         op.setInventoryType(InventoryType.SKU);
         op.setInventoryId(cmd.getInventoryId());
@@ -390,6 +396,7 @@ public class InventoryDomainService {
                                                        BigDecimal availableBefore, BigDecimal lockedBefore,
                                                        BigDecimal qcBefore, BigDecimal totalBefore) {
         InventoryOperation op = new InventoryOperation();
+        op.setOperationNo(codingRuleDomainService.generateCode(OPERATION_CODE_RULE, Collections.emptyMap()));
         op.setOperationType(cmd.getOperationType());
         op.setInventoryType(InventoryType.MATERIAL);
         op.setInventoryId(cmd.getInventoryId());

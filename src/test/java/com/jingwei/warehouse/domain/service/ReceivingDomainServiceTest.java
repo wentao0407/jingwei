@@ -107,12 +107,13 @@ class ReceivingDomainServiceTest {
     class ConfirmReceiveTests {
 
         @Test
-        @DisplayName("正常收货 → 更新实收数量")
+        @DisplayName("正常收货 → 更新实收数量 + 库存变更 + ASN回写")
         void confirm_shouldUpdateReceivedQty() {
             ReceivingLine line = new ReceivingLine();
             line.setId(1L);
             line.setReceivingId(1L);
             line.setMaterialId(201L);
+            line.setAsnLineId(10L);
             line.setExpectedQty(BigDecimal.valueOf(100));
             line.setReceivedQty(BigDecimal.ZERO);
             when(receivingLineRepository.selectById(1L)).thenReturn(line);
@@ -121,12 +122,30 @@ class ReceivingDomainServiceTest {
             ReceivingOrder order = new ReceivingOrder();
             order.setId(1L);
             order.setWarehouseId(1L);
+            order.setReceivingNo("RCV-001");
             when(receivingOrderRepository.selectById(1L)).thenReturn(order);
+            when(receivingOrderRepository.updateById(any())).thenReturn(1);
+
+            // 模拟 ASN 行
+            AsnLine asnLine = buildAsnLine(10L, 201L, BigDecimal.valueOf(100), BigDecimal.ZERO);
+            when(asnLineRepository.selectById(10L)).thenReturn(asnLine);
+            when(asnLineRepository.updateById(any())).thenReturn(1);
+
+            // 模拟收货单所有行（用于状态判断）
+            when(receivingLineRepository.selectByReceivingId(1L)).thenReturn(List.of(line));
 
             service.confirmReceive(1L, BigDecimal.valueOf(60), 3, 1L);
 
             assertEquals(BigDecimal.valueOf(60), line.getReceivedQty());
             assertEquals(BigDecimal.valueOf(-40), line.getDifferenceQty());
+
+            // 验证库存变更被调用
+            verify(inventoryDomainService).changeInventory(any());
+            // 验证 ASN 行已收货数量回写
+            verify(asnLineRepository).updateById(argThat(al ->
+                    al.getReceivedQuantity().compareTo(BigDecimal.valueOf(60)) == 0));
+            // 验证收货单状态更新
+            verify(receivingOrderRepository, atLeastOnce()).updateById(any());
         }
 
         @Test

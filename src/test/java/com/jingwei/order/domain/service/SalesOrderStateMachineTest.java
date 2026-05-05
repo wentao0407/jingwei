@@ -8,6 +8,11 @@ import com.jingwei.order.domain.model.SalesOrderEvent;
 import com.jingwei.order.domain.model.SalesOrderStatus;
 import com.jingwei.order.domain.repository.ProductionOrderSourceRepository;
 import com.jingwei.order.domain.repository.SalesOrderLineRepository;
+import com.jingwei.order.domain.repository.SalesOrderRepository;
+import com.jingwei.inventory.domain.repository.InventoryAllocationRepository;
+import com.jingwei.inventory.domain.repository.InventorySkuRepository;
+import com.jingwei.inventory.domain.service.AllocationDomainService;
+import com.jingwei.master.domain.repository.SkuRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -57,7 +62,15 @@ class SalesOrderStateMachineTest {
         // 默认未关联生产订单，需要时在具体测试中覆盖
         when(productionOrderSourceRepository.existsBySalesOrderId(any())).thenReturn(false);
         SalesOrderConditionEvaluator evaluator = new SalesOrderConditionEvaluator(lineRepository, productionOrderSourceRepository);
-        SalesOrderActionExecutor executor = new SalesOrderActionExecutor();
+        SalesOrderRepository salesOrderRepository = mock(SalesOrderRepository.class);
+        AllocationDomainService allocationDomainService = mock(AllocationDomainService.class);
+        InventoryAllocationRepository inventoryAllocationRepository = mock(InventoryAllocationRepository.class);
+        InventorySkuRepository inventorySkuRepository = mock(InventorySkuRepository.class);
+        SkuRepository skuRepository = mock(SkuRepository.class);
+        SalesOrderActionExecutor executor = new SalesOrderActionExecutor(
+                salesOrderRepository, lineRepository,
+                allocationDomainService, inventoryAllocationRepository,
+                inventorySkuRepository, skuRepository);
 
         stateMachine = buildSalesOrderStateMachine(evaluator, executor);
     }

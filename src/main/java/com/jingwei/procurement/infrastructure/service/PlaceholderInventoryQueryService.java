@@ -1,32 +1,44 @@
 package com.jingwei.procurement.infrastructure.service;
 
+import com.jingwei.inventory.domain.model.InventoryMaterial;
+import com.jingwei.inventory.domain.repository.InventoryMaterialRepository;
 import com.jingwei.procurement.domain.service.InventoryQueryService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
- * 库存查询服务占位实现
+ * 库存查询服务真实实现
  * <p>
- * 库存模块（T-29/T-30）实现后替换为真实调用。
+ * 查询原料库存的可用数量和在途数量，供 MRP 计算使用。
  * </p>
  *
  * @author JingWei
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class PlaceholderInventoryQueryService implements InventoryQueryService {
+
+    private final InventoryMaterialRepository inventoryMaterialRepository;
 
     @Override
     public BigDecimal getAvailableStock(Long materialId) {
-        log.debug("[预留] 查询可用库存: materialId={}, 返回0", materialId);
-        return BigDecimal.ZERO;
+        List<InventoryMaterial> records = inventoryMaterialRepository.selectByMaterialId(materialId);
+        BigDecimal total = records.stream()
+                .map(r -> r.getAvailableQty() != null ? r.getAvailableQty() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        log.debug("查询可用库存: materialId={}, available={}", materialId, total);
+        return total;
     }
 
     @Override
     public BigDecimal getInTransitQuantity(Long materialId) {
-        log.debug("[预留] 查询在途数量: materialId={}, 返回0", materialId);
+        // TODO: InventoryInTransitRepository 需增加 selectByMaterialId 方法后替换
+        log.debug("查询在途数量: materialId={}, 暂返回0（在途查询待完善）", materialId);
         return BigDecimal.ZERO;
     }
 }

@@ -178,9 +178,8 @@ public class OrderConvertDomainService {
             prodOrder.setLines(prodLines);
         }
 
-        // 6. 更新销售订单状态为 PRODUCING
-        salesOrder.setStatus(SalesOrderStatus.PRODUCING);
-        salesOrderRepository.updateById(salesOrder);
+        // 6. 销售订单状态更新由 ApplicationService 通过状态机完成（START_PRODUCE 事件）
+        // 不在此处直接 setStatus，确保走统一的状态流转路径
 
         // 7. 记录变更日志
         logConversion(salesOrderId, lineIds, operatorId);
@@ -261,6 +260,7 @@ public class OrderConvertDomainService {
      * 按 spuId+colorWayId 合并行
      * <p>
      * 同款同色的多行合并为一个生产订单行，尺码矩阵按尺码维度累加。
+     * 对于部分转化的行，按剩余可转化比例等比缩减尺码数量。
      * </p>
      *
      * @param lines         同 spuId 的销售订单行
@@ -273,27 +273,72 @@ public class OrderConvertDomainService {
         for (SalesOrderLine line : lines) {
             String key = line.getSpuId() + "_" + line.getColorWayId();
             MergedLine merged = map.get(key);
+
+            // 计算剩余可转化数量
+            int allocated = getAllocatedQuantity(line.getId());
+            int convertible = line.getTotalQuantity() - allocated;
+
+            // 按可转化比例缩减尺码矩阵
+            SizeMatrix scaledMatrix = scaleMatrix(line.getSizeMatrix(), convertible, line.getTotalQuantity());
+
             if (merged == null) {
                 merged = new MergedLine();
                 merged.colorWayId = line.getColorWayId();
                 merged.skipCutting = skipCuttingMap.getOrDefault(line.getId(), false);
                 merged.sourceRefs = new ArrayList<>();
-                // 初始化合并矩阵：以第一行的矩阵为基础
-                merged.mergedMatrix = copyMatrix(line.getSizeMatrix());
+                merged.mergedMatrix = scaledMatrix;
                 map.put(key, merged);
             } else {
                 // 累加尺码矩阵
-                merged.mergedMatrix = mergeMatrix(merged.mergedMatrix, line.getSizeMatrix());
+                merged.mergedMatrix = mergeMatrix(merged.mergedMatrix, scaledMatrix);
             }
-            // 记录来源：未转化的部分 = 行总数量 - 已分配数量
-            int allocated = getAllocatedQuantity(line.getId());
-            int convertible = line.getTotalQuantity() - allocated;
+            // 记录来源
             SourceRef ref = new SourceRef();
             ref.salesLineId = line.getId();
             ref.allocatedQuantity = convertible;
             merged.sourceRefs.add(ref);
         }
         return map;
+    }
+
+    /**
+     * 按比例缩减尺码矩阵
+     * <p>
+     * 将矩阵中每个尺码的数量按 convertible/totalQuantity 比例缩减，
+     * 使用四舍五入保证总量尽可能接近 convertible。
+     * </p>
+     *
+     * @param source       原始尺码矩阵
+     * @param convertible  剩余可转化数量
+     * @param totalQuantity 行总数量
+     * @return 缩减后的尺码矩阵
+     */
+    private SizeMatrix scaleMatrix(SizeMatrix source, int convertible, int totalQuantity) {
+        if (source == null || convertible >= totalQuantity) {
+            return copyMatrix(source);
+        }
+        if (totalQuantity <= 0) {
+            return copyMatrix(source);
+        }
+
+        List<SizeMatrix.SizeEntry> scaledSizes = new ArrayList<>();
+        int scaledTotal = 0;
+        List<SizeMatrix.SizeEntry> entries = source.getSizes();
+
+        for (int i = 0; i < entries.size(); i++) {
+            SizeMatrix.SizeEntry entry = entries.get(i);
+            int scaledQty;
+            if (i == entries.size() - 1) {
+                // 最后一个尺码用减法，避免四舍五入导致总量不一致
+                scaledQty = convertible - scaledTotal;
+            } else {
+                scaledQty = Math.round((float) entry.getQuantity() * convertible / totalQuantity);
+            }
+            scaledTotal += scaledQty;
+            scaledSizes.add(new SizeMatrix.SizeEntry(entry.getSizeId(), entry.getCode(), Math.max(0, scaledQty)));
+        }
+
+        return new SizeMatrix(source.getSizeGroupId(), scaledSizes);
     }
 
     /**

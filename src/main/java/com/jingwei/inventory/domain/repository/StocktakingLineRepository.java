@@ -11,6 +11,8 @@ import java.util.List;
  */
 public interface StocktakingLineRepository {
 
+    StocktakingLine selectById(Long id);
+
     List<StocktakingLine> selectByStocktakingId(Long stocktakingId);
 
     int batchInsert(List<StocktakingLine> lines);

@@ -2,10 +2,10 @@ package com.jingwei.warehouse.domain.service;
 
 import com.jingwei.common.domain.model.BizException;
 import com.jingwei.common.domain.model.ErrorCode;
+import com.jingwei.inventory.domain.model.InventoryType;
+import com.jingwei.inventory.domain.model.OperationType;
 import com.jingwei.inventory.domain.service.ChangeInventoryCommand;
 import com.jingwei.inventory.domain.service.InventoryDomainService;
-import com.jingwei.inventory.domain.model.OperationType;
-import com.jingwei.inventory.domain.model.InventoryType;
 import com.jingwei.master.domain.model.Location;
 import com.jingwei.master.domain.model.LocationStatus;
 import com.jingwei.master.domain.repository.LocationRepository;
@@ -93,6 +93,9 @@ public class ReceivingDomainService {
 
     /**
      * 确认收货（逐行）
+     * <p>
+     * 流程：更新收贂数量 → 驱动库存变更（INBOUND_PURCHASE 增加质检库存）→ 回写 ASN 行已收货数量。
+     * </p>
      */
     public void confirmReceive(Long receivingLineId, BigDecimal receivedQty, Integer rollCount, Long operatorId) {
         ReceivingLine line = receivingLineRepository.selectById(receivingLineId);
@@ -115,15 +118,52 @@ public class ReceivingDomainService {
         line.setUpdatedBy(operatorId);
         receivingLineRepository.updateById(line);
 
-        // 驱动库存变更（在途→质检）
-        // 注：此处需要查 ASN 行获取 warehouse_id 和 batch_no 信息
-        // 简化处理：直接使用收货单的 warehouse_id
+        // 获取收货单信息（含仓库ID）
         ReceivingOrder order = receivingOrderRepository.selectById(line.getReceivingId());
+        if (order == null) {
+            throw new BizException(ErrorCode.DATA_NOT_FOUND, "收货单不存在");
+        }
 
-        // 自动创建库存记录并变更（INBOUND_PURCHASE）
-        // 实际应通过 InventoryDomainService 的查/建逻辑，此处简化
-        log.info("收货确认: receivingLineId={}, receivedQty={}, materialId={}",
-                receivingLineId, receivedQty, line.getMaterialId());
+        // 生成批次号：RCV-{收货单ID}-{收货行ID}
+        String batchNo = "RCV-" + order.getId() + "-" + line.getId();
+
+        // 驱动库存变更：INBOUND_PURCHASE 增加质检库存
+        ChangeInventoryCommand cmd = new ChangeInventoryCommand();
+        cmd.setOperationType(OperationType.INBOUND_PURCHASE);
+        cmd.setInventoryType(InventoryType.MATERIAL);
+        cmd.setInventoryId(null); // 由 InventoryDomainService 根据 materialId+warehouseId 查找或创建
+        cmd.setMaterialId(line.getMaterialId());
+        cmd.setWarehouseId(order.getWarehouseId());
+        cmd.setBatchNo(batchNo);
+        cmd.setQuantity(receivedQty);
+        cmd.setSourceType("RECEIVING");
+        cmd.setSourceId(order.getId());
+        cmd.setSourceNo(order.getReceivingNo());
+        cmd.setOperatorId(operatorId);
+        inventoryDomainService.changeInventory(cmd);
+
+        // 回写 ASN 行已收货数量
+        if (line.getAsnLineId() != null) {
+            AsnLine asnLine = asnLineRepository.selectById(line.getAsnLineId());
+            if (asnLine != null) {
+                asnLine.setReceivedQuantity(asnLine.getReceivedQuantity().add(receivedQty));
+                asnLineRepository.updateById(asnLine);
+            }
+        }
+
+        // 更新收货单状态
+        List<ReceivingLine> allLines = receivingLineRepository.selectByReceivingId(order.getId());
+        boolean allReceived = allLines.stream().allMatch(l ->
+                l.getReceivedQty() != null && l.getReceivedQty().compareTo(l.getExpectedQty()) >= 0);
+        if (allReceived) {
+            order.setStatus(ReceivingStatus.COMPLETED);
+        } else {
+            order.setStatus(ReceivingStatus.IN_PROGRESS);
+        }
+        receivingOrderRepository.updateById(order);
+
+        log.info("收货确认完成: receivingLineId={}, receivedQty={}, materialId={}, batchNo={}",
+                receivingLineId, receivedQty, line.getMaterialId(), batchNo);
     }
 
     /**

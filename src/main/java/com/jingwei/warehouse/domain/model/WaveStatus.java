@@ -8,7 +8,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum WaveStatus {
     DRAFT("DRAFT", "草稿"),
+    RELEASED("RELEASED", "已释放"),
     PICKING("PICKING", "拣货中"),
+    SORTING("SORTING", "分拣复核中"),
     COMPLETED("COMPLETED", "已完成"),
     CANCELLED("CANCELLED", "已取消");
 

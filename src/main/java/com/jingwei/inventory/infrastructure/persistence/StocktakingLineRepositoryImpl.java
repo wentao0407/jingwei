@@ -20,6 +20,11 @@ public class StocktakingLineRepositoryImpl implements StocktakingLineRepository 
     private final StocktakingLineMapper stocktakingLineMapper;
 
     @Override
+    public StocktakingLine selectById(Long id) {
+        return stocktakingLineMapper.selectById(id);
+    }
+
+    @Override
     public List<StocktakingLine> selectByStocktakingId(Long stocktakingId) {
         return stocktakingLineMapper.selectList(
                 new LambdaQueryWrapper<StocktakingLine>()

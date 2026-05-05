@@ -6,13 +6,17 @@ import com.jingwei.master.domain.model.Spu;
 import com.jingwei.master.domain.repository.ColorWayRepository;
 import com.jingwei.master.domain.repository.SpuRepository;
 import com.jingwei.master.domain.service.CodingRuleDomainService;
+import com.jingwei.common.statemachine.StateMachine;
+import com.jingwei.common.statemachine.TransitionContext;
 import com.jingwei.order.application.dto.ConvertLineDTO;
 import com.jingwei.order.application.dto.ConvertToProductionDTO;
 import com.jingwei.order.domain.model.ProductionOrder;
 import com.jingwei.order.domain.model.ProductionOrderLine;
 import com.jingwei.order.domain.model.ProductionOrderSource;
 import com.jingwei.order.domain.model.SalesOrder;
+import com.jingwei.order.domain.model.SalesOrderEvent;
 import com.jingwei.order.domain.model.SalesOrderLine;
+import com.jingwei.order.domain.model.SalesOrderStatus;
 import com.jingwei.order.domain.repository.ProductionOrderLineRepository;
 import com.jingwei.order.domain.repository.ProductionOrderRepository;
 import com.jingwei.order.domain.repository.ProductionOrderSourceRepository;
@@ -64,6 +68,7 @@ public class OrderConvertApplicationService {
     private final ProductionOrderSourceRepository productionOrderSourceRepository;
     private final SalesOrderRepository salesOrderRepository;
     private final SalesOrderLineRepository salesOrderLineRepository;
+    private final StateMachine<SalesOrderStatus, SalesOrderEvent> salesOrderStateMachine;
     private final SpuRepository spuRepository;
     private final ColorWayRepository colorWayRepository;
 
@@ -148,7 +153,18 @@ public class OrderConvertApplicationService {
             orderVOs.add(toProductionOrderVO(prodOrder));
         }
 
-        // 5. 构建返回结果
+        // 5. 通过状态机将销售订单推进到 PRODUCING（CONFIRMED + START_PRODUCE → PRODUCING）
+        SalesOrder salesOrderForTransition = salesOrderRepository.selectById(dto.getSalesOrderId());
+        if (salesOrderForTransition != null && salesOrderForTransition.getStatus() == SalesOrderStatus.CONFIRMED) {
+            TransitionContext<SalesOrderStatus, SalesOrderEvent> ctx =
+                    new TransitionContext<>(dto.getSalesOrderId(), operatorId);
+            SalesOrderStatus newStatus = salesOrderStateMachine.fireEvent(
+                    salesOrderForTransition.getStatus(), SalesOrderEvent.START_PRODUCE, ctx);
+            salesOrderForTransition.setStatus(newStatus);
+            salesOrderRepository.updateById(salesOrderForTransition);
+        }
+
+        // 6. 构建返回结果
         SalesOrder salesOrder = salesOrderRepository.selectById(dto.getSalesOrderId());
         ConvertResultVO result = new ConvertResultVO();
         result.setProductionOrders(orderVOs);

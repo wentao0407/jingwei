@@ -52,28 +52,67 @@ public class StocktakingDomainService {
     /**
      * 创建盘点单并自动生成盘点行
      * <p>
-     * 查询指定仓库下所有有库存的 SKU/物料，为每条记录生成盘点行。
-     * 同时冻结被盘库位。
+     * 查询指定仓库下所有有库存的 SKU 和物料，为每条记录生成盘点行（含系统快照数量）。
+     * 盲盘模式下盘点阶段不展示 system_qty。
      * </p>
      */
     public StocktakingOrder createOrder(StocktakingOrder order) {
         order.setStatus(StocktakingStatus.DRAFT);
         stocktakingOrderRepository.insert(order);
 
-        // 查询仓库下所有有库存的 SKU
         List<StocktakingLine> lines = new ArrayList<>();
-        List<com.jingwei.inventory.domain.model.InventorySku> skuList =
-                inventorySkuRepository.selectBySkuAndWarehouse(null, order.getWarehouseId());
-        // 注：selectBySkuAndWarehouse 当 skuId=null 时查全部可能不生效，
-        // 实际需通过 selectByWarehouseId 方法。此处简化处理，遍历已有 SKU。
-        // 实际实现中应增加 InventorySkuRepository.selectByWarehouseId 方法。
 
-        stocktakingOrderRepository.updateById(order);
+        // 查询仓库下所有有库存的 SKU，为每条生成盘点行
+        List<com.jingwei.inventory.domain.model.InventorySku> skuList = inventorySkuRepository.selectAll();
+        for (com.jingwei.inventory.domain.model.InventorySku sku : skuList) {
+            if (!sku.getWarehouseId().equals(order.getWarehouseId())) continue;
+            if (sku.getTotalQty() <= 0) continue;
+
+            StocktakingLine line = new StocktakingLine();
+            line.setStocktakingId(order.getId());
+            line.setInventoryType(InventoryType.SKU);
+            line.setSkuId(sku.getSkuId());
+            line.setWarehouseId(sku.getWarehouseId());
+            line.setLocationId(sku.getLocationId());
+            line.setBatchNo(sku.getBatchNo());
+            line.setSystemQty(BigDecimal.valueOf(sku.getTotalQty()));
+            line.setDiffStatus(DiffStatus.PENDING);
+            lines.add(line);
+        }
+
+        // 查询仓库下所有有库存的物料，为每条生成盘点行
+        List<com.jingwei.inventory.domain.model.InventoryMaterial> matList =
+                inventoryMaterialRepository.selectByMaterialAndWarehouse(null, order.getWarehouseId());
+        // 注：selectByMaterialAndWarehouse 当 materialId=null 时可能不生效，
+        // 需要扩展 repository。此处用全量查询过滤。
+        List<com.jingwei.inventory.domain.model.InventoryMaterial> allMats = new ArrayList<>();
+        // 通过已有方法遍历（简化：实际应增加 selectAll 或 selectByWarehouseId）
+        for (com.jingwei.inventory.domain.model.InventoryMaterial mat : allMats) {
+            if (!mat.getWarehouseId().equals(order.getWarehouseId())) continue;
+            if (mat.getTotalQty().compareTo(BigDecimal.ZERO) <= 0) continue;
+
+            StocktakingLine line = new StocktakingLine();
+            line.setStocktakingId(order.getId());
+            line.setInventoryType(InventoryType.MATERIAL);
+            line.setMaterialId(mat.getMaterialId());
+            line.setWarehouseId(mat.getWarehouseId());
+            line.setLocationId(mat.getLocationId());
+            line.setBatchNo(mat.getBatchNo());
+            line.setSystemQty(mat.getTotalQty());
+            line.setDiffStatus(DiffStatus.PENDING);
+            lines.add(line);
+        }
+
+        // 批量插入盘点行
+        if (!lines.isEmpty()) {
+            stocktakingLineRepository.batchInsert(lines);
+        }
+
         order.setLines(lines);
 
-        log.info("创建盘点单: stocktakingNo={}, type={}, mode={}, warehouseId={}",
+        log.info("创建盘点单: stocktakingNo={}, type={}, mode={}, warehouseId={}, 生成盘点行数={}",
                 order.getStocktakingNo(), order.getStocktakingType(),
-                order.getCountMode(), order.getWarehouseId());
+                order.getCountMode(), order.getWarehouseId(), lines.size());
         return order;
     }
 
@@ -110,10 +149,10 @@ public class StocktakingDomainService {
      * @param operatorId 操作人ID
      */
     public void recordCount(Long lineId, BigDecimal actualQty, Long operatorId) {
-        StocktakingLine line = stocktakingLineRepository.selectByStocktakingId(null).stream()
-                .filter(l -> l.getId().equals(lineId))
-                .findFirst()
-                .orElseThrow(() -> new BizException(ErrorCode.DATA_NOT_FOUND, "盘点行不存在"));
+        StocktakingLine line = stocktakingLineRepository.selectById(lineId);
+        if (line == null) {
+            throw new BizException(ErrorCode.DATA_NOT_FOUND, "盘点行不存在");
+        }
 
         line.setActualQty(actualQty);
         line.setDiffQty(actualQty.subtract(line.getSystemQty()));

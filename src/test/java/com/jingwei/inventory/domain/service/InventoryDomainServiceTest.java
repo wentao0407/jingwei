@@ -6,6 +6,7 @@ import com.jingwei.inventory.domain.model.*;
 import com.jingwei.inventory.domain.repository.InventoryMaterialRepository;
 import com.jingwei.inventory.domain.repository.InventoryOperationRepository;
 import com.jingwei.inventory.domain.repository.InventorySkuRepository;
+import com.jingwei.master.domain.service.CodingRuleDomainService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -44,13 +45,17 @@ class InventoryDomainServiceTest {
     private InventoryMaterialRepository inventoryMaterialRepository;
     @Mock
     private InventoryOperationRepository inventoryOperationRepository;
+    @Mock
+    private CodingRuleDomainService codingRuleDomainService;
 
     private InventoryDomainService service;
 
     @BeforeEach
     void setUp() {
+        when(codingRuleDomainService.generateCode(any(), any())).thenReturn("OP-TEST-0001");
         service = new InventoryDomainService(
-                inventorySkuRepository, inventoryMaterialRepository, inventoryOperationRepository);
+                inventorySkuRepository, inventoryMaterialRepository,
+                inventoryOperationRepository, codingRuleDomainService);
     }
 
     // ==================== 辅助方法 ====================

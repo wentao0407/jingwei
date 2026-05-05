@@ -155,10 +155,7 @@ class OrderConvertDomainServiceTest {
             assertEquals(1, po.getLines().size());
             assertEquals(600, po.getTotalQuantity());
 
-            // 验证销售订单状态更新为 PRODUCING
-            verify(salesOrderRepository).updateById(argThat(o ->
-                    o.getStatus() == SalesOrderStatus.PRODUCING));
-
+            // 销售订单状态更新已移至 ApplicationService 通过状态机完成
             // 验证变更日志记录
             verify(orderChangeLogRepository).insert(any(OrderChangeLog.class));
         }
@@ -342,24 +339,7 @@ class OrderConvertDomainServiceTest {
     class StatusChangeTests {
 
         @Test
-        @DisplayName("转化后销售订单状态 = PRODUCING")
-        void convert_shouldUpdateSalesOrderToProducing() {
-            SalesOrder order = buildConfirmedOrder();
-            SalesOrderLine line = buildSalesLine(10L, 201L, 301L, new int[]{100, 200, 300});
-
-            when(salesOrderRepository.selectById(1L)).thenReturn(order);
-            when(salesOrderLineRepository.selectByOrderId(1L)).thenReturn(List.of(line));
-            when(productionOrderSourceRepository.selectBySalesLineId(10L)).thenReturn(Collections.emptyList());
-            when(bomRepository.selectApprovedBySpuId(201L)).thenReturn(Optional.of(buildApprovedBom(201L)));
-
-            service.convertToProduction(1L, List.of(10L), new HashMap<>(), 1L);
-
-            verify(salesOrderRepository).updateById(argThat(o ->
-                    o.getStatus() == SalesOrderStatus.PRODUCING));
-        }
-
-        @Test
-        @DisplayName("变更日志记录了状态变更")
+        @DisplayName("转化后变更日志记录状态变更（状态更新由 ApplicationService 通过状态机完成）")
         void convert_shouldLogStatusChange() {
             SalesOrder order = buildConfirmedOrder();
             SalesOrderLine line = buildSalesLine(10L, 201L, 301L, new int[]{100, 200, 300});
@@ -371,10 +351,28 @@ class OrderConvertDomainServiceTest {
 
             service.convertToProduction(1L, List.of(10L), new HashMap<>(), 1L);
 
+            // 验证变更日志记录（DomainService 仍负责记录日志）
             verify(orderChangeLogRepository).insert(argThat(log ->
                     "STATUS_CHANGE".equals(log.getChangeType())
                             && "CONFIRMED".equals(log.getOldValue())
                             && "PRODUCING".equals(log.getNewValue())));
+        }
+
+        @Test
+        @DisplayName("变更日志记录了转化原因")
+        void convert_shouldLogConversionReason() {
+            SalesOrder order = buildConfirmedOrder();
+            SalesOrderLine line = buildSalesLine(10L, 201L, 301L, new int[]{100, 200, 300});
+
+            when(salesOrderRepository.selectById(1L)).thenReturn(order);
+            when(salesOrderLineRepository.selectByOrderId(1L)).thenReturn(List.of(line));
+            when(productionOrderSourceRepository.selectBySalesLineId(10L)).thenReturn(Collections.emptyList());
+            when(bomRepository.selectApprovedBySpuId(201L)).thenReturn(Optional.of(buildApprovedBom(201L)));
+
+            service.convertToProduction(1L, List.of(10L), new HashMap<>(), 1L);
+
+            verify(orderChangeLogRepository).insert(argThat(log ->
+                    log.getChangeReason() != null && log.getChangeReason().contains("订单转化")));
         }
     }
 
