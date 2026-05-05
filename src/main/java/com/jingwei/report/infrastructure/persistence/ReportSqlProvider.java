@@ -338,6 +338,57 @@ public class ReportSqlProvider {
         return sql.toString();
     }
 
+    // ==================== 库龄汇总（全量，不分页） ====================
+
+    public String selectSkuAgeSummary(Map<String, Object> params) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(*) AS totalCount, ");
+        sql.append("COALESCE(SUM(inv.total_qty), 0) AS totalQty, ");
+        sql.append("COALESCE(SUM(inv.total_qty * inv.unit_cost), 0) AS totalAmount, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int > 90 THEN 1 ELSE 0 END), 0) AS overdueCount, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int > 90 THEN inv.total_qty ELSE 0 END), 0) AS overdueQty, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int <= 30 THEN 1 ELSE 0 END), 0) AS range0to30Count, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int <= 30 THEN inv.total_qty ELSE 0 END), 0) AS range0to30Qty, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int BETWEEN 31 AND 60 THEN 1 ELSE 0 END), 0) AS range31to60Count, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int BETWEEN 31 AND 60 THEN inv.total_qty ELSE 0 END), 0) AS range31to60Qty, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int BETWEEN 61 AND 90 THEN 1 ELSE 0 END), 0) AS range61to90Count, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int BETWEEN 61 AND 90 THEN inv.total_qty ELSE 0 END), 0) AS range61to90Qty, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int BETWEEN 91 AND 180 THEN 1 ELSE 0 END), 0) AS range91to180Count, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int BETWEEN 91 AND 180 THEN inv.total_qty ELSE 0 END), 0) AS range91to180Qty, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int > 180 THEN 1 ELSE 0 END), 0) AS range180plusCount, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int > 180 THEN inv.total_qty ELSE 0 END), 0) AS range180plusQty ");
+        sql.append("FROM t_inventory_sku inv ");
+        sql.append("JOIN t_md_sku sku ON sku.id = inv.sku_id AND sku.deleted = FALSE ");
+        sql.append("LEFT JOIN t_md_spu spu ON spu.id = sku.spu_id AND spu.deleted = FALSE ");
+        sql.append("WHERE inv.deleted = FALSE AND inv.total_qty > 0 ");
+        appendSkuFilters(sql, params);
+        return sql.toString();
+    }
+
+    public String selectMaterialAgeSummary(Map<String, Object> params) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(*) AS totalCount, ");
+        sql.append("COALESCE(SUM(inv.total_qty), 0) AS totalQty, ");
+        sql.append("COALESCE(SUM(inv.total_qty * inv.unit_cost), 0) AS totalAmount, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int > 90 THEN 1 ELSE 0 END), 0) AS overdueCount, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int > 90 THEN inv.total_qty ELSE 0 END), 0) AS overdueQty, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int <= 30 THEN 1 ELSE 0 END), 0) AS range0to30Count, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int <= 30 THEN inv.total_qty ELSE 0 END), 0) AS range0to30Qty, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int BETWEEN 31 AND 60 THEN 1 ELSE 0 END), 0) AS range31to60Count, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int BETWEEN 31 AND 60 THEN inv.total_qty ELSE 0 END), 0) AS range31to60Qty, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int BETWEEN 61 AND 90 THEN 1 ELSE 0 END), 0) AS range61to90Count, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int BETWEEN 61 AND 90 THEN inv.total_qty ELSE 0 END), 0) AS range61to90Qty, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int BETWEEN 91 AND 180 THEN 1 ELSE 0 END), 0) AS range91to180Count, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int BETWEEN 91 AND 180 THEN inv.total_qty ELSE 0 END), 0) AS range91to180Qty, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int > 180 THEN 1 ELSE 0 END), 0) AS range180plusCount, ");
+        sql.append("COALESCE(SUM(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - inv.last_inbound_date))::int > 180 THEN inv.total_qty ELSE 0 END), 0) AS range180plusQty ");
+        sql.append("FROM t_inventory_material inv ");
+        sql.append("JOIN t_md_material mat ON mat.id = inv.material_id AND mat.deleted = FALSE ");
+        sql.append("WHERE inv.deleted = FALSE AND inv.total_qty > 0 ");
+        appendMaterialFilters(sql, params);
+        return sql.toString();
+    }
+
     // ==================== 公共过滤条件 ====================
 
     private void appendSkuFilters(StringBuilder sql, Map<String, Object> params) {

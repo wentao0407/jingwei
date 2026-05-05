@@ -5,6 +5,7 @@ import com.jingwei.inventory.domain.model.ReconciliationAnomaly;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Insert;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -63,4 +64,11 @@ public interface ReconciliationMapper extends BaseMapper<ReconciliationAnomaly> 
             "  AND io.inventory_type = 'MATERIAL' " +
             "GROUP BY io.inventory_id")
     List<Object[]> selectMaterialOpsNetChangeByDate(@Param("accountDate") LocalDate accountDate);
+
+    /**
+     * 检查指定账期是否已有执行记录（幂等校验，不依赖异常表）
+     */
+    @Select("SELECT COUNT(*) FROM t_inventory_reconciliation_log " +
+            "WHERE account_date = #{accountDate} AND deleted = FALSE")
+    int countExecutionLog(@Param("accountDate") LocalDate accountDate);
 }

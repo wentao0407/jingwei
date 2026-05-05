@@ -23,7 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class WaveApplicationService {
 
-    /** 编码规则键：波次编号 */
+    /**
+     * 编码规则键：波次编号。
+     * 与 t_md_coding_rule.code = 'WAVE_NO' 对应，用于创建波次时自动生成波次编号。
+     */
     private static final String WAVE_NO_RULE = "WAVE_NO";
 
     private final WaveDomainService waveDomainService;

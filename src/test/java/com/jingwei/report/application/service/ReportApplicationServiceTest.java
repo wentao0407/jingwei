@@ -332,6 +332,26 @@ class ReportApplicationServiceTest {
         when(reportMapper.selectSkuAgePage(any(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(page);
 
+        // 模拟全量汇总查询（queryAgeAnalysis 内部调用 selectSkuAgeSummary）
+        Map<String, Object> ageSummary = new HashMap<>();
+        ageSummary.put("totalcount", 3L);
+        ageSummary.put("totalqty", new BigDecimal("150"));
+        ageSummary.put("totalamount", new BigDecimal("7500.00"));
+        ageSummary.put("range0to30count", 1L);
+        ageSummary.put("range0to30qty", new BigDecimal("50"));
+        ageSummary.put("range31to60count", 1L);
+        ageSummary.put("range31to60qty", new BigDecimal("50"));
+        ageSummary.put("range61to90count", 0L);
+        ageSummary.put("range61to90qty", BigDecimal.ZERO);
+        ageSummary.put("range91to180count", 1L);
+        ageSummary.put("range91to180qty", new BigDecimal("50"));
+        ageSummary.put("range180pluscount", 0L);
+        ageSummary.put("range180plusqty", BigDecimal.ZERO);
+        ageSummary.put("overduecount", 1L);
+        ageSummary.put("overdueqty", new BigDecimal("50"));
+        when(reportMapper.selectSkuAgeSummary(isNull(), isNull(), isNull(), isNull()))
+                .thenReturn(ageSummary);
+
         InventoryAgeSummaryVO result = service.queryAgeAnalysis(dto);
 
         assertEquals(3L, result.getTotalCount());
@@ -358,6 +378,26 @@ class ReportApplicationServiceTest {
         when(reportMapper.selectSkuAgePage(any(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(page);
 
+        // 模拟全量汇总查询
+        Map<String, Object> ageSummary = new HashMap<>();
+        ageSummary.put("totalcount", 1L);
+        ageSummary.put("totalqty", new BigDecimal("50"));
+        ageSummary.put("totalamount", new BigDecimal("2500.00"));
+        ageSummary.put("range0to30count", 0L);
+        ageSummary.put("range0to30qty", BigDecimal.ZERO);
+        ageSummary.put("range31to60count", 0L);
+        ageSummary.put("range31to60qty", BigDecimal.ZERO);
+        ageSummary.put("range61to90count", 0L);
+        ageSummary.put("range61to90qty", BigDecimal.ZERO);
+        ageSummary.put("range91to180count", 0L);
+        ageSummary.put("range91to180qty", BigDecimal.ZERO);
+        ageSummary.put("range180pluscount", 1L);
+        ageSummary.put("range180plusqty", new BigDecimal("50"));
+        ageSummary.put("overduecount", 1L);
+        ageSummary.put("overdueqty", new BigDecimal("50"));
+        when(reportMapper.selectSkuAgeSummary(isNull(), isNull(), isNull(), isNull()))
+                .thenReturn(ageSummary);
+
         InventoryAgeSummaryVO result = service.queryAgeAnalysis(dto);
 
         InventoryAgeVO detail = result.getDetails().get(0);
@@ -382,6 +422,26 @@ class ReportApplicationServiceTest {
 
         when(reportMapper.selectSkuAgePage(any(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(page);
+
+        // 模拟全量汇总查询
+        Map<String, Object> ageSummary = new HashMap<>();
+        ageSummary.put("totalcount", 1L);
+        ageSummary.put("totalqty", new BigDecimal("50"));
+        ageSummary.put("totalamount", new BigDecimal("2500.00"));
+        ageSummary.put("range0to30count", 1L);
+        ageSummary.put("range0to30qty", new BigDecimal("50"));
+        ageSummary.put("range31to60count", 0L);
+        ageSummary.put("range31to60qty", BigDecimal.ZERO);
+        ageSummary.put("range61to90count", 0L);
+        ageSummary.put("range61to90qty", BigDecimal.ZERO);
+        ageSummary.put("range91to180count", 0L);
+        ageSummary.put("range91to180qty", BigDecimal.ZERO);
+        ageSummary.put("range180pluscount", 0L);
+        ageSummary.put("range180plusqty", BigDecimal.ZERO);
+        ageSummary.put("overduecount", 0L);
+        ageSummary.put("overdueqty", BigDecimal.ZERO);
+        when(reportMapper.selectSkuAgeSummary(isNull(), isNull(), isNull(), isNull()))
+                .thenReturn(ageSummary);
 
         InventoryAgeSummaryVO result = service.queryAgeAnalysis(dto);
 

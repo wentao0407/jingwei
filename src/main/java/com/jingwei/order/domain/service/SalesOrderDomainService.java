@@ -64,9 +64,15 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class SalesOrderDomainService {
 
-    /** 审批业务类型标识：销售订单审批 */
+    /**
+     * 审批业务类型标识：销售订单审批。
+     * 与 t_sys_approval_config.business_type 字段匹配，用于查询销售订单的审批配置。
+     */
     private static final String SALES_ORDER_APPROVAL_TYPE = "SALES_ORDER";
-    /** 审批业务类型标识：订单数量变更审批 */
+    /**
+     * 审批业务类型标识：订单数量变更审批。
+     * 与 t_sys_approval_config.business_type 字段匹配，销售订单发生数量变更时使用独立的审批流程。
+     */
     private static final String QUANTITY_CHANGE_APPROVAL_TYPE = "ORDER_QUANTITY_CHANGE";
 
     private final SalesOrderRepository salesOrderRepository;
@@ -397,11 +403,20 @@ public class SalesOrderDomainService {
 
     // ==================== 数量变更 ====================
 
-    /** 数量变更单状态：待审批 */
+    /**
+     * 数量变更单状态：待审批。
+     * 对应 t_ord_order_quantity_change.status 字段，变更单创建后的初始状态。
+     */
     private static final String QC_PENDING = "PENDING";
-    /** 数量变更单状态：已通过 */
+    /**
+     * 数量变更单状态：已通过。
+     * 对应 t_ord_order_quantity_change.status 字段，审批通过后触发订单行数量的实际变更。
+     */
     private static final String QC_APPROVED = "APPROVED";
-    /** 数量变更单状态：已驳回 */
+    /**
+     * 数量变更单状态：已驳回。
+     * 对应 t_ord_order_quantity_change.status 字段，审批驳回后变更单作废，订单行数量不变。
+     */
     private static final String QC_REJECTED = "REJECTED";
 
     /**

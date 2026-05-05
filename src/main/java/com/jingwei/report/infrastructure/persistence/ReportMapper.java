@@ -130,6 +130,24 @@ public interface ReportMapper {
                                                        @Param("warehouseId") Long warehouseId,
                                                        @Param("keyword") String keyword);
 
+    // ==================== 库龄汇总（全量） ====================
+
+    /**
+     * 成品库龄汇总统计（全量，不分页）
+     */
+    @SelectProvider(type = ReportSqlProvider.class, method = "selectSkuAgeSummary")
+    Map<String, Object> selectSkuAgeSummary(@Param("warehouseId") Long warehouseId,
+                                             @Param("categoryId") Long categoryId,
+                                             @Param("seasonId") Long seasonId,
+                                             @Param("keyword") String keyword);
+
+    /**
+     * 原料库龄汇总统计（全量，不分页）
+     */
+    @SelectProvider(type = ReportSqlProvider.class, method = "selectMaterialAgeSummary")
+    Map<String, Object> selectMaterialAgeSummary(@Param("warehouseId") Long warehouseId,
+                                                  @Param("keyword") String keyword);
+
     // ==================== 畅滞销分析 ====================
 
     /**

@@ -32,7 +32,10 @@ import java.util.stream.Collectors;
 public class PermissionAspect {
 
     /**
-     * 权限前缀，与 JwtAuthenticationFilter 中加载权限时的前缀一致
+     * 权限标识前缀。
+     * JwtAuthenticationFilter 从数据库加载用户权限时，为每个权限码添加此前缀存入 SecurityContext
+     * （如菜单编码 "order:view" 存为 "PERM_order:view"）。
+     * 本切面校验 @RequirePermission 注解时，比对用户持有的带前缀权限集合。
      */
     private static final String PERM_PREFIX = "PERM_";
 

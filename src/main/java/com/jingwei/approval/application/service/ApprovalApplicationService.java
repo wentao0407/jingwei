@@ -39,11 +39,20 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ApprovalApplicationService {
 
-    /** 审批业务类型标识：销售订单审批，与 ApprovalConfig.businessType 匹配 */
+    /**
+     * 审批业务类型标识：销售订单审批。
+     * 与 t_sys_approval_config.business_type 字段匹配，用于加载销售订单的审批配置（单人审批/或签模式）。
+     */
     private static final String SALES_ORDER_TYPE = "SALES_ORDER";
-    /** 审批业务类型标识：订单数量变更审批 */
+    /**
+     * 审批业务类型标识：订单数量变更审批。
+     * 与 t_sys_approval_config.business_type 字段匹配，销售订单发生数量变更时触发的独立审批流程。
+     */
     private static final String QUANTITY_CHANGE_TYPE = "ORDER_QUANTITY_CHANGE";
-    /** 审批业务类型标识：采购订单审批（或签模式） */
+    /**
+     * 审批业务类型标识：采购订单审批（或签模式）。
+     * 与 t_sys_approval_config.business_type 字段匹配，采购订单通常采用或签模式（任一审批人通过即生效）。
+     */
     private static final String PROCUREMENT_ORDER_TYPE = "PROCUREMENT_ORDER";
 
     private final ApprovalDomainService domainService;

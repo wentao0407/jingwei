@@ -1,7 +1,9 @@
 package com.jingwei.inventory.domain.service;
 
 import com.jingwei.common.domain.model.BizException;
+import com.jingwei.common.domain.model.DomainEvent;
 import com.jingwei.common.domain.model.ErrorCode;
+import com.jingwei.common.domain.service.DomainEventPublisher;
 import com.jingwei.inventory.domain.model.*;
 import com.jingwei.inventory.domain.repository.InventoryMaterialRepository;
 import com.jingwei.inventory.domain.repository.InventoryOperationRepository;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -42,19 +45,30 @@ import java.util.concurrent.ThreadLocalRandom;
 @RequiredArgsConstructor
 public class InventoryDomainService {
 
-    /** 乐观锁最大重试次数 */
+    /**
+     * 乐观锁冲突时的最大重试次数。库存变更采用乐观锁（version 字段）保证并发安全，
+     * 当 UPDATE 返回 0 行时判定为冲突，指数退避后重试，超过此次数抛出 BizException。
+     */
     private static final int MAX_RETRIES = 3;
-    /** 重试退避最小等待时间（毫秒） */
+    /**
+     * 重试退避最小等待时间（毫秒）。实际等待时间为 [MIN_BACKOFF_MS, MAX_BACKOFF_MS] 的随机值，
+     * 避免多个事务在同一时刻重试导致"惊群效应"。
+     */
     private static final int MIN_BACKOFF_MS = 50;
-    /** 重试退避最大等待时间（毫秒） */
+    /** 重试退避最大等待时间（毫秒），与 MIN_BACKOFF_MS 配合实现随机退避窗口 */
     private static final int MAX_BACKOFF_MS = 150;
-    /** 库存操作流水编码规则 */
+    /**
+     * 库存操作流水号编码规则键。
+     * 与 t_md_coding_rule.code = 'INVENTORY_OPERATION' 对应（V38 迁移脚本），
+     * 格式：INV-年月日-6位流水号，每日重置。
+     */
     private static final String OPERATION_CODE_RULE = "INVENTORY_OPERATION";
 
     private final InventorySkuRepository inventorySkuRepository;
     private final InventoryMaterialRepository inventoryMaterialRepository;
     private final InventoryOperationRepository inventoryOperationRepository;
     private final CodingRuleDomainService codingRuleDomainService;
+    private final DomainEventPublisher domainEventPublisher;
 
     /**
      * 通用库存变更方法 — 所有库存操作的唯一入口
@@ -118,6 +132,9 @@ public class InventoryDomainService {
                         availableBefore, lockedBefore, qcBefore, totalBefore);
                 inventoryOperationRepository.insert(operation);
 
+                // 成本相关操作发布领域事件（领料出库/生产入库）
+                publishCostEventIfApplicable(cmd);
+
                 log.info("成品库存变更: skuId={}, warehouseId={}, opType={}, qty={}, {}→{}",
                         cmd.getSkuId(), cmd.getWarehouseId(), cmd.getOperationType(),
                         cmd.getQuantity(), availableBefore, record.getAvailableQty());
@@ -168,6 +185,9 @@ public class InventoryDomainService {
                 InventoryOperation operation = buildMaterialOperation(cmd, record,
                         availableBefore, lockedBefore, qcBefore, totalBefore);
                 inventoryOperationRepository.insert(operation);
+
+                // 成本相关操作发布领域事件（领料出库/生产入库）
+                publishCostEventIfApplicable(cmd);
 
                 log.info("原料库存变更: materialId={}, warehouseId={}, opType={}, qty={}, {}→{}",
                         cmd.getMaterialId(), cmd.getWarehouseId(), cmd.getOperationType(),
@@ -467,6 +487,37 @@ public class InventoryDomainService {
     }
 
     // ==================== 工具方法 ====================
+
+    /**
+     * 成本相关操作发布领域事件
+     * <p>
+     * 领料出库(OUTBOUND_MATERIAL)和生产入库(INBOUND_PRODUCTION)时，
+     * 如果来源是生产订单，发布领域事件供成本模块消费。
+     * </p>
+     */
+    private void publishCostEventIfApplicable(ChangeInventoryCommand cmd) {
+        if (cmd.getSourceType() == null || !"PRODUCTION_ORDER".equals(cmd.getSourceType())) {
+            return;
+        }
+
+        if (cmd.getOperationType() == OperationType.OUTBOUND_MATERIAL) {
+            domainEventPublisher.publish(DomainEvent.of("MaterialIssued", "PRODUCTION_ORDER",
+                    cmd.getSourceId(), Map.of(
+                            "productionOrderId", cmd.getSourceId(),
+                            "materialId", cmd.getMaterialId() != null ? cmd.getMaterialId() : cmd.getSkuId(),
+                            "issueQty", cmd.getQuantity(),
+                            "unitCost", cmd.getUnitCost() != null ? cmd.getUnitCost() : BigDecimal.ZERO
+                    )));
+        } else if (cmd.getOperationType() == OperationType.INBOUND_PRODUCTION) {
+            domainEventPublisher.publish(DomainEvent.of("ProductionInbound", "PRODUCTION_ORDER",
+                    cmd.getSourceId(), Map.of(
+                            "productionOrderId", cmd.getSourceId(),
+                            "skuId", cmd.getSkuId() != null ? cmd.getSkuId() : 0L,
+                            "inboundQty", cmd.getQuantity(),
+                            "unitCost", cmd.getUnitCost() != null ? cmd.getUnitCost() : BigDecimal.ZERO
+                    )));
+        }
+    }
 
     /**
      * 退避等待（随机 50~150ms）

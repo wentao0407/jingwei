@@ -33,16 +33,30 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class IdempotencyInterceptor implements HandlerInterceptor {
 
-    /** 幂等 key 前缀 */
+    /**
+     * Redis 幂等锁 key 前缀。
+     * 完整 key 格式：idempotency:{headerValue}，使用 Redis SETNX 实现互斥，
+     * 防止同一请求被重复处理。与 IdempotencyFilter 中的 header 提取逻辑配合使用。
+     */
     private static final String IDEMPOTENCY_KEY_PREFIX = "idempotency:";
 
-    /** 幂等响应缓存前缀 */
+    /**
+     * Redis 幂等响应缓存 key 前缀。
+     * 完整 key 格式：idempotency:response:{headerValue}，缓存首次请求的响应结果，
+     * 重复请求直接返回缓存响应，保证"同一操作只执行一次"的幂等语义。
+     */
     private static final String IDEMPOTENCY_RESPONSE_PREFIX = "idempotency:response:";
 
-    /** 幂等 key 有效期：24 小时 */
+    /**
+     * 幂等 key 在 Redis 中的过期时间。
+     * 24 小时后自动清除，过期后同一 key 可再次使用。过长占用 Redis 内存，过短可能导致窗口内重复执行。
+     */
     private static final Duration IDEMPOTENCY_TTL = Duration.ofHours(24);
 
-    /** 请求头名称 */
+    /**
+     * HTTP 请求头名称：客户端传入的幂等令牌。
+     * 与 IdempotencyFilter 中的同名常量保持一致，前端在需要幂等保护的写操作中携带此 header。
+     */
     private static final String IDEMPOTENCY_HEADER = "X-Idempotency-Key";
 
     private final StringRedisTemplate redisTemplate;

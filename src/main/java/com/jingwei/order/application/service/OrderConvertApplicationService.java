@@ -58,7 +58,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OrderConvertApplicationService {
 
-    /** 编码规则键：生产订单编号（格式 MO-年月-5位流水号） */
+    /**
+     * 编码规则键：生产订单编号。
+     * 与 t_md_coding_rule.code = 'PRODUCTION_ORDER' 对应（V07 迁移脚本），
+     * 订单转化（销售订单→生产订单）时使用此规则生成新编号。
+     */
     private static final String PRODUCTION_ORDER_CODE_RULE = "PRODUCTION_ORDER";
 
     private final OrderConvertDomainService orderConvertDomainService;

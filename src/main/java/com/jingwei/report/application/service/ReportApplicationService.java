@@ -42,7 +42,11 @@ import java.util.*;
 @RequiredArgsConstructor
 public class ReportApplicationService {
 
-    /** 操作类型标签映射缓存 */
+    /**
+     * 库存操作类型枚举到中文标签的映射。
+     * 基于 OperationType 枚举构建，用于出入库流水报表中将操作编码（如 INBOUND_PURCHASE）转换为中文显示（如"采购入库"）。
+     * 静态初始化块构建，运行期间不可变。
+     */
     private static final Map<String, String> OP_TYPE_LABELS;
 
     static {
@@ -437,7 +441,11 @@ public class ReportApplicationService {
 
     // ==================== 库龄分析 ====================
 
-    /** 默认库龄超期阈值（天） */
+    /**
+     * 默认库龄超期阈值（天）。
+     * 当 t_sys_config 中未配置库龄超期天数时的兜底值，超过此天数的库存标记为"超期"并触发预警。
+     * 服装行业通常以 90 天作为库龄健康分界线。
+     */
     private static final int DEFAULT_OVERDUE_DAYS = 90;
 
     /**
@@ -458,64 +466,62 @@ public class ReportApplicationService {
                     dto.getCategoryId(), dto.getSeasonId(), dto.getKeyword());
         }
 
-        // 转换明细
+        // 转换明细（分页）
         List<InventoryAgeVO> details = result.getRecords().stream()
                 .map(this::mapToAgeVO)
                 .toList();
 
-        // 构建汇总
+        // 构建汇总（使用全量聚合查询，不依赖分页结果）
         InventoryAgeSummaryVO summary = new InventoryAgeSummaryVO();
         summary.setDetails(details);
+        summary.setTotalCount(result.getTotal());
 
-        // 计算汇总数据（基于当前页，实际场景可考虑全量统计）
+        Map<String, Object> fullSummary;
+        if ("MATERIAL".equalsIgnoreCase(inventoryType)) {
+            fullSummary = reportMapper.selectMaterialAgeSummary(
+                    dto.getWarehouseId(), dto.getKeyword());
+        } else {
+            fullSummary = reportMapper.selectSkuAgeSummary(
+                    dto.getWarehouseId(), dto.getCategoryId(), dto.getSeasonId(), dto.getKeyword());
+        }
+
+        // 从全量汇总结果中提取数据
         Map<String, Long> ageRangeCount = new LinkedHashMap<>();
         Map<String, BigDecimal> ageRangeQty = new LinkedHashMap<>();
         Map<String, BigDecimal> ageRangeAmount = new LinkedHashMap<>();
-        long totalCount = 0;
-        BigDecimal totalQty = BigDecimal.ZERO;
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        long overdueCount = 0;
-        BigDecimal overdueQty = BigDecimal.ZERO;
 
-        // 初始化区间
-        for (String range : List.of("0-30天", "31-60天", "61-90天", "91-180天", "180天以上")) {
-            ageRangeCount.put(range, 0L);
-            ageRangeQty.put(range, BigDecimal.ZERO);
-            ageRangeAmount.put(range, BigDecimal.ZERO);
-        }
-
-        for (InventoryAgeVO vo : details) {
-            totalCount++;
-            BigDecimal qty = vo.getTotalQty() != null ? vo.getTotalQty() : BigDecimal.ZERO;
-            BigDecimal amount = vo.getTotalAmount() != null ? vo.getTotalAmount() : BigDecimal.ZERO;
-            totalQty = totalQty.add(qty);
-            totalAmount = totalAmount.add(amount);
-
-            // 分区间统计
-            String range = vo.getAgeRange();
-            if (range != null) {
-                ageRangeCount.merge(range, 1L, Long::sum);
-                ageRangeQty.merge(range, qty, BigDecimal::add);
-                ageRangeAmount.merge(range, amount, BigDecimal::add);
-            }
-
-            // 超期统计
-            if (Boolean.TRUE.equals(vo.getOverdue())) {
-                overdueCount++;
-                overdueQty = overdueQty.add(qty);
-            }
-        }
+        ageRangeCount.put("0-30天", toLongDefault0(fullSummary.get("range0to30count")));
+        ageRangeQty.put("0-30天", toBigDecimalDefault0(fullSummary.get("range0to30qty")));
+        ageRangeCount.put("31-60天", toLongDefault0(fullSummary.get("range31to60count")));
+        ageRangeQty.put("31-60天", toBigDecimalDefault0(fullSummary.get("range31to60qty")));
+        ageRangeCount.put("61-90天", toLongDefault0(fullSummary.get("range61to90count")));
+        ageRangeQty.put("61-90天", toBigDecimalDefault0(fullSummary.get("range61to90qty")));
+        ageRangeCount.put("91-180天", toLongDefault0(fullSummary.get("range91to180count")));
+        ageRangeQty.put("91-180天", toBigDecimalDefault0(fullSummary.get("range91to180qty")));
+        ageRangeCount.put("180天以上", toLongDefault0(fullSummary.get("range180pluscount")));
+        ageRangeQty.put("180天以上", toBigDecimalDefault0(fullSummary.get("range180plusqty")));
 
         summary.setAgeRangeCount(ageRangeCount);
         summary.setAgeRangeQty(ageRangeQty);
         summary.setAgeRangeAmount(ageRangeAmount);
-        summary.setTotalCount(totalCount);
-        summary.setTotalQty(totalQty);
-        summary.setTotalAmount(totalAmount);
-        summary.setOverdueCount(overdueCount);
-        summary.setOverdueQty(overdueQty);
+        summary.setTotalCount(toLongDefault0(fullSummary.get("totalcount")));
+        summary.setTotalQty(toBigDecimalDefault0(fullSummary.get("totalqty")));
+        summary.setTotalAmount(toBigDecimalDefault0(fullSummary.get("totalamount")));
+        summary.setOverdueCount(toLongDefault0(fullSummary.get("overduecount")));
+        summary.setOverdueQty(toBigDecimalDefault0(fullSummary.get("overdueqty")));
 
         return summary;
+    }
+
+    private long toLongDefault0(Object val) {
+        if (val instanceof Number) return ((Number) val).longValue();
+        return 0L;
+    }
+
+    private BigDecimal toBigDecimalDefault0(Object val) {
+        if (val instanceof BigDecimal) return (BigDecimal) val;
+        if (val instanceof Number) return BigDecimal.valueOf(((Number) val).doubleValue());
+        return BigDecimal.ZERO;
     }
 
     /**
@@ -598,16 +604,31 @@ public class ReportApplicationService {
 
     // ==================== 畅滞销分析 ====================
 
-    /** 畅销等级：周转天数<=15 */
+    /**
+     * 畅销等级：周转天数 ≤ 15 天。
+     * 对应畅滞销分析报表中的分级标准，用于标识快速流转的 SKU/物料。
+     */
     private static final String GRADE_FAST = "FAST";
-    /** 畅销等级：周转天数16-60 */
+    /**
+     * 畅销等级：周转天数 16-60 天。
+     * 正常流转速度，属于健康库存水平。
+     */
     private static final String GRADE_NORMAL = "NORMAL";
-    /** 畅销等级：周转天数61-90 */
+    /**
+     * 畅销等级：周转天数 61-90 天。
+     * 流转偏慢，需关注是否即将进入滞销区间。
+     */
     private static final String GRADE_SLOW = "SLOW";
-    /** 畅销等级：周转天数>90或无出库 */
+    /**
+     * 畅销等级：周转天数 > 90 天或统计周期内无出库记录。
+     * 滞销/死库存，建议促销或清仓处理。
+     */
     private static final String GRADE_DEAD = "DEAD";
 
-    /** 畅销等级标签映射 */
+    /**
+     * 畅销等级编码到中文标签的映射。
+     * 用于畅滞销分析报表的 VO 层展示：FAST→"畅销"、NORMAL→"正常"、SLOW→"滞销"、DEAD→"死货"。
+     */
     private static final Map<String, String> GRADE_LABELS = Map.of(
             GRADE_FAST, "畅销",
             GRADE_NORMAL, "正常",

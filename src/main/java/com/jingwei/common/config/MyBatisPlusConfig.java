@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import org.apache.ibatis.plugin.Interceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -35,4 +36,11 @@ public class MyBatisPlusConfig {
         interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
         return interceptor;
     }
+
+    // 数据权限拦截器暂时禁用：delegate 属性访问与当前 MyBatis 版本不兼容
+    // 待修复后重新启用
+    // @Bean
+    // public Interceptor dataPermissionInterceptor() {
+    //     return new DataPermissionInterceptor();
+    // }
 }

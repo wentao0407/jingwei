@@ -31,7 +31,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OutboundApplicationService {
 
-    /** 编码规则键：出库单编号 */
+    /**
+     * 编码规则键：出库单编号。
+     * 与 t_md_coding_rule.code = 'OUTBOUND_NO' 对应，用于创建出库单时自动生成单号。
+     */
     private static final String OUTBOUND_NO_RULE = "OUTBOUND_NO";
 
     private final OutboundDomainService outboundDomainService;

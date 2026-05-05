@@ -44,7 +44,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ProductionOrderApplicationService {
 
-    /** 编码规则键：生产订单编号（格式 MO-年月-5位流水号） */
+    /**
+     * 编码规则键：生产订单编号。
+     * 与 t_md_coding_rule.code = 'PRODUCTION_ORDER' 对应（V07 迁移脚本），
+     * 格式：MO-年月-5位流水号（如 MO-202605-00001），每月重置。
+     */
     private static final String PRODUCTION_ORDER_CODE_RULE = "PRODUCTION_ORDER";
 
     private final ProductionOrderDomainService productionOrderDomainService;

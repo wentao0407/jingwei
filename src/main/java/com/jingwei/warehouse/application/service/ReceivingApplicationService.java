@@ -33,7 +33,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ReceivingApplicationService {
 
-    /** 编码规则键：收货单号 */
+    /**
+     * 编码规则键：收货单编号。
+     * 与 t_md_coding_rule.code = 'RECEIVING_NO' 对应，格式由编码规则配置决定，
+     * 用于从 ASN 创建收货单时自动生成单号。
+     */
     private static final String RECEIVING_NO_RULE = "RECEIVING_NO";
 
     private final ReceivingDomainService receivingDomainService;

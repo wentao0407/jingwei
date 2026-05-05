@@ -6,6 +6,7 @@ import com.jingwei.inventory.domain.model.*;
 import com.jingwei.inventory.domain.repository.InventoryMaterialRepository;
 import com.jingwei.inventory.domain.repository.InventoryOperationRepository;
 import com.jingwei.inventory.domain.repository.InventorySkuRepository;
+import com.jingwei.common.domain.service.DomainEventPublisher;
 import com.jingwei.master.domain.service.CodingRuleDomainService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -47,6 +48,8 @@ class InventoryDomainServiceTest {
     private InventoryOperationRepository inventoryOperationRepository;
     @Mock
     private CodingRuleDomainService codingRuleDomainService;
+    @Mock
+    private DomainEventPublisher domainEventPublisher;
 
     private InventoryDomainService service;
 
@@ -55,7 +58,8 @@ class InventoryDomainServiceTest {
         lenient().when(codingRuleDomainService.generateCode(any(), any())).thenReturn("OP-TEST-0001");
         service = new InventoryDomainService(
                 inventorySkuRepository, inventoryMaterialRepository,
-                inventoryOperationRepository, codingRuleDomainService);
+                inventoryOperationRepository, codingRuleDomainService,
+                domainEventPublisher);
     }
 
     // ==================== 辅助方法 ====================

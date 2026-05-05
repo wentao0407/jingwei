@@ -11,6 +11,11 @@ package com.jingwei.common.domain.model;
  */
 public class UserContext {
 
+    /**
+     * 当前线程绑定的用户 ID。
+     * 由 JwtAuthenticationFilter 在请求入口处设置，由 BaseEntity 的 MetaObjectHandler
+     * 在 INSERT/UPDATE 时读取并填充 created_by/updated_by 审计字段，请求结束时必须 clear() 防止内存泄漏。
+     */
     private static final ThreadLocal<Long> USER_ID = new ThreadLocal<>();
 
     /**

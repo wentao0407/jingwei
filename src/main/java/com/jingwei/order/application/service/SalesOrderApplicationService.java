@@ -54,7 +54,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SalesOrderApplicationService {
 
-    /** 编码规则键：销售订单编号（格式 SO-年月-5位流水号） */
+    /**
+     * 编码规则键：销售订单编号。
+     * 与 t_md_coding_rule.code = 'SALES_ORDER' 对应（V06 迁移脚本），
+     * 格式：SO-年月-5位流水号（如 SO-202605-00001），每月重置。
+     */
     private static final String SALES_ORDER_CODE_RULE = "SALES_ORDER";
 
     private final SalesOrderDomainService salesOrderDomainService;

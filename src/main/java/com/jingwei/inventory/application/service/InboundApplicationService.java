@@ -31,7 +31,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class InboundApplicationService {
 
-    /** 编码规则键：入库单编号 */
+    /**
+     * 编码规则键：入库单编号。
+     * 与 t_md_coding_rule.code = 'INBOUND_NO' 对应，用于创建入库单时自动生成单号。
+     */
     private static final String INBOUND_NO_RULE = "INBOUND_NO";
 
     private final InboundDomainService inboundDomainService;

@@ -61,7 +61,7 @@ class ReconciliationDomainServiceTest {
     @Test
     @DisplayName("库存一致 → 不生成异常")
     void reconcile_consistent_shouldNotGenerateAnomaly() {
-        when(reconciliationRepository.existsByAccountDate(accountDate)).thenReturn(false);
+        when(reconciliationRepository.hasExecutionLog(accountDate)).thenReturn(false);
 
         // 无操作流水
         when(reconciliationMapper.selectSkuOpsNetChangeByDate(accountDate)).thenReturn(Collections.emptyList());
@@ -81,7 +81,7 @@ class ReconciliationDomainServiceTest {
     @Test
     @DisplayName("库存不一致 → 生成异常记录")
     void reconcile_inconsistent_shouldGenerateAnomaly() {
-        when(reconciliationRepository.existsByAccountDate(accountDate)).thenReturn(false);
+        when(reconciliationRepository.hasExecutionLog(accountDate)).thenReturn(false);
         // 提供 inventory_id=1 的操作流水，使对账循环能检查到该记录
         when(reconciliationMapper.selectSkuOpsNetChangeByDate(accountDate))
                 .thenReturn(Collections.singletonList(new Object[]{1L, BigDecimal.valueOf(5)}));
@@ -106,7 +106,7 @@ class ReconciliationDomainServiceTest {
     @Test
     @DisplayName("同账期重复对账 → 跳过")
     void reconcile_duplicate_shouldSkip() {
-        when(reconciliationRepository.existsByAccountDate(accountDate)).thenReturn(true);
+        when(reconciliationRepository.hasExecutionLog(accountDate)).thenReturn(true);
 
         int count = service.reconcile(accountDate);
 
@@ -117,7 +117,7 @@ class ReconciliationDomainServiceTest {
     @Test
     @DisplayName("无流水但有库存 → 正常检查不报错")
     void reconcile_noOps_shouldStillCheck() {
-        when(reconciliationRepository.existsByAccountDate(accountDate)).thenReturn(false);
+        when(reconciliationRepository.hasExecutionLog(accountDate)).thenReturn(false);
         when(reconciliationMapper.selectSkuOpsNetChangeByDate(accountDate)).thenReturn(Collections.emptyList());
         when(reconciliationMapper.selectMaterialOpsNetChangeByDate(accountDate)).thenReturn(Collections.emptyList());
 
@@ -135,7 +135,7 @@ class ReconciliationDomainServiceTest {
     @Test
     @DisplayName("原料库存不一致 → 生成异常")
     void reconcile_materialInconsistent_shouldGenerateAnomaly() {
-        when(reconciliationRepository.existsByAccountDate(accountDate)).thenReturn(false);
+        when(reconciliationRepository.hasExecutionLog(accountDate)).thenReturn(false);
         when(reconciliationMapper.selectSkuOpsNetChangeByDate(accountDate)).thenReturn(Collections.emptyList());
         // 提供 inventory_id=1 的操作流水，使对账循环能检查到该记录
         when(reconciliationMapper.selectMaterialOpsNetChangeByDate(accountDate))

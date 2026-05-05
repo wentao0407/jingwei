@@ -30,10 +30,17 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OutboxEventRelay {
 
-    /** 每次扫描的最大事件条数 */
+    /**
+     * 每次定时扫描的最大事件条数。
+     * Outbox 事件中继器按此批次大小拉取待发送事件，避免单次查询数据量过大。
+     * 值过大增加单次事务耗时，过小则事件投递延迟增大，50 为经验值平衡点。
+     */
     private static final int BATCH_SIZE = 50;
 
-    /** 最大重试次数，超过后触发告警 */
+    /**
+     * 最大重试次数。超过此次数的事件标记为 FAILED 并触发告警通知运维人员。
+     * 对应 t_outbox_domain_event.retry_count 字段，通常由网络抖动或消费者不可用导致。
+     */
     private static final int MAX_RETRY_COUNT = 5;
 
     private final DomainEventOutboxRepository outboxRepository;
@@ -56,8 +63,9 @@ public class OutboxEventRelay {
 
         for (DomainEventOutbox outbox : events) {
             try {
-                // 构建 DomainEvent 用于投递
+                // 构建 DomainEvent 用于投递（沿用原始 eventId 保证幂等语义）
                 DomainEvent event = DomainEvent.of(
+                        outbox.getEventId(),
                         outbox.getEventType(),
                         outbox.getAggregateType(),
                         outbox.getAggregateId(),

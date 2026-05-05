@@ -5,7 +5,9 @@ import com.jingwei.common.domain.model.BizException;
 import com.jingwei.common.domain.model.ErrorCode;
 import com.jingwei.inventory.domain.repository.InventorySkuRepository;
 import com.jingwei.inventory.domain.service.InventoryDomainService;
+import com.jingwei.master.domain.repository.SkuRepository;
 import com.jingwei.master.domain.service.CodingRuleDomainService;
+import com.jingwei.order.domain.repository.SalesOrderLineRepository;
 import com.jingwei.order.domain.model.*;
 import com.jingwei.order.domain.repository.ReturnOrderLineRepository;
 import com.jingwei.order.domain.repository.ReturnOrderRepository;
@@ -53,6 +55,10 @@ class ReturnOrderDomainServiceTest {
     private InventoryDomainService inventoryDomainService;
     @Mock
     private InventorySkuRepository inventorySkuRepository;
+    @Mock
+    private SalesOrderLineRepository salesOrderLineRepository;
+    @Mock
+    private SkuRepository skuRepository;
 
     private ReturnOrderDomainService service;
 
@@ -62,7 +68,8 @@ class ReturnOrderDomainServiceTest {
         service = new ReturnOrderDomainService(
                 returnOrderRepository, returnOrderLineRepository,
                 approvalDomainService, codingRuleDomainService,
-                inventoryDomainService, inventorySkuRepository);
+                inventoryDomainService, inventorySkuRepository,
+                salesOrderLineRepository, skuRepository);
     }
 
     // ==================== 辅助方法 ====================
@@ -112,6 +119,10 @@ class ReturnOrderDomainServiceTest {
             List<ReturnOrderLine> lines = List.of(buildReturnLine());
 
             when(returnOrderLineRepository.sumReturnQtyBySalesOrderLineId(50L)).thenReturn(0);
+            SalesOrderLine salesOrderLine = new SalesOrderLine();
+            salesOrderLine.setId(50L);
+            salesOrderLine.setTotalQuantity(20);
+            when(salesOrderLineRepository.selectById(50L)).thenReturn(salesOrderLine);
 
             ReturnOrder result = service.createReturnOrder(order, lines);
 
@@ -155,7 +166,7 @@ class ReturnOrderDomainServiceTest {
             ReturnOrder order = buildReturnOrder(ReturnStatus.DRAFT);
             when(returnOrderRepository.selectById(1L)).thenReturn(order);
             when(approvalDomainService.submitForApproval(anyString(), any(), anyString(), any()))
-                    .thenReturn(false);
+                    .thenReturn(true);
 
             service.submitForApproval(1L, 1L);
 
@@ -169,7 +180,7 @@ class ReturnOrderDomainServiceTest {
             ReturnOrder order = buildReturnOrder(ReturnStatus.DRAFT);
             when(returnOrderRepository.selectById(1L)).thenReturn(order);
             when(approvalDomainService.submitForApproval(anyString(), any(), anyString(), any()))
-                    .thenReturn(true);
+                    .thenReturn(false);
 
             service.submitForApproval(1L, 1L);
 

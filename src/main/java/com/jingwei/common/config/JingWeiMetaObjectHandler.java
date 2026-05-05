@@ -24,7 +24,12 @@ import java.time.LocalDateTime;
 @Component
 public class JingWeiMetaObjectHandler implements MetaObjectHandler {
 
-    /** 未登录时默认的用户ID */
+    /**
+     * 未登录时的默认用户 ID。
+     * 当 UserContext.getUserId() 返回 null（如系统内部调用、定时任务、初始化脚本）时，
+     * 审计字段 created_by/updated_by 填充 0 而非 null，避免数据库约束异常。
+     * 0 不对应任何真实用户，可在审计日志中作为"系统操作"的标识。
+     */
     private static final Long DEFAULT_USER_ID = 0L;
 
     /**

@@ -40,7 +40,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CategoryDomainService {
 
-    /** 分类最大层级 */
+    /**
+     * 物料/产品分类的最大层级深度。
+     * 服装行业分类通常为 3 级（如：面料 → 梭织面料 → 棉布），超过此层级的创建请求将被拒绝。
+     */
     private static final int MAX_LEVEL = 3;
 
     private final CategoryRepository categoryRepository;

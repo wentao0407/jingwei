@@ -54,8 +54,8 @@ public class ReconciliationDomainService {
      * @return 生成的异常记录数
      */
     public int reconcile(LocalDate accountDate) {
-        // 幂等校验：同一天不重复对账
-        if (reconciliationRepository.existsByAccountDate(accountDate)) {
+        // 幂等校验：同一天不重复对账（基于执行日志表，无异常时也能判断已执行）
+        if (reconciliationRepository.hasExecutionLog(accountDate)) {
             log.info("账期[{}]已执行过对账，跳过", accountDate);
             return 0;
         }
@@ -75,6 +75,9 @@ public class ReconciliationDomainService {
         } else {
             log.info("日终对账完成，无异常, accountDate={}", accountDate);
         }
+
+        // 4. 写入执行记录（无论是否有异常，保证幂等）
+        reconciliationRepository.insertExecutionLog(accountDate, anomalies.size());
 
         return anomalies.size();
     }

@@ -21,7 +21,10 @@ public class R<T> implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    /** 成功状态码 */
+    /**
+     * 统一响应成功状态码。code = 0 表示业务处理成功，非 0 值表示各类业务异常（见 BizErrorCode 枚举）。
+     * 前端通过此字段判断请求是否成功，而非 HTTP 状态码。
+     */
     private static final int SUCCESS_CODE = 0;
 
     /** 响应码：0=成功，非0=业务错误 */

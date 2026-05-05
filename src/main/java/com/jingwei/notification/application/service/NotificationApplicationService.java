@@ -69,15 +69,16 @@ public class NotificationApplicationService {
         Page<Notification> result = notificationRepository.selectPage(
                 page, userId, dto.getCategory(), dto.getIsRead());
 
-        // 批量查询当前用户的接收记录，用于填充已读状态
-        List<NotificationReceiver> receivers = receiverRepository.selectUnreadByReceiverId(userId);
-        Map<Long, Boolean> readStatusMap = receivers.stream()
-                .collect(Collectors.toMap(NotificationReceiver::getNotificationId,
-                        r -> Boolean.FALSE.equals(r.getIsRead()), (a, b) -> a));
+        // 批量查询当前用户的未读接收记录，用于填充已读状态
+        List<NotificationReceiver> unreadReceivers = receiverRepository.selectUnreadByReceiverId(userId);
+        // 构建未读通知ID集合：在集合中 = 未读，不在集合中 = 已读
+        java.util.Set<Long> unreadIds = unreadReceivers.stream()
+                .map(NotificationReceiver::getNotificationId)
+                .collect(Collectors.toSet());
 
         Page<NotificationVO> voPage = new Page<>(result.getCurrent(), result.getSize(), result.getTotal());
         voPage.setRecords(result.getRecords().stream()
-                .map(n -> toVO(n, readStatusMap.getOrDefault(n.getId(), true)))
+                .map(n -> toVO(n, unreadIds.contains(n.getId())))
                 .toList());
         return voPage;
     }

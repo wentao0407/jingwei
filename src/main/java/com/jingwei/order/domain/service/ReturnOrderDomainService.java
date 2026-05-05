@@ -8,10 +8,13 @@ import com.jingwei.inventory.domain.model.InventorySku;
 import com.jingwei.inventory.domain.model.OperationType;
 import com.jingwei.inventory.domain.service.InventoryDomainService;
 import com.jingwei.inventory.domain.repository.InventorySkuRepository;
+import com.jingwei.master.domain.model.Sku;
+import com.jingwei.master.domain.repository.SkuRepository;
 import com.jingwei.master.domain.service.CodingRuleDomainService;
 import com.jingwei.order.domain.model.*;
 import com.jingwei.order.domain.repository.ReturnOrderLineRepository;
 import com.jingwei.order.domain.repository.ReturnOrderRepository;
+import com.jingwei.order.domain.repository.SalesOrderLineRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -59,6 +62,8 @@ public class ReturnOrderDomainService {
     private final CodingRuleDomainService codingRuleDomainService;
     private final InventoryDomainService inventoryDomainService;
     private final InventorySkuRepository inventorySkuRepository;
+    private final SalesOrderLineRepository salesOrderLineRepository;
+    private final SkuRepository skuRepository;
 
     /**
      * 创建退货单
@@ -118,18 +123,18 @@ public class ReturnOrderDomainService {
                     "当前状态[" + returnOrder.getStatus().getLabel() + "]不允许提交审批");
         }
 
-        // 调用审批引擎
-        boolean autoApproved = approvalDomainService.submitForApproval(
+        // 调用审批引擎（返回 true=需要人工审批，false=自动通过）
+        boolean needApproval = approvalDomainService.submitForApproval(
                 RETURN_ORDER_APPROVAL_TYPE, returnId, returnOrder.getReturnNo(), operatorId);
 
-        if (autoApproved) {
-            // 自动审批通过（无审批配置或审批人就是提交人）
+        if (!needApproval) {
+            // 自动通过（无审批配置或审批人就是提交人）
             returnOrder.setStatus(ReturnStatus.APPROVED);
             returnOrder.setApprovedAt(LocalDateTime.now());
             returnOrderRepository.updateById(returnOrder);
             log.info("退货单自动审批通过: returnNo={}", returnOrder.getReturnNo());
         } else {
-            // 等待审批
+            // 需要人工审批
             returnOrder.setStatus(ReturnStatus.PENDING_APPROVAL);
             returnOrderRepository.updateById(returnOrder);
             log.info("退货单已提交审批: returnNo={}", returnOrder.getReturnNo());
@@ -292,9 +297,10 @@ public class ReturnOrderDomainService {
     }
 
     /**
-     * 校验退货数量不超过原订单已发货数量
+     * 校验退货数量不超过原订单行数量
      * <p>
-     * 累计校验：同一订单行的退货总量（包含历史退货）不能超过已发货数量
+     * 累计校验：同一订单行的退货总量（包含历史退货）不能超过原订单行数量。
+     * 注：原订单行数量是退货数量的上限（实际已发货数量待出库模块完善后可替换）。
      * </p>
      */
     private void validateReturnQuantities(List<ReturnOrderLine> lines) {
@@ -303,12 +309,18 @@ public class ReturnOrderDomainService {
             int existingReturnQty = returnOrderLineRepository
                     .sumReturnQtyBySalesOrderLineId(line.getSalesOrderLineId());
 
-            // TODO: 查询原订单行的已发货数量（需要 SalesOrderLineRepository）
-            // 暂时跳过此校验，在 ApplicationService 层补充
-            // int shippedQty = salesOrderLineRepository.getShippedQty(line.getSalesOrderLineId());
-            // if (existingReturnQty + line.getTotalQuantity() > shippedQty) {
-            //     throw new BizException(ErrorCode.ORDER_RETURN_QUANTITY_EXCEEDED);
-            // }
+            // 查询原订单行数量作为退货上限
+            SalesOrderLine orderLine = salesOrderLineRepository.selectById(line.getSalesOrderLineId());
+            if (orderLine == null) {
+                throw new BizException(ErrorCode.DATA_NOT_FOUND,
+                        "原订单行不存在: salesOrderLineId=" + line.getSalesOrderLineId());
+            }
+            int maxReturnQty = orderLine.getTotalQuantity();
+            if (existingReturnQty + line.getTotalQuantity() > maxReturnQty) {
+                throw new BizException(ErrorCode.ORDER_RETURN_QUANTITY_EXCEEDED,
+                        "退货数量超过原订单行数量，原订单行数量" + maxReturnQty +
+                        "，已退货" + existingReturnQty + "，本次" + line.getTotalQuantity());
+            }
         }
     }
 
@@ -332,16 +344,21 @@ public class ReturnOrderDomainService {
                 continue;
             }
 
-            // TODO: 通过 (spu_id, color_way_id, sizeId) 查询获取 sku_id
-            // 暂时使用 spuId 作为占位，实际需要 SKU 查询
-            Long skuId = line.getSpuId(); // 占位
-
-            // 查询或创建库存记录
-            InventorySku inventorySku = inventorySkuRepository.selectById(skuId);
-            if (inventorySku == null) {
-                log.warn("退货SKU库存记录不存在，需先创建: skuId={}", skuId);
+            // 通过 (spuId, colorWayId, sizeId) 查找真实 SKU
+            Long skuId = findSkuId(line.getSpuId(), line.getColorWayId(), sizeEntry.getSizeId());
+            if (skuId == null) {
+                log.warn("退货SKU不存在: spuId={}, colorWayId={}, sizeId={}, 跳过",
+                        line.getSpuId(), line.getColorWayId(), sizeEntry.getSizeId());
                 continue;
             }
+
+            // 查询该 SKU 的库存记录（取第一条可用记录）
+            List<InventorySku> inventoryList = inventorySkuRepository.selectBySkuId(skuId);
+            if (inventoryList.isEmpty()) {
+                log.warn("退货SKU库存记录不存在: skuId={}, 跳过", skuId);
+                continue;
+            }
+            InventorySku inventorySku = inventoryList.get(0);
 
             // 执行 INBOUND_RETURN 操作（质检库存增加）
             ChangeInventoryCommand cmd = ChangeInventoryCommand.forSku(
@@ -363,19 +380,104 @@ public class ReturnOrderDomainService {
 
     /**
      * 处理质检合格（QC_PASS）
+     * <p>
+     * 按尺码矩阵定位 SKU，查找对应库存记录，执行 QC_PASS（质检库存→可用库存）。
+     * </p>
      */
     private void processQcPass(ReturnOrderLine line, int passedQty, ReturnOrder returnOrder) {
-        // TODO: 需要获取退货入库时的库存记录ID
-        // 暂时记录日志，实际需要关联入库时的 inventorySkuId
-        log.debug("退货质检合格: lineId={}, passedQty={}", line.getId(), passedQty);
+        if (line.getSizeMatrix() == null || line.getSizeMatrix().getSizes() == null) {
+            log.warn("退货行尺码矩阵为空，跳过QC_PASS: lineId={}", line.getId());
+            return;
+        }
+
+        // 按尺码矩阵分配合格数量（按比例或全部分配到第一个尺码）
+        int remaining = passedQty;
+        for (SizeMatrix.SizeEntry sizeEntry : line.getSizeMatrix().getSizes()) {
+            if (remaining <= 0) break;
+            int sizeQty = Math.min(sizeEntry.getQuantity(), remaining);
+
+            Long skuId = findSkuId(line.getSpuId(), line.getColorWayId(), sizeEntry.getSizeId());
+            if (skuId == null) continue;
+
+            List<InventorySku> inventoryList = inventorySkuRepository.selectBySkuId(skuId);
+            if (inventoryList.isEmpty()) continue;
+            InventorySku inventorySku = inventoryList.get(0);
+
+            ChangeInventoryCommand cmd = ChangeInventoryCommand.forSku(
+                    OperationType.QC_PASS,
+                    inventorySku.getId(),
+                    skuId,
+                    inventorySku.getWarehouseId(),
+                    inventorySku.getBatchNo(),
+                    sizeQty,
+                    "RETURN_ORDER",
+                    returnOrder.getId(),
+                    line.getId());
+
+            inventoryDomainService.changeInventory(cmd);
+            remaining -= sizeQty;
+        }
+
+        log.debug("退货质检合格处理完成: lineId={}, passedQty={}", line.getId(), passedQty);
     }
 
     /**
      * 处理质检不合格（QC_FAIL）
+     * <p>
+     * 按尺码矩阵定位 SKU，查找对应库存记录，执行 QC_FAIL（质检库存减少，不进入可用库存）。
+     * </p>
      */
     private void processQcFail(ReturnOrderLine line, int failedQty, ReturnOrder returnOrder) {
-        // TODO: 需要获取退货入库时的库存记录ID
-        log.debug("退货质检不合格（报废）: lineId={}, failedQty={}", line.getId(), failedQty);
+        if (line.getSizeMatrix() == null || line.getSizeMatrix().getSizes() == null) {
+            log.warn("退货行尺码矩阵为空，跳过QC_FAIL: lineId={}", line.getId());
+            return;
+        }
+
+        int remaining = failedQty;
+        for (SizeMatrix.SizeEntry sizeEntry : line.getSizeMatrix().getSizes()) {
+            if (remaining <= 0) break;
+            int sizeQty = Math.min(sizeEntry.getQuantity(), remaining);
+
+            Long skuId = findSkuId(line.getSpuId(), line.getColorWayId(), sizeEntry.getSizeId());
+            if (skuId == null) continue;
+
+            List<InventorySku> inventoryList = inventorySkuRepository.selectBySkuId(skuId);
+            if (inventoryList.isEmpty()) continue;
+            InventorySku inventorySku = inventoryList.get(0);
+
+            ChangeInventoryCommand cmd = ChangeInventoryCommand.forSku(
+                    OperationType.QC_FAIL,
+                    inventorySku.getId(),
+                    skuId,
+                    inventorySku.getWarehouseId(),
+                    inventorySku.getBatchNo(),
+                    sizeQty,
+                    "RETURN_ORDER",
+                    returnOrder.getId(),
+                    line.getId());
+
+            inventoryDomainService.changeInventory(cmd);
+            remaining -= sizeQty;
+        }
+
+        log.debug("退货质检不合格处理完成: lineId={}, failedQty={}", line.getId(), failedQty);
+    }
+
+    /**
+     * 根据 (spuId, colorWayId, sizeId) 查找真实 SKU ID
+     *
+     * @param spuId      款式ID
+     * @param colorWayId 颜色款ID
+     * @param sizeId     尺码ID
+     * @return SKU ID，找不到返回 null
+     */
+    private Long findSkuId(Long spuId, Long colorWayId, Long sizeId) {
+        List<Sku> skus = skuRepository.selectBySpuId(spuId);
+        return skus.stream()
+                .filter(s -> colorWayId.equals(s.getColorWayId()) && sizeId.equals(s.getSizeId()))
+                .map(Sku::getId)
+                .findFirst()
+                .orElse(null);
     }
 
     /**

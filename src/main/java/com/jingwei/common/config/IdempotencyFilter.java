@@ -28,7 +28,11 @@ import java.io.IOException;
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
 public class IdempotencyFilter extends OncePerRequestFilter {
 
-    /** 请求头名称 */
+    /**
+     * HTTP 请求头名称：客户端传入的幂等令牌。
+     * 与 IdempotencyInterceptor.IDEMPOTENCY_HEADER 保持一致，
+     * Filter 层负责将 header 值存入 request attribute 供 Interceptor 读取。
+     */
     private static final String IDEMPOTENCY_HEADER = "X-Idempotency-Key";
 
     @Override

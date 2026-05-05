@@ -46,8 +46,8 @@ public class DomainEvent {
     /** 事件创建时间 */
     private final LocalDateTime occurredAt;
 
-    private DomainEvent(String eventType, String aggregateType, Long aggregateId, Map<String, Object> payload) {
-        this.eventId = UUID.randomUUID().toString();
+    private DomainEvent(String eventId, String eventType, String aggregateType, Long aggregateId, Map<String, Object> payload) {
+        this.eventId = eventId != null ? eventId : UUID.randomUUID().toString();
         this.eventType = eventType;
         this.aggregateType = aggregateType;
         this.aggregateId = aggregateId;
@@ -66,7 +66,22 @@ public class DomainEvent {
      */
     public static DomainEvent of(String eventType, String aggregateType,
                                   Long aggregateId, Map<String, Object> payload) {
-        return new DomainEvent(eventType, aggregateType, aggregateId, payload);
+        return new DomainEvent(null, eventType, aggregateType, aggregateId, payload);
+    }
+
+    /**
+     * 创建领域事件（携带指定 eventId，用于 Outbox 重放时保持幂等）
+     *
+     * @param eventId       事件ID（沿用 Outbox 表中的原始 eventId）
+     * @param eventType     事件类型
+     * @param aggregateType 聚合根类型
+     * @param aggregateId   聚合根ID
+     * @param payload       事件数据
+     * @return 领域事件实例
+     */
+    public static DomainEvent of(String eventId, String eventType, String aggregateType,
+                                  Long aggregateId, Map<String, Object> payload) {
+        return new DomainEvent(eventId, eventType, aggregateType, aggregateId, payload);
     }
 
     /**

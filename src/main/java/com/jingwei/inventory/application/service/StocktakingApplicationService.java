@@ -30,7 +30,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StocktakingApplicationService {
 
-    /** 编码规则键：盘点单编号 */
+    /**
+     * 编码规则键：盘点单编号。
+     * 与 t_md_coding_rule.code = 'STOCKTAKING_NO' 对应，用于创建盘点单时自动生成单号。
+     */
     private static final String STOCKTAKING_NO_RULE = "STOCKTAKING_NO";
 
     private final StocktakingDomainService stocktakingDomainService;

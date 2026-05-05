@@ -36,9 +36,17 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StocktakingDomainService {
 
-    /** 差异率复盘阈值配置键 */
+    /**
+     * 差异率复盘阈值配置键。
+     * 与 t_sys_config.config_key 对应，配置值为百分比整数（如 "5" 表示 5%）。
+     * 当盘点差异率超过此阈值时，系统自动标记该行需要复盘。
+     */
     private static final String RECHECK_THRESHOLD_KEY = "stocktaking.diff.recheck.threshold";
-    /** 默认复盘阈值（百分比） */
+    /**
+     * 默认复盘阈值（百分比）。
+     * 当 t_sys_config 中未找到 RECHECK_THRESHOLD_KEY 配置项或读取失败时的兜底值，
+     * 表示差异率超过 5% 的盘点行需要安排复盘。
+     */
     private static final int DEFAULT_RECHECK_THRESHOLD = 5;
 
     private final StocktakingOrderRepository stocktakingOrderRepository;
