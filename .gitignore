@@ -19,5 +19,17 @@ Thumbs.db
 # Maven
 .mvn/wrapper/maven-wrapper.jar
 
+# Frontend
+node_modules/
+dist/
+*.local
+*.tsbuildinfo
+frontend/*.config.js
+frontend/*.config.d.ts
+
 # Environment
 .env
+
+# Claude Code
+.pnpm-store/
+memory/

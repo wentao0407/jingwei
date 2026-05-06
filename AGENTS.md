@@ -20,6 +20,40 @@
 
 ---
 
+# 🧭 Project Memory & Progress
+
+每次重新开始会话或接手新任务时，必须先读取项目记忆文档，避免重复规划或遗漏当前进度。
+
+必读顺序：
+
+1. `AGENTS.md`
+2. `codex/PROGRESS.md`
+3. `codex/FRONTEND_PROGRESS.md`（前端任务必须读取）
+4. 当前任务相关的 `api/` 接口文档
+5. 当前任务相关的后端 `Controller` / `DTO` / `VO`
+
+前端当前主视觉方向：
+
+- 使用 Quiet 企业后台风
+- 静态参考页：
+  - `mock-login-quiet.html`
+  - `mock-orders-quiet.html`
+- 登录页背景参考图：
+  - `mock-assets/quiet-login-bg-01.png`
+
+前端阶段进度维护规则：
+
+- `codex/FRONTEND_PROGRESS.md` 是前端开发进度唯一总账
+- 每次完成前端任务后，必须更新其中的：
+  - `Current Frontend Status`
+  - 对应阶段的 `Status`
+  - `Update Log`
+  - `Next Task`
+- 新会话必须从第一个 `In Progress` 或 `Not Started` 阶段继续
+- 禁止跳过前置阶段直接开发后续复杂模块，除非用户明确要求
+
+---
+
 # 🎯 Core Principles
 
 - 优先保证代码清晰，而不是炫技

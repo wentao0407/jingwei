@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JingWei Orders Quiet</title>
+    <link rel="stylesheet" href="./mockups.css" />
+  </head>
+  <body class="quiet">
+    <main class="app-shell">
+      <aside class="sidebar">
+        <div class="side-title"><span class="brand-mark">JW</span> 经纬</div>
+        <div class="nav-item">工作台</div>
+        <div class="nav-item active">销售订单</div>
+        <div class="nav-item">生产订单</div>
+        <div class="nav-item">库存管理</div>
+        <div class="nav-item">物流发运</div>
+      </aside>
+      <section class="main">
+        <div class="topbar">
+          <div><h1>销售订单</h1><p>按客户、交期、状态跟踪订单履约进度</p></div>
+          <div class="toolbar"><input placeholder="搜索订单号/客户" /><select><option>全部状态</option></select><button>导出</button><button class="primary">新建订单</button></div>
+        </div>
+        <div class="stats">
+          <div class="stat"><span>今日新增</span><strong>12</strong></div>
+          <div class="stat"><span>待审批</span><strong>18</strong></div>
+          <div class="stat"><span>生产中</span><strong>64</strong></div>
+          <div class="stat"><span>本周交付</span><strong>31</strong></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>订单号</th><th>客户</th><th>款号</th><th>数量</th><th>交期</th><th>状态</th><th>负责人</th></tr></thead>
+            <tbody>
+              <tr><td>SO20260506001</td><td>杭州云织</td><td>JW-POLO-2418</td><td>3,200</td><td>2026-05-18</td><td><span class="tag info">待审批</span></td><td>陈敏</td></tr>
+              <tr><td>SO20260505012</td><td>上海锦棉</td><td>JW-DRESS-1102</td><td>1,860</td><td>2026-05-21</td><td><span class="tag ok">生产中</span></td><td>王磊</td></tr>
+              <tr><td>SO20260504008</td><td>宁波海岚</td><td>JW-COAT-0907</td><td>920</td><td>2026-05-14</td><td><span class="tag warn">待发运</span></td><td>刘佳</td></tr>
+              <tr><td>SO20260503019</td><td>苏州织造</td><td>JW-SHIRT-3301</td><td>4,500</td><td>2026-05-29</td><td><span class="tag ok">生产中</span></td><td>周航</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

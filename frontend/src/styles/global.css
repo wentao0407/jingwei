@@ -1,0 +1,64 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #f5f7fa;
+  color: #1f2329;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background:
+    linear-gradient(135deg, rgba(22, 119, 255, 0.08), rgba(38, 190, 126, 0.08)),
+    #f5f7fa;
+}
+
+.login-panel {
+  width: min(100%, 420px);
+  padding: 32px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(31, 35, 41, 0.08);
+}
+
+.login-panel h1.ant-typography {
+  margin-bottom: 4px;
+  font-size: 32px;
+  line-height: 1.2;
+}
+
+.layout-menu-button {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dashboard-page {
+  display: grid;
+  gap: 16px;
+}
+
+@media (max-width: 575px) {
+  .login-panel {
+    padding: 24px;
+  }
+}
