@@ -1,4 +1,6 @@
 import axios, { AxiosError } from 'axios';
+import { emitUnauthorized } from '@/shared/auth/authEvents';
+import { clearAuthSession } from '@/shared/storage/authSessionStorage';
 import { clearAccessToken, getAccessToken } from '@/shared/storage/tokenStorage';
 
 const UNAUTHORIZED_CODE = 10005;
@@ -31,6 +33,8 @@ apiClient.interceptors.response.use(
   (error: AxiosError<ApiResponse<unknown>>) => {
     if (error.response?.status === 401 || error.response?.data?.code === UNAUTHORIZED_CODE) {
       clearAccessToken();
+      clearAuthSession();
+      emitUnauthorized();
     }
 
     return Promise.reject(error);

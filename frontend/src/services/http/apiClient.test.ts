@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { apiClient, getApiErrorMessage } from './apiClient';
+import { onUnauthorized } from '@/shared/auth/authEvents';
 import { clearAccessToken, setAccessToken } from '@/shared/storage/tokenStorage';
 
 describe('apiClient', () => {
@@ -41,5 +42,28 @@ describe('apiClient', () => {
     };
 
     expect(getApiErrorMessage(error)).toBe('未授权，请先登录');
+  });
+
+  it('clears token and emits unauthorized event when backend rejects the session', async () => {
+    setAccessToken('expired-token');
+    const listener = vi.fn();
+    const unsubscribe = onUnauthorized(listener);
+    const adapter = vi.fn().mockRejectedValue({
+      response: {
+        status: 401,
+        data: {
+          code: 10005,
+          message: '未授权，请先登录',
+          data: null,
+          success: false,
+        },
+      },
+    });
+
+    await expect(apiClient.get('/system/profile', { adapter })).rejects.toBeDefined();
+
+    unsubscribe();
+    expect(localStorage.getItem('jingwei.accessToken')).toBeNull();
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 });

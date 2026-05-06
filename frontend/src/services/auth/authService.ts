@@ -1,22 +1,33 @@
 import { apiClient, unwrapApiResponse } from '@/services/http/apiClient';
+import type { AuthMenuItem } from '@/shared/storage/authSessionStorage';
 
-interface LoginRequest {
+export interface LoginRequest {
   username: string;
   password: string;
 }
 
-interface LoginResponse {
+export interface LoginResponse {
   token: string;
   userId: number;
   username: string;
   realName: string;
   roleIds: number[];
   permissions: string[];
-  menuTree: unknown[];
+  menuTree: AuthMenuItem[];
   passwordExpired: boolean;
+}
+
+export interface UserPermissionResponse {
+  menuTree: AuthMenuItem[];
+  permissions: string[];
 }
 
 export async function login(payload: LoginRequest): Promise<LoginResponse> {
   const response = await apiClient.post('/auth/login', payload);
   return unwrapApiResponse<LoginResponse>(response.data);
+}
+
+export async function getCurrentUserPermissions(): Promise<UserPermissionResponse> {
+  const response = await apiClient.post('/system/menu/permissions');
+  return unwrapApiResponse<UserPermissionResponse>(response.data);
 }

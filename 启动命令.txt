@@ -1,0 +1,20 @@
+#启动redis
+brew services start redis
+
+#后端启动
+cd /Users/hwt/project/claudeCodeProjects/jingwei
+mvn spring-boot:run
+
+#启动前端
+cd /Users/hwt/project/claudeCodeProjects/jingwei/frontend
+pnpm dev
+
+#杀后端进程
+kill -9 $(lsof -t -i:8080)
+
+
+curl -X POST http://localhost:8080/api/system/menu/permissions \
+  -H "Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiJhZG1pbiIsImlhdCI6MTc3ODA1NTA3NiwiZXhwIjoxNzc4MDgzODc2fQ.75J89DZMZN6wAkLp35cnBwKybnfDeEGfxK0pbGZAJlEXZMlnmZQTTuq_v0l8A-Er-IRP6HypVgAAhd5lOweXvQ"
+
+
+

@@ -15,6 +15,8 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
           borderRadius: 6,
           fontFamily:
             '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          colorBgLayout: '#f5f7fb',
+          colorText: '#1f2937',
         },
       }}
     >
