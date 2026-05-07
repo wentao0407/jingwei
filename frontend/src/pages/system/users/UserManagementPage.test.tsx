@@ -152,6 +152,31 @@ describe('UserManagementPage', () => {
     expect(mockedListUsers).toHaveBeenCalledTimes(2);
   });
 
+  it('blocks creating users with invalid input format', async () => {
+    mockedListUsers.mockResolvedValue({
+      records: [],
+      total: 0,
+      size: 10,
+      current: 1,
+      pages: 0,
+    });
+
+    renderPage();
+
+    await screen.findByText('暂无用户数据');
+    fireEvent.click(screen.getByRole('button', { name: '新建用户' }));
+    fireEvent.change(screen.getByLabelText('用户名'), { target: { value: 'bad user' } });
+    fireEvent.change(screen.getByLabelText('初始密码'), { target: { value: 'Example123' } });
+    fireEvent.change(screen.getByLabelText('手机号'), { target: { value: '12345' } });
+    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'bad-email' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+
+    expect(await screen.findByText('用户名只能包含字母、数字、下划线和短横线')).toBeInTheDocument();
+    expect(screen.getByText('请输入正确的手机号')).toBeInTheDocument();
+    expect(screen.getByText('请输入正确的邮箱')).toBeInTheDocument();
+    expect(mockedCreateUser).not.toHaveBeenCalled();
+  });
+
   it('updates a user and reloads the list', async () => {
     mockedListUsers.mockResolvedValue({
       records: [activeAdminUser],
@@ -178,6 +203,28 @@ describe('UserManagementPage', () => {
       }),
     );
     expect(mockedListUsers).toHaveBeenCalledTimes(2);
+  });
+
+  it('blocks updating users with invalid contact format', async () => {
+    mockedListUsers.mockResolvedValue({
+      records: [activeAdminUser],
+      total: 1,
+      size: 10,
+      current: 1,
+      pages: 1,
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('系统管理员')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '编辑 admin' }));
+    fireEvent.change(screen.getByLabelText('手机号'), { target: { value: 'not-phone' } });
+    fireEvent.change(screen.getByLabelText('邮箱'), { target: { value: 'admin@' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+
+    expect(await screen.findByText('请输入正确的手机号')).toBeInTheDocument();
+    expect(screen.getByText('请输入正确的邮箱')).toBeInTheDocument();
+    expect(mockedUpdateUser).not.toHaveBeenCalled();
   });
 
   it('deactivates a user after confirmation and reloads the list', async () => {

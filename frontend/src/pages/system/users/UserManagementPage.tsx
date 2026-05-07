@@ -23,11 +23,53 @@ const INITIAL_PAGE = 1;
 const USER_CREATE_PERMISSION = 'system:user:create';
 const USER_UPDATE_PERMISSION = 'system:user:update';
 const USER_DEACTIVATE_PERMISSION = 'system:user:deactivate';
+const USERNAME_MAX_LENGTH = 50;
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MAX_LENGTH = 50;
+const REAL_NAME_MAX_LENGTH = 50;
+const PHONE_MAX_LENGTH = 20;
+const EMAIL_MAX_LENGTH = 100;
+const usernamePattern = /^[A-Za-z0-9_-]+$/;
+const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+const phonePattern = /^1[3-9]\d{9}$/;
 
 const statusOptions = [
   { label: '全部状态', value: '' },
   { label: '启用', value: 'ACTIVE' },
   { label: '停用', value: 'INACTIVE' },
+];
+
+const usernameRules = [
+  { required: true, whitespace: true, message: '请输入用户名' },
+  { max: USERNAME_MAX_LENGTH, message: `用户名最长${USERNAME_MAX_LENGTH}个字符` },
+  {
+    pattern: usernamePattern,
+    message: '用户名只能包含字母、数字、下划线和短横线',
+  },
+];
+
+const passwordRules = [
+  { required: true, message: '请输入初始密码' },
+  { min: PASSWORD_MIN_LENGTH, max: PASSWORD_MAX_LENGTH, message: '密码长度8-50个字符' },
+  {
+    pattern: passwordPattern,
+    message: '密码必须包含大写字母、小写字母和数字',
+  },
+];
+
+const realNameRules = [{ max: REAL_NAME_MAX_LENGTH, message: `姓名最长${REAL_NAME_MAX_LENGTH}个字符` }];
+
+const phoneRules = [
+  { max: PHONE_MAX_LENGTH, message: `手机号最长${PHONE_MAX_LENGTH}个字符` },
+  {
+    pattern: phonePattern,
+    message: '请输入正确的手机号',
+  },
+];
+
+const emailRules = [
+  { max: EMAIL_MAX_LENGTH, message: `邮箱最长${EMAIL_MAX_LENGTH}个字符` },
+  { type: 'email' as const, message: '请输入正确的邮箱' },
 ];
 
 type UserFormValues = CreateUserPayload & UpdateUserPayload;
@@ -131,9 +173,9 @@ export function UserManagementPage() {
   };
 
   const handleSaveUser = async () => {
-    const values = await form.validateFields();
-    setSaving(true);
     try {
+      const values = await form.validateFields();
+      setSaving(true);
       if (formMode === 'create') {
         await createUser(toCreatePayload(values));
         message.success('用户创建成功');
@@ -144,6 +186,10 @@ export function UserManagementPage() {
       setFormOpen(false);
       await loadUsers();
     } catch (error) {
+      if (isFormValidationError(error)) {
+        return;
+      }
+
       message.error(getApiErrorMessage(error));
     } finally {
       setSaving(false);
@@ -270,37 +316,48 @@ export function UserManagementPage() {
               <Form.Item
                 label="用户名"
                 name="username"
-                rules={[
-                  { required: true, message: '请输入用户名' },
-                  { max: 50, message: '用户名最长50个字符' },
-                ]}
+                rules={usernameRules}
               >
-                <Input autoComplete="username" />
+                <Input
+                  allowClear
+                  autoComplete="username"
+                  maxLength={USERNAME_MAX_LENGTH}
+                  placeholder="请输入用户名"
+                />
               </Form.Item>
               <Form.Item
                 label="初始密码"
                 name="password"
-                rules={[
-                  { required: true, message: '请输入初始密码' },
-                  { min: 8, max: 50, message: '密码长度8-50个字符' },
-                  {
-                    pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
-                    message: '密码必须包含大写字母、小写字母和数字',
-                  },
-                ]}
+                rules={passwordRules}
               >
-                <Input.Password autoComplete="new-password" />
+                <Input.Password
+                  autoComplete="new-password"
+                  maxLength={PASSWORD_MAX_LENGTH}
+                  placeholder="请输入初始密码"
+                />
               </Form.Item>
             </>
           ) : null}
-          <Form.Item label="姓名" name="realName" rules={[{ max: 50, message: '姓名最长50个字符' }]}>
-            <Input />
+          <Form.Item label="姓名" name="realName" rules={realNameRules}>
+            <Input allowClear maxLength={REAL_NAME_MAX_LENGTH} placeholder="请输入姓名" />
           </Form.Item>
-          <Form.Item label="手机号" name="phone" rules={[{ max: 20, message: '手机号最长20个字符' }]}>
-            <Input />
+          <Form.Item label="手机号" name="phone" rules={phoneRules}>
+            <Input
+              allowClear
+              autoComplete="tel"
+              maxLength={PHONE_MAX_LENGTH}
+              placeholder="请输入手机号"
+              type="tel"
+            />
           </Form.Item>
-          <Form.Item label="邮箱" name="email" rules={[{ max: 100, message: '邮箱最长100个字符' }]}>
-            <Input />
+          <Form.Item label="邮箱" name="email" rules={emailRules}>
+            <Input
+              allowClear
+              autoComplete="email"
+              maxLength={EMAIL_MAX_LENGTH}
+              placeholder="请输入邮箱"
+              type="email"
+            />
           </Form.Item>
           {formMode === 'edit' ? (
             <Form.Item label="状态" name="status">
@@ -391,6 +448,10 @@ function buildUserColumns(actions: {
 
 function hasPermission(permissions: string[], permission: string): boolean {
   return permissions.includes(permission);
+}
+
+function isFormValidationError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'errorFields' in error;
 }
 
 function toCreatePayload(values: UserFormValues): CreateUserPayload {

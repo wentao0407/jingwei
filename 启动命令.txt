@@ -12,9 +12,7 @@ pnpm dev
 #杀后端进程
 kill -9 $(lsof -t -i:8080)
 
-
-curl -X POST "http://localhost:8080/api/system/user/deactivate?userId=2051941087109058561" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiJhZG1pbiIsImlhdCI6MTc3ODA1NzQ0MSwiZXhwIjoxNzc4MDg2MjQxfQ.etuxwdeJlwDFLsD68Q_sSSl2WnuXD6zBf9YZs92yzQcxiHE_VKyyPhiqehSHpyDmrdXiECr74YP-REUdw1CbQQ"
+http://localhost:5173/system/users
 
 
 

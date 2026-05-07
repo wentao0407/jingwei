@@ -2,7 +2,7 @@
 
 > 用途：记录 JingWei 前端开发阶段、当前进度、下一步任务和恢复上下文。  
 > 当前前端风格：Quiet 企业后台风。  
-> 更新时间：2026-05-06。  
+> 更新时间：2026-05-07。  
 > 维护规则：每次完成前端任务后，必须更新本文档的阶段状态、已完成内容、验证结果和下一步任务。
 
 ---
@@ -38,7 +38,7 @@ pnpm build
 ## Current Frontend Status
 
 **Current Stage:** Stage 2 - 系统管理模块  
-**Current Task:** Stage 2 - 用户管理新增/编辑/停用入口权限回填修复  
+**Current Task:** Stage 2 - 用户管理新增/编辑输入格式校验修复  
 **Next Task:** 继续 Stage 2，优先实现用户分配角色入口，或开始角色管理列表页基础版。
 
 已完成：
@@ -74,6 +74,11 @@ pnpm build
   - 后端 `Long` 统一序列化为字符串
   - 前端用户 ID 和角色 ID 类型改为 string
   - 编辑/停用请求保留原始字符串 ID
+- 已修复用户管理新增/编辑表单输入格式校验：
+  - 用户名仅允许字母、数字、下划线和短横线
+  - 手机号按大陆手机号格式校验
+  - 邮箱按邮箱格式校验
+  - 表单校验失败不再触发未处理 Promise rejection
 - 已补充本地权限数据回填迁移：
   - `V41__backfill_admin_user_permissions.sql`
   - `V42__backfill_admin_user_permissions_by_role_code.sql`
@@ -98,7 +103,9 @@ pnpm build
   - ADMIN 用户管理按钮权限和缺失种子数据回填迁移测试通过
   - 用户管理雪花 ID 字符串传参测试通过
   - Long 序列化为字符串测试通过
+  - 用户管理新增/编辑输入格式校验测试通过
   - 用户管理操作入口本轮验证通过：`pnpm lint`、`pnpm test`、`pnpm build`
+  - 本轮用户管理输入格式校验验证通过：`pnpm lint`、`pnpm test`、`pnpm build`
   - 本轮权限回填修复验证通过：`mvn -Dtest=AdminUserPermissionBackfillMigrationTest test`
   - `mvn test` 本轮未通过，原因是当前执行环境中 Mockito/ByteBuddy 无法 self-attach，且 Spring 集成测试无法连接本机 PostgreSQL；失败与本轮迁移修复无关
   - `pnpm dev` 未能在当前沙箱启动，原因是端口监听被拒绝：`listen EPERM`
@@ -195,6 +202,7 @@ pnpm build
 - 用户列表支持 keyword 查询、状态筛选入口、分页、刷新。
 - 用户列表支持新建、编辑和停用操作，提交成功后刷新列表。
 - 新建用户表单已按后端规则校验密码长度和复杂度。
+- 新建/编辑用户表单已补充用户名、手机号、邮箱格式校验。
 - 用户管理操作按钮已按 `system:user:create`、`system:user:update`、`system:user:deactivate` 控制显示。
 - 用户管理页会主动刷新当前用户权限，并回写本地登录会话，避免按钮显示依赖过期权限快照。
 - 已接入通用 `LoadingState` / `ErrorState` / `EmptyState`。
@@ -404,6 +412,36 @@ pnpm build
 ---
 
 ## Update Log
+
+### 2026-05-07 Stage 2 - 用户管理新增/编辑输入格式校验修复
+
+已完成：
+
+- 新增用户管理表单格式校验回归测试，覆盖新增用户和编辑用户两条路径。
+- 用户名新增格式校验，仅允许字母、数字、下划线和短横线，避免空格等非法字符进入提交参数。
+- 手机号新增大陆手机号格式校验，邮箱新增邮箱格式校验。
+- 输入框补充 `allowClear`、`maxLength`、`type`、`autoComplete` 和占位提示，保持新增/编辑表单可编辑且约束清晰。
+- 修复 `form.validateFields()` 校验失败时产生未处理 Promise rejection 的问题，校验失败只展示表单项错误，不弹接口错误。
+
+变更文件：
+
+- `frontend/src/pages/system/users/UserManagementPage.tsx`
+- `frontend/src/pages/system/users/UserManagementPage.test.tsx`
+- `codex/FRONTEND_PROGRESS.md`
+
+验证：
+
+- `pnpm test -- UserManagementPage.test.tsx` 先失败，确认缺少新增/编辑输入格式校验；修复后通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，25 tests passed。
+- `pnpm build` 通过，存在 Vite chunk size warning，后续可通过路由懒加载和 manual chunks 优化。
+- `pnpm dev -- --host 127.0.0.1` 未能在当前沙箱启动，原因是项目脚本固定绑定 `0.0.0.0` 且端口监听被拒绝：`listen EPERM 0.0.0.0:5173`。
+- `pnpm exec vite --host 127.0.0.1` 同样被当前沙箱拒绝：`listen EPERM 127.0.0.1:5173`；尝试申请提升权限启动时审批超时，未完成浏览器自测。
+
+后续任务：
+
+- 在允许本地端口监听的环境启动前端，打开 `/system/users` 手动验证新增/编辑表单校验提示。
+- 继续 Stage 2，优先实现用户分配角色入口，或开始角色管理列表页基础版。
 
 ### 2026-05-06 Stage 2 - 用户管理按钮权限回填修复
 
