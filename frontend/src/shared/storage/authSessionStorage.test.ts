@@ -8,15 +8,15 @@ describe('authSessionStorage', () => {
 
   it('stores and reads user session with permissions and menu tree', () => {
     setAuthSession({
-      userId: 1,
+      userId: '1',
       username: 'admin',
       realName: '系统管理员',
-      roleIds: [1],
+      roleIds: ['1'],
       permissions: ['system:user:create'],
       menuTree: [
         {
-          id: 10,
-          parentId: 0,
+          id: '10',
+          parentId: '0',
           name: '系统管理',
           type: 'DIRECTORY',
           path: '/system',
@@ -40,10 +40,10 @@ describe('authSessionStorage', () => {
 
   it('clears stored user session', () => {
     setAuthSession({
-      userId: 1,
+      userId: '1',
       username: 'admin',
       realName: '系统管理员',
-      roleIds: [1],
+      roleIds: ['1'],
       permissions: [],
       menuTree: [],
     });

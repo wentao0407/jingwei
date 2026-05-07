@@ -1,8 +1,8 @@
 const AUTH_SESSION_KEY = 'jingwei.authSession';
 
 export interface AuthMenuItem {
-  id: number;
-  parentId: number;
+  id: string;
+  parentId: string;
   name: string;
   type: string;
   path?: string | null;
@@ -16,10 +16,10 @@ export interface AuthMenuItem {
 }
 
 export interface AuthSession {
-  userId: number;
+  userId: string;
   username: string;
   realName: string;
-  roleIds: number[];
+  roleIds: string[];
   permissions: string[];
   menuTree: AuthMenuItem[];
 }
@@ -52,7 +52,7 @@ function isValidAuthSession(value: AuthSession): boolean {
   return (
     typeof value === 'object' &&
     value !== null &&
-    typeof value.userId === 'number' &&
+    typeof value.userId === 'string' &&
     typeof value.username === 'string' &&
     typeof value.realName === 'string' &&
     Array.isArray(value.roleIds) &&

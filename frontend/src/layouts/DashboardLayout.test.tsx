@@ -13,15 +13,15 @@ describe('DashboardLayout', () => {
 
   it('renders backend menu tree and current user name from auth session', async () => {
     setAuthSession({
-      userId: 1,
+      userId: '1',
       username: 'admin',
       realName: '系统管理员',
-      roleIds: [1],
+      roleIds: ['1'],
       permissions: ['system:user:create'],
       menuTree: [
         {
-          id: 10,
-          parentId: 0,
+          id: '10',
+          parentId: '0',
           name: '系统管理',
           type: 'DIRECTORY',
           path: '/system',
@@ -31,8 +31,8 @@ describe('DashboardLayout', () => {
           status: 'ACTIVE',
           children: [
             {
-              id: 11,
-              parentId: 10,
+              id: '11',
+              parentId: '10',
               name: '用户管理',
               type: 'MENU',
               path: '/system/users',

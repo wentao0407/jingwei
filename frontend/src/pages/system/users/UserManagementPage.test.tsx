@@ -23,15 +23,16 @@ const mockedDeactivateUser = vi.mocked(deactivateUser);
 const mockedListUsers = vi.mocked(listUsers);
 const mockedUpdateUser = vi.mocked(updateUser);
 const userActionPermissionCodes = ['system:user:create', 'system:user:update', 'system:user:deactivate'];
+const snowflakeUserId = '1778059952652742657';
 
 const activeAdminUser = {
-  id: 1,
+  id: '1',
   username: 'admin',
   realName: '系统管理员',
   phone: '13800000000',
   email: 'admin@example.com',
   status: 'ACTIVE',
-  roleIds: [1],
+  roleIds: ['1'],
   createdAt: '2026-05-01T10:00:00',
   updatedAt: '2026-05-02T10:00:00',
 };
@@ -130,7 +131,7 @@ describe('UserManagementPage', () => {
       current: 1,
       pages: 0,
     });
-    mockedCreateUser.mockResolvedValue({ ...activeAdminUser, id: 2, username: 'newuser' });
+    mockedCreateUser.mockResolvedValue({ ...activeAdminUser, id: '2', username: 'newuser' });
 
     renderPage();
 
@@ -169,7 +170,7 @@ describe('UserManagementPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '保存' }));
 
     await waitFor(() =>
-      expect(mockedUpdateUser).toHaveBeenCalledWith(1, {
+      expect(mockedUpdateUser).toHaveBeenCalledWith('1', {
         realName: '管理员',
         phone: '13800000000',
         email: 'admin@example.com',
@@ -195,8 +196,40 @@ describe('UserManagementPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '停用 admin' }));
     fireEvent.click(screen.getByRole('button', { name: '确认停用' }));
 
-    await waitFor(() => expect(mockedDeactivateUser).toHaveBeenCalledWith(1));
+    await waitFor(() => expect(mockedDeactivateUser).toHaveBeenCalledWith('1'));
     expect(mockedListUsers).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps snowflake user ids as strings when updating and deactivating users', async () => {
+    const snowflakeUser = {
+      ...activeAdminUser,
+      id: snowflakeUserId,
+      username: 'snowflake',
+      realName: '雪花用户',
+    };
+    mockedListUsers.mockResolvedValue({
+      records: [snowflakeUser],
+      total: 1,
+      size: 10,
+      current: 1,
+      pages: 1,
+    });
+    mockedUpdateUser.mockResolvedValue({ ...snowflakeUser, realName: '雪花用户A' });
+    mockedDeactivateUser.mockResolvedValue(undefined);
+
+    renderPage();
+
+    expect(await screen.findByText('雪花用户')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '编辑 snowflake' }));
+    fireEvent.change(screen.getByLabelText('姓名'), { target: { value: '雪花用户A' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() => expect(mockedUpdateUser).toHaveBeenCalledWith(snowflakeUserId, expect.any(Object)));
+
+    fireEvent.click(screen.getByRole('button', { name: '停用 snowflake' }));
+    fireEvent.click(screen.getByRole('button', { name: '确认停用' }));
+
+    await waitFor(() => expect(mockedDeactivateUser).toHaveBeenCalledWith(snowflakeUserId));
   });
 
   it('hides user action buttons when session has no button permissions', async () => {
@@ -240,10 +273,10 @@ describe('UserManagementPage', () => {
 
 function renderPage(sessionOverrides: Partial<AuthSession> = {}) {
   setAuthSession({
-    userId: 1,
+    userId: '1',
     username: 'admin',
     realName: '系统管理员',
-    roleIds: [1],
+    roleIds: ['1'],
     permissions: userActionPermissionCodes,
     menuTree: [],
     ...sessionOverrides,

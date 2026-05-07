@@ -70,6 +70,10 @@ pnpm build
   - 操作成功后自动刷新列表，失败时展示后端错误信息
   - 新建、编辑、停用按钮已按登录会话 `permissions` 控制显示
   - 进入用户管理页会刷新 `POST /system/menu/permissions`，避免旧登录会话导致按钮误隐藏
+- 已修复用户管理编辑/停用时雪花 ID 精度丢失问题：
+  - 后端 `Long` 统一序列化为字符串
+  - 前端用户 ID 和角色 ID 类型改为 string
+  - 编辑/停用请求保留原始字符串 ID
 - 已补充本地权限数据回填迁移：
   - `V41__backfill_admin_user_permissions.sql`
   - `V42__backfill_admin_user_permissions_by_role_code.sql`
@@ -92,6 +96,8 @@ pnpm build
   - 用户管理按钮权限控制测试通过
   - 用户管理旧会话权限刷新测试通过
   - ADMIN 用户管理按钮权限和缺失种子数据回填迁移测试通过
+  - 用户管理雪花 ID 字符串传参测试通过
+  - Long 序列化为字符串测试通过
   - 用户管理操作入口本轮验证通过：`pnpm lint`、`pnpm test`、`pnpm build`
   - 本轮权限回填修复验证通过：`mvn -Dtest=AdminUserPermissionBackfillMigrationTest test`
   - `mvn test` 本轮未通过，原因是当前执行环境中 Mockito/ByteBuddy 无法 self-attach，且 Spring 集成测试无法连接本机 PostgreSQL；失败与本轮迁移修复无关
@@ -427,6 +433,40 @@ pnpm build
 
 - 启动后端执行 Flyway migration 后，重新登录或刷新用户管理页确认 `POST /system/menu/permissions` 返回 `system:user:create`。
 - 继续 Stage 2，优先实现用户分配角色入口，或开始角色管理列表页基础版。
+
+### 2026-05-06 Stage 2 - 用户管理雪花 ID 精度修复
+
+已完成：
+
+- 定位用户管理编辑/停用提示“用户不存在”的根因：后端雪花 ID 为 Java `Long`，前端以 JavaScript `number` 接收后超过安全整数范围发生精度丢失。
+- 新增 `JacksonConfig`，将后端所有 `Long` / `long` 响应统一序列化为字符串。
+- 前端用户管理相关 ID 类型调整为 string，编辑和停用接口保留原始字符串 ID 传参。
+- 登录会话和后端菜单树中的 ID 类型同步调整为 string。
+- 新增雪花 ID 回归测试，覆盖编辑和停用操作。
+
+变更文件：
+
+- `src/main/java/com/jingwei/common/config/JacksonConfig.java`
+- `src/test/java/com/jingwei/common/config/JacksonConfigTest.java`
+- `frontend/src/services/system/userService.ts`
+- `frontend/src/services/auth/authService.ts`
+- `frontend/src/shared/storage/authSessionStorage.ts`
+- `frontend/src/shared/storage/authSessionStorage.test.ts`
+- `frontend/src/layouts/DashboardLayout.test.tsx`
+- `frontend/src/pages/system/users/UserManagementPage.test.tsx`
+- `codex/FRONTEND_PROGRESS.md`
+
+验证：
+
+- `mvn -Dtest=JacksonConfigTest,AdminUserPermissionBackfillMigrationTest test` 通过。
+- `pnpm test -- src/pages/system/users/UserManagementPage.test.tsx src/shared/storage/authSessionStorage.test.ts src/layouts/DashboardLayout.test.tsx` 通过。
+- `pnpm lint` 通过。
+- `pnpm build` 通过，存在 Vite chunk size warning，后续可通过路由懒加载和 manual chunks 优化。
+
+后续任务：
+
+- 重启后端，使 Long 序列化配置生效。
+- 刷新前端并重新登录后验证用户管理编辑/停用。
 
 ### 2026-05-06 Stage 2 - 用户管理列表页基础版
 

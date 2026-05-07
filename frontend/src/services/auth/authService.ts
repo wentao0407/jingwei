@@ -8,10 +8,10 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   token: string;
-  userId: number;
+  userId: string;
   username: string;
   realName: string;
-  roleIds: number[];
+  roleIds: string[];
   permissions: string[];
   menuTree: AuthMenuItem[];
   passwordExpired: boolean;

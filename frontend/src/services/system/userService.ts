@@ -23,13 +23,13 @@ export interface UpdateUserPayload {
 }
 
 export interface UserRecord {
-  id: number;
+  id: string;
   username: string;
   realName?: string | null;
   phone?: string | null;
   email?: string | null;
   status: string;
-  roleIds: number[];
+  roleIds: string[];
   createdAt?: string | null;
   updatedAt?: string | null;
 }
@@ -52,14 +52,14 @@ export async function createUser(payload: CreateUserPayload): Promise<UserRecord
   return unwrapApiResponse<UserRecord>(response.data);
 }
 
-export async function updateUser(userId: number, payload: UpdateUserPayload): Promise<UserRecord> {
+export async function updateUser(userId: string, payload: UpdateUserPayload): Promise<UserRecord> {
   const response = await apiClient.post('/system/user/update', normalizeOptionalFields(payload), {
     params: { userId },
   });
   return unwrapApiResponse<UserRecord>(response.data);
 }
 
-export async function deactivateUser(userId: number): Promise<void> {
+export async function deactivateUser(userId: string): Promise<void> {
   const response = await apiClient.post('/system/user/deactivate', null, {
     params: { userId },
   });
