@@ -3,7 +3,8 @@ import { App as AntdApp } from 'antd';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserManagementPage } from './UserManagementPage';
 import { getCurrentUserPermissions } from '@/services/auth/authService';
-import { createUser, deactivateUser, listUsers, updateUser } from '@/services/system/userService';
+import { listRoles } from '@/services/system/roleService';
+import { assignUserRoles, createUser, deactivateUser, listUsers, updateUser } from '@/services/system/userService';
 import { setAuthSession, type AuthSession } from '@/shared/storage/authSessionStorage';
 
 vi.mock('@/services/auth/authService', () => ({
@@ -11,19 +12,32 @@ vi.mock('@/services/auth/authService', () => ({
 }));
 
 vi.mock('@/services/system/userService', () => ({
+  assignUserRoles: vi.fn(),
   createUser: vi.fn(),
   deactivateUser: vi.fn(),
   listUsers: vi.fn(),
   updateUser: vi.fn(),
 }));
 
+vi.mock('@/services/system/roleService', () => ({
+  listRoles: vi.fn(),
+}));
+
 const mockedGetCurrentUserPermissions = vi.mocked(getCurrentUserPermissions);
+const mockedAssignUserRoles = vi.mocked(assignUserRoles);
 const mockedCreateUser = vi.mocked(createUser);
 const mockedDeactivateUser = vi.mocked(deactivateUser);
 const mockedListUsers = vi.mocked(listUsers);
+const mockedListRoles = vi.mocked(listRoles);
 const mockedUpdateUser = vi.mocked(updateUser);
-const userActionPermissionCodes = ['system:user:create', 'system:user:update', 'system:user:deactivate'];
+const userActionPermissionCodes = [
+  'system:user:create',
+  'system:user:update',
+  'system:user:deactivate',
+  'system:user:assignRole',
+];
 const snowflakeUserId = '1778059952652742657';
+const snowflakeRoleId = '1778059952652742666';
 
 const activeAdminUser = {
   id: '1',
@@ -45,9 +59,11 @@ describe('UserManagementPage', () => {
       menuTree: [],
       permissions: userActionPermissionCodes,
     });
+    mockedAssignUserRoles.mockReset();
     mockedCreateUser.mockReset();
     mockedDeactivateUser.mockReset();
     mockedListUsers.mockReset();
+    mockedListRoles.mockReset();
     mockedUpdateUser.mockReset();
   });
 
@@ -298,6 +314,7 @@ describe('UserManagementPage', () => {
     expect(screen.queryByRole('button', { name: '新建用户' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '编辑 admin' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '停用 admin' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '分配角色 admin' })).not.toBeInTheDocument();
   });
 
   it('refreshes button permissions when local session is stale', async () => {
@@ -315,6 +332,95 @@ describe('UserManagementPage', () => {
     expect(await screen.findByRole('button', { name: '新建用户' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '编辑 admin' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '停用 admin' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '分配角色 admin' })).toBeInTheDocument();
+  });
+
+  it('opens role assignment with current user roles selected', async () => {
+    mockedListUsers.mockResolvedValue({
+      records: [activeAdminUser],
+      total: 1,
+      size: 10,
+      current: 1,
+      pages: 1,
+    });
+    mockedListRoles.mockResolvedValue({
+      records: [
+        {
+          id: '1',
+          roleCode: 'ADMIN',
+          roleName: '系统管理员',
+          description: '系统管理员角色',
+          status: 'ACTIVE',
+        },
+        {
+          id: snowflakeRoleId,
+          roleCode: 'PRODUCTION_MANAGER',
+          roleName: '生产主管',
+          status: 'ACTIVE',
+        },
+      ],
+      total: 2,
+      size: 100,
+      current: 1,
+      pages: 1,
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('系统管理员')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '分配角色 admin' }));
+
+    expect(await screen.findByText('分配角色 - admin')).toBeInTheDocument();
+    expect(await screen.findByText('系统管理员（ADMIN）')).toBeInTheDocument();
+    await waitFor(() => expect(mockedListRoles).toHaveBeenCalledWith({ current: 1, size: 100 }));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: '角色' }));
+    expect(await screen.findByText('生产主管（PRODUCTION_MANAGER）')).toBeInTheDocument();
+    expect(mockedListRoles).toHaveBeenCalledWith({ current: 1, size: 100 });
+  });
+
+  it('assigns selected roles with string ids and reloads the list', async () => {
+    const userWithoutRole = {
+      ...activeAdminUser,
+      roleIds: [],
+    };
+    mockedListUsers.mockResolvedValue({
+      records: [userWithoutRole],
+      total: 1,
+      size: 10,
+      current: 1,
+      pages: 1,
+    });
+    mockedListRoles.mockResolvedValue({
+      records: [
+        {
+          id: snowflakeRoleId,
+          roleCode: 'PRODUCTION_MANAGER',
+          roleName: '生产主管',
+          status: 'ACTIVE',
+        },
+      ],
+      total: 1,
+      size: 100,
+      current: 1,
+      pages: 1,
+    });
+    mockedAssignUserRoles.mockResolvedValue(undefined);
+
+    renderPage();
+
+    expect(await screen.findByText('系统管理员')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '分配角色 admin' }));
+    await waitFor(() => expect(mockedListRoles).toHaveBeenCalledWith({ current: 1, size: 100 }));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: '角色' }));
+    fireEvent.click(await screen.findByText('生产主管（PRODUCTION_MANAGER）'));
+    fireEvent.click(screen.getByRole('button', { name: '保存角色' }));
+
+    await waitFor(() =>
+      expect(mockedAssignUserRoles).toHaveBeenCalledWith('1', {
+        roleIds: [snowflakeRoleId],
+      }),
+    );
+    expect(mockedListUsers).toHaveBeenCalledTimes(2);
   });
 });
 

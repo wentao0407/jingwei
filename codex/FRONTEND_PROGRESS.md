@@ -38,8 +38,8 @@ pnpm build
 ## Current Frontend Status
 
 **Current Stage:** Stage 2 - 系统管理模块  
-**Current Task:** Stage 2 - 用户管理新增/编辑输入格式校验修复  
-**Next Task:** 继续 Stage 2，优先实现用户分配角色入口，或开始角色管理列表页基础版。
+**Current Task:** Stage 2 - 用户分配角色入口实现  
+**Next Task:** 继续 Stage 2，开始角色管理列表页基础版。
 
 已完成：
 
@@ -79,6 +79,16 @@ pnpm build
   - 手机号按大陆手机号格式校验
   - 邮箱按邮箱格式校验
   - 表单校验失败不再触发未处理 Promise rejection
+- 已实现用户分配角色入口：
+  - 操作按钮按 `system:user:assignRole` 权限控制显示
+  - 角色候选读取 `POST /system/role/page`
+  - 分配提交对接 `POST /system/user/assignRoles`
+  - 分配弹窗回显用户当前角色，提交后刷新列表
+  - 用户 ID 和角色 ID 保持字符串传参，避免雪花 ID 精度丢失
+- 已修复用户管理菜单显示和路由兼容：
+  - 后端菜单 path `/system/user` 会规范化为前端路由 `/system/users`
+  - 后端 `menuTree` 为空时，fallback 菜单也包含“系统管理 / 用户管理”
+- 已将前端开发服务默认监听地址从 `0.0.0.0` 收敛为 `127.0.0.1`，避免本地自测默认监听所有网卡。
 - 已补充本地权限数据回填迁移：
   - `V41__backfill_admin_user_permissions.sql`
   - `V42__backfill_admin_user_permissions_by_role_code.sql`
@@ -104,11 +114,15 @@ pnpm build
   - 用户管理雪花 ID 字符串传参测试通过
   - Long 序列化为字符串测试通过
   - 用户管理新增/编辑输入格式校验测试通过
+  - 用户分配角色入口测试通过
+  - 用户管理菜单 fallback 和 `/system/user` 路径兼容测试通过
   - 用户管理操作入口本轮验证通过：`pnpm lint`、`pnpm test`、`pnpm build`
   - 本轮用户管理输入格式校验验证通过：`pnpm lint`、`pnpm test`、`pnpm build`
   - 本轮权限回填修复验证通过：`mvn -Dtest=AdminUserPermissionBackfillMigrationTest test`
   - `mvn test` 本轮未通过，原因是当前执行环境中 Mockito/ByteBuddy 无法 self-attach，且 Spring 集成测试无法连接本机 PostgreSQL；失败与本轮迁移修复无关
-  - `pnpm dev` 未能在当前沙箱启动，原因是端口监听被拒绝：`listen EPERM`
+  - `pnpm dev` 在默认沙箱中会因端口监听被拒绝失败：`listen EPERM`
+  - `pnpm dev` 使用提升权限在沙箱外启动通过：`http://127.0.0.1:5173/`
+  - 沙箱外 `curl -I http://127.0.0.1:5173/` 返回 `HTTP/1.1 200 OK`
   - in-app browser 插件连接超时，尚未完成本轮自动浏览器截图预览
 
 当前决策：
@@ -199,14 +213,17 @@ pnpm build
 - 已封装 `createUser()`，对接 `POST /system/user/create`。
 - 已封装 `updateUser()`，对接 `POST /system/user/update`。
 - 已封装 `deactivateUser()`，对接 `POST /system/user/deactivate`。
+- 已封装 `assignUserRoles()`，对接 `POST /system/user/assignRoles`。
+- 已封装 `listRoles()`，对接 `POST /system/role/page`。
 - 用户列表支持 keyword 查询、状态筛选入口、分页、刷新。
 - 用户列表支持新建、编辑和停用操作，提交成功后刷新列表。
+- 用户列表支持分配角色操作，提交成功后刷新列表。
 - 新建用户表单已按后端规则校验密码长度和复杂度。
 - 新建/编辑用户表单已补充用户名、手机号、邮箱格式校验。
 - 用户管理操作按钮已按 `system:user:create`、`system:user:update`、`system:user:deactivate` 控制显示。
 - 用户管理页会主动刷新当前用户权限，并回写本地登录会话，避免按钮显示依赖过期权限快照。
 - 已接入通用 `LoadingState` / `ErrorState` / `EmptyState`。
-- 分配角色等操作暂未实现。
+- 角色管理列表页暂未实现。
 
 ### Stage 3: 主数据模块
 
@@ -413,6 +430,98 @@ pnpm build
 
 ## Update Log
 
+### 2026-05-07 Stage 2 - 用户管理菜单显示修复
+
+已完成：
+
+- 修复后端菜单 path `/system/user` 与前端路由 `/system/users` 不一致导致菜单点击进错路由的问题。
+- 修复后端 `menuTree` 为空时 fallback 菜单没有“系统管理 / 用户管理”的问题。
+- fallback 菜单新增系统管理分组，保留现有 Quiet 工作台菜单。
+
+变更文件：
+
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `frontend/src/layouts/DashboardLayout.test.tsx`
+- `codex/FRONTEND_PROGRESS.md`
+
+验证：
+
+- `pnpm test -- DashboardLayout.test.tsx` 先失败，复现 `/system/user` 路由不匹配和空 `menuTree` 缺少系统菜单；修复后通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，29 tests passed。
+- `pnpm build` 通过，存在 Vite chunk size warning，后续可通过路由懒加载和 manual chunks 优化。
+- Playwright CLI 浏览器验证通过：在 mock 空 `menuTree` 登录态下打开 `/system/users`，侧边栏显示“系统管理 / 用户管理”，页面正常渲染。
+
+后续任务：
+
+- 继续 Stage 2，开始角色管理列表页基础版。
+
+### 2026-05-07 Stage 2 - 用户分配角色入口实现
+
+已完成：
+
+- 新增用户分配角色入口，按 `system:user:assignRole` 权限控制按钮显示。
+- 新增 `assignUserRoles()`，对接 `POST /system/user/assignRoles?userId=...`。
+- 新增 `listRoles()`，对接 `POST /system/role/page`，用于分配角色弹窗候选项。
+- 分配角色弹窗支持回显当前用户角色、多选角色、必选校验、保存 loading 和接口错误展示。
+- 修复真实浏览器发现的 Ant Design Modal 表单初始化时序问题：使用带 `key` 的表单重挂载和 `initialValues` 确保当前角色稳定回显。
+- 提交分配时保留用户 ID 和角色 ID 字符串，避免雪花 ID 精度丢失。
+
+变更文件：
+
+- `frontend/src/pages/system/users/UserManagementPage.tsx`
+- `frontend/src/pages/system/users/UserManagementPage.test.tsx`
+- `frontend/src/services/system/userService.ts`
+- `frontend/src/services/system/roleService.ts`
+- `codex/FRONTEND_PROGRESS.md`
+
+验证：
+
+- `pnpm test -- UserManagementPage.test.tsx` 先失败，确认缺少分配角色入口和角色服务；实现后通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，27 tests passed。
+- `pnpm build` 通过，存在 Vite chunk size warning，后续可通过路由懒加载和 manual chunks 优化。
+- Playwright CLI 浏览器验证通过：
+  - 打开 `/system/users` 后用户列表和“分配角色”按钮正常显示。
+  - 点击“分配角色”后弹窗正常打开。
+  - 当前角色 `系统管理员（ADMIN）` 正常回显。
+  - 角色下拉显示 `生产主管（PRODUCTION_MANAGER）` 候选项并可选中。
+  - 点击“保存角色”后弹窗关闭并刷新用户列表。
+  - 网络请求已确认：`POST /api/system/user/assignRoles?userId=1` 返回 200。
+  - 请求体已确认：`{"roleIds":["1","1778059952652742666"]}`。
+- in-app browser backend 不可用，已按插件说明降级使用 Playwright CLI。
+- 真实后端 `8080` 已确认运行并对未授权请求返回 `401`；因不能使用迁移注释中的默认密码作为用户提供凭据，本轮浏览器功能验证使用 Playwright API mock 登录态和系统管理接口响应。
+
+后续任务：
+
+- 继续 Stage 2，开始角色管理列表页基础版。
+
+### 2026-05-07 Stage 2 - 前端开发服务沙箱端口监听处理
+
+已完成：
+
+- 确认 `frontend/package.json` 的 `dev` 脚本已使用 `vite --host 127.0.0.1`。
+- 使用最小 Node `net.Server` 探针验证当前默认沙箱禁止任何本地端口监听：
+  - `127.0.0.1:5173` 返回 `EPERM`
+  - `127.0.0.1:0` 返回 `EPERM`
+  - `localhost:5173` 解析到 `::1` 后返回 `EPERM`
+- 使用提升权限在沙箱外启动 `pnpm dev` 成功，Vite 地址为 `http://127.0.0.1:5173/`。
+- 默认沙箱内 `curl` 无法连接提升权限进程；沙箱外 `curl -I http://127.0.0.1:5173/` 返回 `HTTP/1.1 200 OK`。
+
+变更文件：
+
+- `codex/FRONTEND_PROGRESS.md`
+
+验证：
+
+- `node net.Server` 最小监听探针已确认默认沙箱层拒绝 `listen()`。
+- `pnpm dev` 使用提升权限启动通过。
+- 沙箱外 `curl -I http://127.0.0.1:5173/` 返回 `HTTP/1.1 200 OK`。
+
+后续任务：
+
+- 继续 Stage 2，优先实现用户分配角色入口，或开始角色管理列表页基础版。
+
 ### 2026-05-07 Stage 2 - 用户管理新增/编辑输入格式校验修复
 
 已完成：
@@ -437,6 +546,7 @@ pnpm build
 - `pnpm build` 通过，存在 Vite chunk size warning，后续可通过路由懒加载和 manual chunks 优化。
 - `pnpm dev -- --host 127.0.0.1` 未能在当前沙箱启动，原因是项目脚本固定绑定 `0.0.0.0` 且端口监听被拒绝：`listen EPERM 0.0.0.0:5173`。
 - `pnpm exec vite --host 127.0.0.1` 同样被当前沙箱拒绝：`listen EPERM 127.0.0.1:5173`；尝试申请提升权限启动时审批超时，未完成浏览器自测。
+- 已将 `frontend/package.json` 的 `dev` 脚本改为 `vite --host 127.0.0.1`；重新运行 `pnpm dev` 后错误收敛为沙箱权限限制：`listen EPERM 127.0.0.1:5173`。
 
 后续任务：
 

@@ -22,6 +22,10 @@ export interface UpdateUserPayload {
   status?: string;
 }
 
+export interface AssignUserRolesPayload {
+  roleIds: string[];
+}
+
 export interface UserRecord {
   id: string;
   username: string;
@@ -61,6 +65,13 @@ export async function updateUser(userId: string, payload: UpdateUserPayload): Pr
 
 export async function deactivateUser(userId: string): Promise<void> {
   const response = await apiClient.post('/system/user/deactivate', null, {
+    params: { userId },
+  });
+  return unwrapApiResponse<void>(response.data);
+}
+
+export async function assignUserRoles(userId: string, payload: AssignUserRolesPayload): Promise<void> {
+  const response = await apiClient.post('/system/user/assignRoles', payload, {
     params: { userId },
   });
   return unwrapApiResponse<void>(response.data);

@@ -1,4 +1,4 @@
-import { ReloadOutlined, SearchOutlined, UserAddOutlined } from '@ant-design/icons';
+import { ReloadOutlined, SearchOutlined, TeamOutlined, UserAddOutlined } from '@ant-design/icons';
 import { ProCard } from '@ant-design/pro-components';
 import { App, Button, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
@@ -6,7 +6,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { EmptyState, ErrorState, LoadingState } from '@/components/state';
 import { getCurrentUserPermissions } from '@/services/auth/authService';
 import { getApiErrorMessage } from '@/services/http/apiClient';
+import { listRoles, type RoleRecord } from '@/services/system/roleService';
 import {
+  assignUserRoles,
   createUser,
   deactivateUser,
   listUsers,
@@ -23,6 +25,8 @@ const INITIAL_PAGE = 1;
 const USER_CREATE_PERMISSION = 'system:user:create';
 const USER_UPDATE_PERMISSION = 'system:user:update';
 const USER_DEACTIVATE_PERMISSION = 'system:user:deactivate';
+const USER_ASSIGN_ROLE_PERMISSION = 'system:user:assignRole';
+const ROLE_OPTION_PAGE_SIZE = 100;
 const USERNAME_MAX_LENGTH = 50;
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 50;
@@ -76,9 +80,14 @@ type UserFormValues = CreateUserPayload & UpdateUserPayload;
 
 type UserFormMode = 'create' | 'edit';
 
+interface RoleAssignmentFormValues {
+  roleIds: string[];
+}
+
 export function UserManagementPage() {
   const { message } = App.useApp();
   const [form] = Form.useForm<UserFormValues>();
+  const [roleForm] = Form.useForm<RoleAssignmentFormValues>();
   const [keywordInput, setKeywordInput] = useState('');
   const [keyword, setKeyword] = useState('');
   const [status, setStatus] = useState('');
@@ -90,18 +99,26 @@ export function UserManagementPage() {
   const [formMode, setFormMode] = useState<UserFormMode>('create');
   const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [assigningUser, setAssigningUser] = useState<UserRecord | null>(null);
+  const [roleModalOpen, setRoleModalOpen] = useState(false);
+  const [roleOptions, setRoleOptions] = useState<RoleRecord[]>([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [rolesSaving, setRolesSaving] = useState(false);
+  const [rolesErrorMessage, setRolesErrorMessage] = useState('');
   const [pageResult, setPageResult] = useState<PageResult<UserRecord> | null>(null);
   const [permissions, setPermissions] = useState<string[]>(() => getAuthSession()?.permissions ?? []);
   const userActionPermissions = {
     canCreate: hasPermission(permissions, USER_CREATE_PERMISSION),
     canUpdate: hasPermission(permissions, USER_UPDATE_PERMISSION),
     canDeactivate: hasPermission(permissions, USER_DEACTIVATE_PERMISSION),
+    canAssignRole: hasPermission(permissions, USER_ASSIGN_ROLE_PERMISSION),
   };
 
   const userColumns = buildUserColumns({
     permissions: userActionPermissions,
     onEdit: openEditForm,
     onDeactivate: handleDeactivate,
+    onAssignRole: openRoleAssignment,
   });
 
   const loadUsers = useCallback(async () => {
@@ -172,6 +189,21 @@ export function UserManagementPage() {
     setFormOpen(false);
   };
 
+  function openRoleAssignment(user: UserRecord) {
+    setAssigningUser(user);
+    setRolesErrorMessage('');
+    setRoleModalOpen(true);
+    void loadRoleOptions();
+  }
+
+  const closeRoleAssignment = () => {
+    if (rolesSaving) {
+      return;
+    }
+
+    setRoleModalOpen(false);
+  };
+
   const handleSaveUser = async () => {
     try {
       const values = await form.validateFields();
@@ -203,6 +235,45 @@ export function UserManagementPage() {
       await loadUsers();
     } catch (error) {
       message.error(getApiErrorMessage(error));
+    }
+  }
+
+  async function loadRoleOptions() {
+    setRolesLoading(true);
+    setRolesErrorMessage('');
+    try {
+      const result = await listRoles({
+        current: INITIAL_PAGE,
+        size: ROLE_OPTION_PAGE_SIZE,
+      });
+      setRoleOptions(result.records);
+    } catch (error) {
+      setRolesErrorMessage(getApiErrorMessage(error));
+    } finally {
+      setRolesLoading(false);
+    }
+  }
+
+  async function handleAssignRoles() {
+    if (!assigningUser) {
+      return;
+    }
+
+    try {
+      const values = await roleForm.validateFields();
+      setRolesSaving(true);
+      await assignUserRoles(assigningUser.id, { roleIds: values.roleIds });
+      message.success('角色分配成功');
+      setRoleModalOpen(false);
+      await loadUsers();
+    } catch (error) {
+      if (isFormValidationError(error)) {
+        return;
+      }
+
+      message.error(getApiErrorMessage(error));
+    } finally {
+      setRolesSaving(false);
     }
   }
 
@@ -366,6 +437,39 @@ export function UserManagementPage() {
           ) : null}
         </Form>
       </Modal>
+      <Modal
+        title={assigningUser ? `分配角色 - ${assigningUser.username}` : '分配角色'}
+        open={roleModalOpen}
+        confirmLoading={rolesSaving}
+        okText="保存角色"
+        cancelText="取消"
+        okButtonProps={{ 'aria-label': '保存角色' }}
+        onCancel={closeRoleAssignment}
+        onOk={handleAssignRoles}
+        destroyOnHidden
+      >
+        {rolesErrorMessage ? <ErrorState message={rolesErrorMessage} onRetry={loadRoleOptions} /> : null}
+        <Form<RoleAssignmentFormValues>
+          key={assigningUser?.id ?? 'role-assignment'}
+          form={roleForm}
+          initialValues={{ roleIds: assigningUser?.roleIds ?? [] }}
+          layout="vertical"
+          preserve={false}
+        >
+          <Form.Item
+            label="角色"
+            name="roleIds"
+            rules={[{ required: true, message: '请选择角色' }]}
+          >
+            <Select
+              loading={rolesLoading}
+              mode="multiple"
+              options={roleOptions.map(toRoleSelectOption)}
+              placeholder="请选择角色"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
@@ -373,12 +477,14 @@ export function UserManagementPage() {
 interface UserActionPermissions {
   canUpdate: boolean;
   canDeactivate: boolean;
+  canAssignRole: boolean;
 }
 
 function buildUserColumns(actions: {
   permissions: UserActionPermissions;
   onEdit: (user: UserRecord) => void;
   onDeactivate: (user: UserRecord) => void;
+  onAssignRole: (user: UserRecord) => void;
 }): ColumnsType<UserRecord> {
   const columns: ColumnsType<UserRecord> = [
     {
@@ -412,7 +518,7 @@ function buildUserColumns(actions: {
     },
   ];
 
-  if (!actions.permissions.canUpdate && !actions.permissions.canDeactivate) {
+  if (!actions.permissions.canUpdate && !actions.permissions.canDeactivate && !actions.permissions.canAssignRole) {
     return columns;
   }
 
@@ -426,6 +532,16 @@ function buildUserColumns(actions: {
           {actions.permissions.canUpdate ? (
             <Button type="link" aria-label={`编辑 ${user.username}`} onClick={() => actions.onEdit(user)}>
               编辑
+            </Button>
+          ) : null}
+          {actions.permissions.canAssignRole ? (
+            <Button
+              type="link"
+              icon={<TeamOutlined />}
+              aria-label={`分配角色 ${user.username}`}
+              onClick={() => actions.onAssignRole(user)}
+            >
+              分配角色
             </Button>
           ) : null}
           {actions.permissions.canDeactivate && user.status === 'ACTIVE' ? (
@@ -444,6 +560,13 @@ function buildUserColumns(actions: {
       ),
     },
   ];
+}
+
+function toRoleSelectOption(role: RoleRecord) {
+  return {
+    label: `${role.roleName}（${role.roleCode}）`,
+    value: role.id,
+  };
 }
 
 function hasPermission(permissions: string[], permission: string): boolean {

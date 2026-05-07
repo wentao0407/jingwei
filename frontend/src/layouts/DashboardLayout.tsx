@@ -8,6 +8,7 @@ import {
   SettingOutlined,
   TeamOutlined,
   TruckOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { PageContainer, ProLayout } from '@ant-design/pro-components';
 import type { MenuDataItem } from '@ant-design/pro-components';
@@ -42,6 +43,18 @@ const fallbackMenuItems: MenuDataItem[] = [
     name: '物流发运',
     icon: <TruckOutlined />,
   },
+  {
+    path: '/system',
+    name: '系统管理',
+    icon: <SettingOutlined />,
+    children: [
+      {
+        path: '/system/users',
+        name: '用户管理',
+        icon: <UserOutlined />,
+      },
+    ],
+  },
 ];
 
 const iconMap = {
@@ -52,6 +65,7 @@ const iconMap = {
   ShopOutlined: <ShopOutlined />,
   TeamOutlined: <TeamOutlined />,
   TruckOutlined: <TruckOutlined />,
+  UserOutlined: <UserOutlined />,
 };
 
 export function DashboardLayout() {
@@ -130,11 +144,19 @@ function buildMenuItems(menuTree: AuthMenuItem[]): MenuDataItem[] {
     .filter(isVisibleMenu)
     .sort(compareMenu)
     .map((item) => ({
-      path: item.path || '/',
+      path: normalizeMenuPath(item.path),
       name: item.name,
       icon: getMenuIcon(item.icon),
       children: buildMenuItems(item.children ?? []),
     }));
+}
+
+function normalizeMenuPath(path?: string | null): string {
+  if (path === '/system/user') {
+    return '/system/users';
+  }
+
+  return path || '/';
 }
 
 function isVisibleMenu(item: AuthMenuItem): boolean {
