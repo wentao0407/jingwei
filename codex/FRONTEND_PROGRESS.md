@@ -38,8 +38,8 @@ pnpm build
 ## Current Frontend Status
 
 **Current Stage:** Stage 2 - 系统管理模块  
-**Current Task:** Stage 2 - 用户分配角色入口实现  
-**Next Task:** 继续 Stage 2，开始角色管理列表页基础版。
+**Current Task:** Stage 2 - 角色管理列表页基础版  
+**Next Task:** 继续 Stage 2，开始角色管理新增/编辑操作入口。
 
 已完成：
 
@@ -88,6 +88,15 @@ pnpm build
 - 已修复用户管理菜单显示和路由兼容：
   - 后端菜单 path `/system/user` 会规范化为前端路由 `/system/users`
   - 后端 `menuTree` 为空时，fallback 菜单也包含“系统管理 / 用户管理”
+- 已实现角色管理列表页基础版：
+  - 路由为 `/system/roles`
+  - 读取 `POST /system/role/page`
+  - 支持 keyword 查询
+  - 支持状态筛选入口
+  - 支持分页和刷新
+  - 支持 loading / error / empty 状态
+  - 后端菜单 path `/system/role` 会规范化为前端路由 `/system/roles`
+  - 后端 `menuTree` 为空时，fallback 菜单也包含“系统管理 / 角色管理”
 - 已将前端开发服务默认监听地址从 `0.0.0.0` 收敛为 `127.0.0.1`，避免本地自测默认监听所有网卡。
 - 已补充本地权限数据回填迁移：
   - `V41__backfill_admin_user_permissions.sql`
@@ -116,8 +125,13 @@ pnpm build
   - 用户管理新增/编辑输入格式校验测试通过
   - 用户分配角色入口测试通过
   - 用户管理菜单 fallback 和 `/system/user` 路径兼容测试通过
+  - 角色管理列表页测试通过
+  - 角色管理菜单 fallback 和 `/system/role` 路径兼容测试通过
   - 用户管理操作入口本轮验证通过：`pnpm lint`、`pnpm test`、`pnpm build`
   - 本轮用户管理输入格式校验验证通过：`pnpm lint`、`pnpm test`、`pnpm build`
+  - 本轮角色管理列表页验证通过：`pnpm lint`、`pnpm test`、`pnpm build`
+  - 本轮浏览器验证已打开 `http://127.0.0.1:5174/system/roles`，确认 fallback 菜单、角色管理页标题、筛选区、角色表格和分页渲染正常
+  - 本轮浏览器继续交互验证搜索控件时，平台自动审批因额度限制拒绝后续 Playwright 控制命令，未继续绕过执行
   - 本轮权限回填修复验证通过：`mvn -Dtest=AdminUserPermissionBackfillMigrationTest test`
   - `mvn test` 本轮未通过，原因是当前执行环境中 Mockito/ByteBuddy 无法 self-attach，且 Spring 集成测试无法连接本机 PostgreSQL；失败与本轮迁移修复无关
   - `pnpm dev` 在默认沙箱中会因端口监听被拒绝失败：`listen EPERM`
@@ -223,7 +237,9 @@ pnpm build
 - 用户管理操作按钮已按 `system:user:create`、`system:user:update`、`system:user:deactivate` 控制显示。
 - 用户管理页会主动刷新当前用户权限，并回写本地登录会话，避免按钮显示依赖过期权限快照。
 - 已接入通用 `LoadingState` / `ErrorState` / `EmptyState`。
-- 角色管理列表页暂未实现。
+- 已实现角色管理列表页基础版，路由为 `/system/roles`。
+- 角色列表支持 keyword 查询、状态筛选入口、分页、刷新。
+- 角色管理菜单已兼容后端 `/system/role` 单数路径，fallback 菜单包含角色管理入口。
 
 ### Stage 3: 主数据模块
 

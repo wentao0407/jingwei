@@ -53,6 +53,11 @@ const fallbackMenuItems: MenuDataItem[] = [
         name: '用户管理',
         icon: <UserOutlined />,
       },
+      {
+        path: '/system/roles',
+        name: '角色管理',
+        icon: <TeamOutlined />,
+      },
     ],
   },
 ];
@@ -133,6 +138,13 @@ function getPageMeta(pathname: string) {
     };
   }
 
+  if (pathname === '/system/roles') {
+    return {
+      title: '角色管理',
+      subTitle: '维护角色、状态和权限配置入口',
+    };
+  }
+
   return {
     title: '销售订单',
     subTitle: '按客户、交期、状态跟踪订单履约进度',
@@ -154,6 +166,10 @@ function buildMenuItems(menuTree: AuthMenuItem[]): MenuDataItem[] {
 function normalizeMenuPath(path?: string | null): string {
   if (path === '/system/user') {
     return '/system/users';
+  }
+
+  if (path === '/system/role') {
+    return '/system/roles';
   }
 
   return path || '/';

@@ -1,3 +1,5 @@
+source ~/.zshrc
+
 #启动redis
 brew services start redis
 
@@ -12,7 +14,9 @@ pnpm dev
 #杀后端进程
 kill -9 $(lsof -t -i:8080)
 
-http://localhost:5173/system/users
+http://127.0.0.1:5173/system/users
+
+http://127.0.0.1:5174/system/roles
 
 
 

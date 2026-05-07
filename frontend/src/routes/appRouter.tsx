@@ -3,6 +3,7 @@ import { AuthGuard } from '@/routes/AuthGuard';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
 import { LoginPage } from '@/pages/login/LoginPage';
+import { RoleManagementPage } from '@/pages/system/roles/RoleManagementPage';
 import { UserManagementPage } from '@/pages/system/users/UserManagementPage';
 
 export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRouter(
@@ -26,6 +27,10 @@ export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRo
         {
           path: 'system/users',
           element: <UserManagementPage />,
+        },
+        {
+          path: 'system/roles',
+          element: <RoleManagementPage />,
         },
       ],
     },
