@@ -2,7 +2,7 @@
 
 > 用途：记录 JingWei 前端开发阶段、当前进度、下一步任务和恢复上下文。  
 > 当前前端风格：Quiet 企业后台风。  
-> 更新时间：2026-05-07。  
+> 更新时间：2026-05-08。  
 > 维护规则：每次完成前端任务后，必须更新本文档的阶段状态、已完成内容、验证结果和下一步任务。
 
 ---
@@ -38,8 +38,8 @@ pnpm build
 ## Current Frontend Status
 
 **Current Stage:** Stage 3 - 主数据模块  
-**Current Task:** Stage 3 第一批 - 客户管理与供应商管理已完成  
-**Next Task:** 继续 Stage 3，开始物料分类与物料主数据管理。
+**Current Task:** Stage 3 第二批 - 物料分类与物料主数据管理已完成  
+**Next Task:** 继续 Stage 3，开始 SPU/SKU 管理与尺码组/尺码管理。
 
 已完成：
 
@@ -162,6 +162,25 @@ pnpm build
   - 新建、编辑、启用、停用、删除按钮按 `master:supplier:*` 权限控制显示
   - 联系电话按手机号格式校验，表单提交前 trim 文本输入
   - 后端菜单 path `/master/supplier` 会规范化为前端路由 `/master/suppliers`
+- 已实现物料分类页：
+  - 路由为 `/master/categories`
+  - 读取 `POST /master/category/tree`
+  - 新建分类对接 `POST /master/category/create`
+  - 编辑分类对接 `POST /master/category/update`
+  - 删除分类对接 `POST /master/category/delete`
+  - 新建、编辑、删除按钮按 `master:category:*` 权限控制显示
+  - 分类树选择默认展开，方便选择子分类
+  - 后端菜单 path `/master/category` 会规范化为前端路由 `/master/categories`
+- 已实现物料主数据页：
+  - 路由为 `/master/materials`
+  - 读取 `POST /master/material/page`
+  - 支持 keyword、类型、分类、状态筛选、分页、刷新、loading / error / empty 状态
+  - 新建物料对接 `POST /master/material/create`
+  - 编辑物料对接 `POST /master/material/update`
+  - 停用物料对接 `POST /master/material/deactivate`
+  - 动态属性定义读取 `POST /master/material/attributeDefs`
+  - 新建、编辑、停用和动态属性读取按 `master:material:*` 权限控制
+  - 后端菜单 path `/master/material` 会规范化为前端路由 `/master/materials`
 - 已新增本地 ADMIN 客户/供应商菜单和按钮权限恢复迁移：
   - 新增 `V48__restore_admin_customer_supplier_permissions.sql`
   - 恢复基础数据、客户管理、供应商管理菜单和客户/供应商按钮权限点
@@ -252,6 +271,9 @@ pnpm build
   - 本轮客户/供应商管理验证通过：`pnpm test src/pages/master/customers/CustomerManagementPage.test.tsx src/pages/master/suppliers/SupplierManagementPage.test.tsx`
   - 本轮前端全量验证通过：`pnpm lint`、`pnpm test`（92 个测试通过）、`pnpm build`
   - 本轮客户/供应商权限迁移验证通过：`mvn -Dtest=AdminMasterPermissionBackfillMigrationTest test`
+  - 本轮物料分类与物料主数据管理验证通过：`pnpm lint`、`pnpm test`（112 个测试通过）、`pnpm build`
+  - 本轮物料分类与物料主数据权限迁移验证通过：`mvn -Dtest=AdminMasterPermissionBackfillMigrationTest test`
+  - 本轮未新增 V50 脚本；物料分类和物料主数据所需菜单、按钮、ADMIN 授权已由 `V49__restore_admin_category_material_permissions.sql` 覆盖
   - `mvn test` 本轮未通过，原因是当前执行环境中 Mockito/ByteBuddy 无法 self-attach，且 Spring 集成测试无法连接本机 PostgreSQL；失败与本轮迁移修复无关
   - `pnpm dev` 在默认沙箱中会因端口监听被拒绝失败：`listen EPERM`
   - `pnpm dev` 使用提升权限在沙箱外启动通过：`http://127.0.0.1:5173/`
@@ -424,6 +446,13 @@ pnpm build
 - 主布局 fallback 菜单已包含“基础数据 / 客户管理 / 供应商管理”。
 - 已兼容后端单数菜单路径 `/master/customer`、`/master/supplier`。
 - 已新增 `V48__restore_admin_customer_supplier_permissions.sql`，回填 ADMIN 客户/供应商菜单和按钮权限。
+- 已实现物料分类管理，路由为 `/master/categories`。
+- 已封装 `listCategoryTree()`、`createCategory()`、`updateCategory()`、`deleteCategory()`。
+- 已实现物料主数据管理，路由为 `/master/materials`。
+- 已封装 `listMaterials()`、`createMaterial()`、`updateMaterial()`、`deactivateMaterial()`、`getMaterialAttributeDefs()`。
+- 主布局 fallback 菜单已包含“基础数据 / 物料管理 / 物料分类”。
+- 已兼容后端单数菜单路径 `/master/material`、`/master/category`。
+- 已新增 `V49__restore_admin_category_material_permissions.sql`，回填 ADMIN 物料分类/物料主数据菜单和按钮权限。
 
 ### Stage 4: 销售订单模块
 

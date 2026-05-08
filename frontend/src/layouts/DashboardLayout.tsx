@@ -1,4 +1,5 @@
 import {
+  ApartmentOutlined,
   BellOutlined,
   DashboardOutlined,
   DatabaseOutlined,
@@ -34,6 +35,16 @@ const fallbackMenuItems: MenuDataItem[] = [
     name: '基础数据',
     icon: <DatabaseOutlined />,
     children: [
+      {
+        path: '/master/materials',
+        name: '物料管理',
+        icon: <InboxOutlined />,
+      },
+      {
+        path: '/master/categories',
+        name: '物料分类',
+        icon: <ApartmentOutlined />,
+      },
       {
         path: '/master/suppliers',
         name: '供应商管理',
@@ -76,6 +87,8 @@ const fallbackMenuItems: MenuDataItem[] = [
 ];
 
 const iconMap = {
+  ApartmentOutlined: <ApartmentOutlined />,
+  BoxOutlined: <InboxOutlined />,
   DashboardOutlined: <DashboardOutlined />,
   DatabaseOutlined: <DatabaseOutlined />,
   HomeOutlined: <HomeOutlined />,
@@ -178,6 +191,20 @@ function getPageMeta(pathname: string) {
     };
   }
 
+  if (pathname === '/master/materials') {
+    return {
+      title: '物料管理',
+      subTitle: '维护面料、辅料和包装物料主数据',
+    };
+  }
+
+  if (pathname === '/master/categories') {
+    return {
+      title: '物料分类',
+      subTitle: '维护物料分类树和启停状态',
+    };
+  }
+
   if (pathname === '/master/customers') {
     return {
       title: '客户管理',
@@ -233,6 +260,14 @@ function normalizeMenuPath(path?: string | null): string {
 
   if (path === '/master/supplier') {
     return '/master/suppliers';
+  }
+
+  if (path === '/master/material') {
+    return '/master/materials';
+  }
+
+  if (path === '/master/category') {
+    return '/master/categories';
   }
 
   return path || '/';

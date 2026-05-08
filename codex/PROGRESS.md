@@ -358,6 +358,59 @@
 后续任务：
 - 继续 Stage 3，开始物料分类与物料主数据管理。
 
+## 2026-05-08 任务：物料分类与物料主数据管理
+
+已完成：
+- 前端物料分类页已支持分类树列表、新建分类、编辑分类和删除分类。
+- 前端物料主数据页已支持列表查询、筛选、分页、新建物料、编辑物料和停用物料。
+- 物料主数据新增/编辑已对接动态属性定义，按物料类型读取 `POST /master/material/attributeDefs`。
+- 主布局已补充物料管理、物料分类菜单 fallback，并兼容后端单数路径 `/master/material`、`/master/category`。
+- 已准备并验证 ADMIN 物料分类/物料主数据菜单和按钮权限恢复迁移 `V49__restore_admin_category_material_permissions.sql`；本轮无新增 V50 脚本。
+
+变更文件：
+- `frontend/src/pages/master/categories/CategoryManagementPage.tsx`
+- `frontend/src/pages/master/categories/CategoryManagementPage.test.tsx`
+- `frontend/src/pages/master/materials/MaterialManagementPage.tsx`
+- `frontend/src/pages/master/materials/MaterialManagementPage.test.tsx`
+- `frontend/src/services/master/categoryService.ts`
+- `frontend/src/services/master/categoryService.test.ts`
+- `frontend/src/services/master/materialService.ts`
+- `frontend/src/services/master/materialService.test.ts`
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `frontend/src/layouts/DashboardLayout.test.tsx`
+- `frontend/src/routes/appRouter.tsx`
+- `src/main/resources/db/migration/V49__restore_admin_category_material_permissions.sql`
+- `src/test/java/com/jingwei/master/AdminMasterPermissionBackfillMigrationTest.java`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+- `pnpm lint` 通过
+- `pnpm test` 通过，112 个测试通过
+- `pnpm build` 通过
+- `mvn -Dtest=AdminMasterPermissionBackfillMigrationTest test` 通过
+
+后续任务：
+- 继续 Stage 3，开始 SPU/SKU 管理与尺码组/尺码管理。
+
+## 2026-05-08 修复：主数据新增提示编码规则不存在
+
+已完成：
+- 定位新增客户、物料、供应商分别报 `编码规则不存在: CUSTOMER_CODE`、`MATERIAL_CODE`、`SUPPLIER_CODE` 的根因。
+- 本地 `jingwei_dev` 中三条编码规则存在但 `deleted = true`，对应 6 条规则段也为 `deleted = true`，编码规则引擎被 MyBatis-Plus 逻辑删除过滤后查不到规则。
+- 新增 `V50__restore_master_code_rules.sql`，恢复客户、物料、供应商编码规则及其规则段。
+
+变更文件：
+- `src/main/resources/db/migration/V50__restore_master_code_rules.sql`
+- `src/test/java/com/jingwei/master/AdminMasterPermissionBackfillMigrationTest.java`
+- `codex/PROGRESS.md`
+
+验证：
+- `mvn -Dtest=AdminMasterPermissionBackfillMigrationTest test` 通过
+
+后续任务：
+- 用户执行 V50 后重新验证新增客户、物料、供应商。
+
 ## 更新模板
 
 ```md

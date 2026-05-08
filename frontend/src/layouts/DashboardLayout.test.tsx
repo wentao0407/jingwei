@@ -392,6 +392,82 @@ describe('DashboardLayout', () => {
     expect(screen.getByText('供应商管理')).toBeInTheDocument();
     expect(screen.getByText('客户管理页面')).toBeInTheDocument();
   });
+
+  it('normalizes backend material and category menu paths to frontend routes', async () => {
+    setAuthSession({
+      userId: '1',
+      username: 'admin',
+      realName: '系统管理员',
+      roleIds: ['1'],
+      permissions: ['master:material:create', 'master:category:create'],
+      menuTree: [
+        {
+          id: '200',
+          parentId: '0',
+          name: '基础数据',
+          type: 'DIRECTORY',
+          path: '/master',
+          icon: 'DatabaseOutlined',
+          sortOrder: 2,
+          visible: true,
+          status: 'ACTIVE',
+          children: [
+            {
+              id: '210',
+              parentId: '200',
+              name: '物料管理',
+              type: 'MENU',
+              path: '/master/material',
+              icon: 'BoxOutlined',
+              sortOrder: 1,
+              visible: true,
+              status: 'ACTIVE',
+              children: [],
+            },
+            {
+              id: '270',
+              parentId: '200',
+              name: '物料分类',
+              type: 'MENU',
+              path: '/master/category',
+              icon: 'ApartmentOutlined',
+              sortOrder: 7,
+              visible: true,
+              status: 'ACTIVE',
+              children: [],
+            },
+          ],
+        },
+      ],
+    });
+
+    renderLayout('/');
+
+    fireEvent.click(await screen.findByText('基础数据'));
+    fireEvent.click(await screen.findByText('物料管理'));
+    expect(await screen.findByText('物料管理页面')).toBeInTheDocument();
+    fireEvent.click(await screen.findByText('物料分类'));
+    expect(await screen.findByText('物料分类页面')).toBeInTheDocument();
+  });
+
+  it('shows material and category menus from fallback when backend menu tree is empty', async () => {
+    setAuthSession({
+      userId: '1',
+      username: 'admin',
+      realName: '系统管理员',
+      roleIds: ['1'],
+      permissions: ['master:material:create', 'master:category:create'],
+      menuTree: [],
+    });
+
+    renderLayout('/master/materials');
+
+    fireEvent.click(await screen.findByText('基础数据'));
+
+    expect(await screen.findAllByText('物料管理')).toHaveLength(2);
+    expect(screen.getByText('物料分类')).toBeInTheDocument();
+    expect(screen.getByText('物料管理页面')).toBeInTheDocument();
+  });
 });
 
 function renderLayout(initialPath: string) {
@@ -410,6 +486,8 @@ function renderLayout(initialPath: string) {
             <Route path="system/configs" element={<div>系统配置页面</div>} />
             <Route path="master/customers" element={<div>客户管理页面</div>} />
             <Route path="master/suppliers" element={<div>供应商管理页面</div>} />
+            <Route path="master/materials" element={<div>物料管理页面</div>} />
+            <Route path="master/categories" element={<div>物料分类页面</div>} />
           </Route>
         </Routes>
       </MemoryRouter>
