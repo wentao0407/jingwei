@@ -69,7 +69,7 @@ public class SystemExtController {
     /**
      * 创建配置项
      */
-    @RequirePermission("system:config:update")
+    @RequirePermission("system:config:create")
     @PostMapping("/system/config/create")
     public R<SysConfigVO> createConfig(@Valid @RequestBody CreateSysConfigDTO dto) {
         return R.ok(systemExtApplicationService.createConfig(dto));

@@ -1,0 +1,180 @@
+- generic [ref=e1]:
+  - generic [ref=e5]:
+    - complementary [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e10] [cursor=pointer]:
+          - img "shop" [ref=e11]:
+            - img [ref=e12]
+          - heading "经纬" [level=1] [ref=e14]
+        - menu [ref=e16]:
+          - menuitem "setting 系统管理" [expanded] [ref=e17] [cursor=pointer]:
+            - generic [ref=e19]:
+              - img "setting" [ref=e21]:
+                - img [ref=e22]
+              - generic [ref=e24]: 系统管理
+          - menu [ref=e25]:
+            - menuitem "菜单管理" [ref=e26] [cursor=pointer]:
+              - button "菜单管理" [ref=e28]:
+                - generic [ref=e30]: 菜单管理
+        - generic [ref=e31]:
+          - generic [ref=e33] [cursor=pointer]: 系统管理员
+          - generic [ref=e34]:
+            - button "通知" [ref=e37] [cursor=pointer]:
+              - img "bell" [ref=e39]:
+                - img [ref=e40]
+            - button "退出登录" [ref=e44] [cursor=pointer]:
+              - img "logout" [ref=e46]:
+                - img [ref=e47]
+        - img [ref=e50] [cursor=pointer]
+    - main [ref=e53]:
+      - generic [ref=e54]:
+        - generic [ref=e55]:
+          - navigation [ref=e56]:
+            - list [ref=e57]:
+              - listitem [ref=e58]: 系统管理
+              - listitem [ref=e59]: /
+              - listitem [ref=e60]: 菜单管理
+          - generic [ref=e61]:
+            - generic [ref=e62]:
+              - generic "菜单管理" [ref=e63]
+              - generic "维护导航菜单、按钮权限点和前端路由配置" [ref=e64]
+            - generic [ref=e69]: 开发环境
+        - generic [ref=e73]:
+          - generic [ref=e74]:
+            - generic [ref=e75]:
+              - heading "菜单管理" [level=1] [ref=e76]
+              - paragraph [ref=e77]: 维护导航菜单、按钮权限点和前端路由配置。
+            - button "新建菜单" [ref=e78] [cursor=pointer]:
+              - img "plus" [ref=e80]:
+                - img [ref=e81]
+              - generic [ref=e84]: 新建菜单
+          - table [ref=e93]:
+            - rowgroup [ref=e94]:
+              - row "菜单名称 类型 路由路径 权限标识 可见 状态 排序 操作" [ref=e95]:
+                - columnheader "菜单名称" [ref=e96]
+                - columnheader "类型" [ref=e97]
+                - columnheader "路由路径" [ref=e98]
+                - columnheader "权限标识" [ref=e99]
+                - columnheader "可见" [ref=e100]
+                - columnheader "状态" [ref=e101]
+                - columnheader "排序" [ref=e102]
+                - columnheader "操作" [ref=e103]
+            - rowgroup [ref=e104]:
+              - row "关闭行 系统管理 DIRECTORY /system - 显示 启用 1 编辑 系统管理" [ref=e105]:
+                - cell "关闭行 系统管理" [ref=e106]:
+                  - button "关闭行" [expanded] [ref=e107] [cursor=pointer]
+                  - text: 系统管理
+                - cell "DIRECTORY" [ref=e108]:
+                  - generic [ref=e109]: DIRECTORY
+                - cell "/system" [ref=e110]
+                - cell "-" [ref=e111]
+                - cell "显示" [ref=e112]
+                - cell "启用" [ref=e113]:
+                  - generic [ref=e114]: 启用
+                - cell "1" [ref=e115]
+                - cell "编辑 系统管理" [ref=e116]:
+                  - button "编辑 系统管理" [ref=e117] [cursor=pointer]:
+                    - generic [ref=e118]: 编辑
+              - row "关闭行 菜单管理 MENU /system/menu - 显示 启用 3 编辑 菜单管理" [ref=e119]:
+                - cell "关闭行 菜单管理" [ref=e120]:
+                  - button "关闭行" [expanded] [ref=e122] [cursor=pointer]
+                  - text: 菜单管理
+                - cell "MENU" [ref=e123]:
+                  - generic [ref=e124]: MENU
+                - cell "/system/menu" [ref=e125]
+                - cell "-" [ref=e126]
+                - cell "显示" [ref=e127]
+                - cell "启用" [ref=e128]:
+                  - generic [ref=e129]: 启用
+                - cell "3" [ref=e130]
+                - cell "编辑 菜单管理" [ref=e131]:
+                  - button "编辑 菜单管理" [ref=e132] [cursor=pointer]:
+                    - generic [ref=e133]: 编辑
+  - generic [ref=e134]:
+    - dialog "新建菜单":
+      - generic [ref=e135]:
+        - button "Close" [ref=e136] [cursor=pointer]:
+          - generic "关闭" [ref=e137]:
+            - img "close" [ref=e138]:
+              - img [ref=e139]
+        - generic [ref=e142]: 新建菜单
+        - generic [ref=e144]:
+          - generic [ref=e146]:
+            - generic "菜单名称" [ref=e148]: "* 菜单名称"
+            - generic [ref=e152]:
+              - textbox "* 菜单名称" [ref=e153]:
+                - /placeholder: 请输入菜单名称
+                - text: 测试按钮菜单
+              - button "close-circle" [ref=e258] [cursor=pointer]:
+                - img "close-circle" [ref=e259]:
+                  - img [ref=e260]
+          - generic [ref=e156]:
+            - generic "菜单类型" [ref=e158]: "* 菜单类型"
+            - generic [ref=e162] [cursor=pointer]:
+              - generic [ref=e164]:
+                - combobox "* 菜单类型" [expanded] [active] [ref=e166]:
+                  - listbox:
+                    - option "目录": DIRECTORY
+                    - option "菜单" [selected]: MENU
+                    - option "按钮": BUTTON
+                - generic "菜单" [ref=e167]
+              - generic:
+                - img:
+                  - img
+          - generic [ref=e169]:
+            - generic "父菜单ID" [ref=e171]: "* 父菜单ID"
+            - generic [ref=e175]:
+              - textbox "* 父菜单ID" [ref=e176]:
+                - /placeholder: 0 表示顶级菜单
+                - text: "0"
+              - button "close-circle" [ref=e178] [cursor=pointer]:
+                - img "close-circle" [ref=e179]:
+                  - img [ref=e180]
+          - generic [ref=e183]:
+            - generic "路由路径" [ref=e185]
+            - textbox "路由路径" [ref=e190]:
+              - /placeholder: 请输入路由路径
+          - generic [ref=e193]:
+            - generic "前端组件" [ref=e195]
+            - textbox "前端组件" [ref=e200]:
+              - /placeholder: 请输入前端组件路径
+          - generic [ref=e203]:
+            - generic "权限标识" [ref=e205]
+            - textbox "权限标识" [ref=e210]:
+              - /placeholder: 按钮类型必填
+          - generic [ref=e213]:
+            - generic "图标" [ref=e215]
+            - textbox "图标" [ref=e220]:
+              - /placeholder: 请输入 Ant Design 图标名
+          - generic [ref=e223]:
+            - generic "排序号" [ref=e225]
+            - generic [ref=e229]:
+              - generic:
+                - button "Increase Value" [ref=e230] [cursor=pointer]:
+                  - img "up" [ref=e231]:
+                    - img [ref=e232]
+                - button "Decrease Value" [disabled] [ref=e234]:
+                  - img "down" [ref=e235]:
+                    - img [ref=e236]
+              - spinbutton "排序号" [ref=e239]: "0"
+          - generic [ref=e241]:
+            - generic "是否可见" [ref=e243]
+            - generic [ref=e247] [cursor=pointer]:
+              - generic [ref=e249]:
+                - combobox "是否可见" [ref=e251]
+                - generic "显示" [ref=e252]
+              - generic:
+                - img:
+                  - img
+        - generic [ref=e253]:
+          - button "取 消" [ref=e254] [cursor=pointer]:
+            - generic [ref=e255]: 取 消
+          - button "保存" [ref=e256] [cursor=pointer]:
+            - generic [ref=e257]: 保 存
+  - generic [ref=e267]:
+    - generic "目录" [ref=e268] [cursor=pointer]:
+      - generic [ref=e269]: 目录
+    - generic "菜单" [ref=e270] [cursor=pointer]:
+      - generic [ref=e271]: 菜单
+    - generic "按钮" [ref=e272] [cursor=pointer]:
+      - generic [ref=e273]: 按钮

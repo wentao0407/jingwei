@@ -1,0 +1,37 @@
+- main [ref=e4]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: JW
+      - generic [ref=e8]: JingWei 经纬
+    - generic [ref=e9]:
+      - heading "把订单、生产、仓储和物流放在一张清晰的工作台上。" [level=1] [ref=e10]
+      - generic [ref=e11]: 安静克制的企业后台风格，适合长时间办公、表格录入、跨部门协作和稳定交付。
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - strong [ref=e14]: "128"
+          - text: 在制订单
+        - generic [ref=e15]:
+          - strong [ref=e16]: 96%
+          - text: 准交率
+        - generic [ref=e17]:
+          - strong [ref=e18]: "18"
+          - text: 待审批
+  - generic [ref=e19]:
+    - heading "登录系统" [level=2] [ref=e20]
+    - generic [ref=e21]: 使用企业账号进入经纬生产管理系统
+    - generic [ref=e24]:
+      - generic [ref=e30]:
+        - img "user" [ref=e32]:
+          - img [ref=e33]
+        - textbox "用户名" [active] [ref=e35]
+      - generic [ref=e42]:
+        - img "lock" [ref=e44]:
+          - img [ref=e45]
+        - textbox "密码" [ref=e47]
+        - img "eye-invisible" [ref=e49] [cursor=pointer]:
+          - img [ref=e50]
+      - button "登 录" [ref=e53] [cursor=pointer]:
+        - generic [ref=e54]: 登 录
+    - generic [ref=e55]:
+      - generic [ref=e56]: 开发环境
+      - generic [ref=e57]: v0.1.0

@@ -37,9 +37,9 @@ pnpm build
 
 ## Current Frontend Status
 
-**Current Stage:** Stage 2 - 系统管理模块  
-**Current Task:** Stage 2 - 角色管理列表页基础版  
-**Next Task:** 继续 Stage 2，开始角色管理新增/编辑操作入口。
+**Current Stage:** Stage 3 - 主数据模块  
+**Current Task:** Stage 3 第一批 - 客户管理与供应商管理已完成  
+**Next Task:** 继续 Stage 3，开始物料分类与物料主数据管理。
 
 已完成：
 
@@ -97,6 +97,90 @@ pnpm build
   - 支持 loading / error / empty 状态
   - 后端菜单 path `/system/role` 会规范化为前端路由 `/system/roles`
   - 后端 `menuTree` 为空时，fallback 菜单也包含“系统管理 / 角色管理”
+- 已完善角色管理操作入口：
+  - 新建角色，对接 `POST /system/role/create`
+  - 编辑角色，对接 `POST /system/role/update`
+  - 角色编码仅在新建时填写，编辑时不可修改
+  - 新建/编辑表单具备必填、长度、角色编码格式校验
+  - 新建、编辑按钮已按登录会话 `permissions` 控制显示
+  - 进入角色管理页会刷新 `POST /system/menu/permissions`，避免旧登录会话导致按钮误隐藏
+  - 操作成功后自动刷新列表，失败时展示后端错误信息
+- 已实现角色权限配置入口：
+  - 操作按钮按 `system:role:assignPermission` 权限控制显示
+  - 权限树读取 `POST /system/menu/tree`
+  - 已分配菜单 ID 读取 `POST /system/menu/roleMenuIds`
+  - 分配提交对接 `POST /system/menu/assign`
+  - 分配弹窗回显角色当前菜单和按钮权限，提交后全量替换角色权限
+  - 角色 ID 和菜单 ID 保持字符串传参，避免雪花 ID 精度丢失
+  - 权限树显式展开所有层级，方便查看按钮级权限点
+  - 空权限提交会在前端拦截并提示，避免触发后端 `menuIds` 不能为空
+- 已实现菜单管理列表页与操作入口：
+  - 路由为 `/system/menus`
+  - 读取 `POST /system/menu/tree`
+  - 支持树形菜单列表、默认展开、loading / error / empty 状态
+  - 后端菜单 path `/system/menu` 会规范化为前端路由 `/system/menus`
+  - 后端 `menuTree` 为空时，fallback 菜单也包含“系统管理 / 菜单管理”
+  - 新建菜单，对接 `POST /system/menu/create`
+  - 编辑菜单，对接 `POST /system/menu/update`
+  - 删除菜单，对接 `POST /system/menu/delete`
+  - 表单支持目录、菜单、按钮三类菜单，按钮类型必须填写权限标识
+  - 新建、编辑、删除按钮已按登录会话 `permissions` 控制显示
+  - 进入菜单管理页会刷新 `POST /system/menu/permissions`，避免旧登录会话导致按钮误隐藏
+  - 操作成功后自动刷新菜单树，失败时展示后端错误信息
+- 已实现系统配置列表页与编辑入口：
+  - 路由为 `/system/configs`
+  - 读取 `POST /system/config/list`
+  - 支持配置分组筛选、刷新、loading / error / empty 状态
+  - 列表分组列展示中文分组名称，不直接展示后端分组 code
+  - 新增配置对接 `POST /system/config/create`
+  - 新增表单支持配置键、分组、配置值、说明和是否需重启维护
+  - 新增按钮按 `system:config:create` 权限控制显示
+  - 编辑配置对接 `POST /system/config/update`
+  - 编辑时配置键和分组不可修改，配置值、说明、是否需重启和修改原因可维护
+  - 修改原因前端必填，避免触发后端 `remark` 不能为空
+  - 编辑按钮按 `system:config:update` 权限控制显示
+  - 进入系统配置页会刷新 `POST /system/menu/permissions`，避免旧登录会话导致按钮误隐藏
+  - 后端菜单 path `/system/config` 会规范化为前端路由 `/system/configs`
+  - 后端 `menuTree` 为空时，fallback 菜单也包含“系统配置”
+- 已实现客户管理页：
+  - 路由为 `/master/customers`
+  - 读取 `POST /master/customer/page`
+  - 支持 keyword 查询、类型/等级/状态筛选入口、分页、刷新、loading / error / empty 状态
+  - 新建客户对接 `POST /master/customer/create`
+  - 编辑客户对接 `POST /master/customer/update`
+  - 启用、停用、删除分别对接 `POST /master/customer/activate`、`POST /master/customer/deactivate`、`POST /master/customer/delete`
+  - 新建、编辑、启用、停用、删除按钮按 `master:customer:*` 权限控制显示
+  - 联系电话按手机号格式校验，表单提交前 trim 文本输入
+  - 后端菜单 path `/master/customer` 会规范化为前端路由 `/master/customers`
+- 已实现供应商管理页：
+  - 路由为 `/master/suppliers`
+  - 读取 `POST /master/supplier/page`
+  - 支持 keyword 查询、类型/资质/状态筛选入口、分页、刷新、loading / error / empty 状态
+  - 新建供应商对接 `POST /master/supplier/create`
+  - 编辑供应商对接 `POST /master/supplier/update`
+  - 启用、停用、删除分别对接 `POST /master/supplier/activate`、`POST /master/supplier/deactivate`、`POST /master/supplier/delete`
+  - 新建、编辑、启用、停用、删除按钮按 `master:supplier:*` 权限控制显示
+  - 联系电话按手机号格式校验，表单提交前 trim 文本输入
+  - 后端菜单 path `/master/supplier` 会规范化为前端路由 `/master/suppliers`
+- 已新增本地 ADMIN 客户/供应商菜单和按钮权限恢复迁移：
+  - 新增 `V48__restore_admin_customer_supplier_permissions.sql`
+  - 恢复基础数据、客户管理、供应商管理菜单和客户/供应商按钮权限点
+  - 恢复 ADMIN 角色与客户/供应商菜单、按钮的授权关联
+- 已修复本地 ADMIN 角色看不到角色管理菜单和按钮的问题：
+  - 新增 `V45__restore_admin_role_management_permissions.sql`
+  - 恢复软删除的角色管理菜单和 `system:role:create/update/assignPermission` 权限点
+  - 恢复 ADMIN 角色与角色管理菜单、按钮的授权关联
+  - 已将修复 SQL 直接应用到当前本地 `jingwei_dev` 数据库
+- 已修复本地 ADMIN 角色看不到菜单管理菜单和按钮的问题：
+  - 新增 `V46__restore_admin_menu_management_permissions.sql`
+  - 恢复软删除的菜单管理菜单和 `system:menu:create/update/delete` 权限点
+  - 恢复 ADMIN 角色与菜单管理菜单、按钮的授权关联
+  - 已将修复 SQL 直接应用到当前本地 `jingwei_dev` 数据库
+- 已新增本地 ADMIN 系统配置菜单和按钮权限恢复迁移：
+  - 新增 `V47__restore_admin_system_config_permissions.sql`
+  - 恢复系统配置菜单和 `system:config:create/update` 权限点
+  - 恢复 ADMIN 角色与系统配置菜单、新增按钮、修改按钮的授权关联
+  - 本轮沙箱阻止连接本机 PostgreSQL，自动提升审批两次超时，尚未直接应用到当前本地 `jingwei_dev` 数据库
 - 已将前端开发服务默认监听地址从 `0.0.0.0` 收敛为 `127.0.0.1`，避免本地自测默认监听所有网卡。
 - 已补充本地权限数据回填迁移：
   - `V41__backfill_admin_user_permissions.sql`
@@ -127,12 +211,47 @@ pnpm build
   - 用户管理菜单 fallback 和 `/system/user` 路径兼容测试通过
   - 角色管理列表页测试通过
   - 角色管理菜单 fallback 和 `/system/role` 路径兼容测试通过
+  - 角色管理新增、编辑入口测试通过
+  - 角色管理按钮权限控制测试通过
+  - 菜单管理列表页测试通过
+  - 菜单管理菜单 fallback 和 `/system/menu` 路径兼容测试通过
+  - 菜单管理新增、编辑、删除入口测试通过
+  - 菜单管理按钮权限控制测试通过
+  - 角色权限配置入口测试通过
+  - 系统配置列表页测试通过
+  - 系统配置分组列中文名称展示测试通过
+  - 系统配置新增入口测试通过
+  - 系统配置编辑入口测试通过
+  - 系统配置菜单 fallback 和 `/system/config` 路径兼容测试通过
+  - `configService` 查询、新增、编辑系统配置请求封装测试通过
+  - ADMIN 系统配置权限种子数据恢复迁移测试通过
+  - `menuService` 查询、新建、编辑、删除菜单、查询角色菜单 ID、分配菜单权限请求封装测试通过
+  - ADMIN 菜单管理权限种子数据恢复迁移测试通过
+  - `roleService` 创建/更新角色请求封装测试通过
+  - ADMIN 角色管理权限种子数据恢复迁移测试通过
   - 用户管理操作入口本轮验证通过：`pnpm lint`、`pnpm test`、`pnpm build`
   - 本轮用户管理输入格式校验验证通过：`pnpm lint`、`pnpm test`、`pnpm build`
   - 本轮角色管理列表页验证通过：`pnpm lint`、`pnpm test`、`pnpm build`
+  - 本轮角色管理新增/编辑验证通过：`pnpm lint`、`pnpm test`、`pnpm build`
+  - 本轮浏览器验证已打开 `http://127.0.0.1:5175/system/roles`，mock 后端接口后实际完成新建角色、编辑角色、列表刷新，提交 payload 符合接口要求，控制台 0 errors
+  - 本轮角色管理权限数据修复验证通过：`mvn -Dtest=AdminUserPermissionBackfillMigrationTest test`
+  - 本轮本地数据库验证通过：角色管理菜单和按钮权限 `deleted = false`，ADMIN 角色授权关联 `deleted = false`
+  - 本轮菜单管理权限数据修复验证通过：`mvn -Dtest=AdminUserPermissionBackfillMigrationTest test`
+  - 本轮本地数据库验证通过：菜单管理菜单和按钮权限 `deleted = false`，ADMIN 角色授权关联 `deleted = false`
+  - 本轮菜单管理删除入口验证通过：`pnpm lint`、`pnpm test`、`pnpm build`
+  - 本轮角色权限配置入口验证通过：`pnpm lint`、`pnpm test`、`pnpm build`
   - 本轮浏览器验证已打开 `http://127.0.0.1:5174/system/roles`，确认 fallback 菜单、角色管理页标题、筛选区、角色表格和分页渲染正常
   - 本轮浏览器继续交互验证搜索控件时，平台自动审批因额度限制拒绝后续 Playwright 控制命令，未继续绕过执行
   - 本轮权限回填修复验证通过：`mvn -Dtest=AdminUserPermissionBackfillMigrationTest test`
+  - 本轮系统配置列表与编辑入口验证通过：`pnpm lint`、`pnpm test`（70 个测试通过）、`pnpm build`
+  - 本轮系统配置权限迁移验证通过：`mvn -Dtest=AdminUserPermissionBackfillMigrationTest test`
+  - 本轮系统配置新增入口验证通过：`pnpm test src/services/system/configService.test.ts src/pages/system/configs/SystemConfigPage.test.tsx`
+  - 本轮系统配置新增收口验证通过：`pnpm lint`、`pnpm test`（94 个测试通过）、`pnpm build`、`mvn -Dtest=AdminUserPermissionBackfillMigrationTest test`
+  - 本轮系统配置分组列显示修正验证通过：`pnpm test src/pages/system/configs/SystemConfigPage.test.tsx`、`pnpm lint`、`pnpm test`（94 个测试通过）、`pnpm build`
+  - 本轮本地数据库直接应用未完成：沙箱拒绝 PostgreSQL 连接，提升权限自动审批两次超时
+  - 本轮客户/供应商管理验证通过：`pnpm test src/pages/master/customers/CustomerManagementPage.test.tsx src/pages/master/suppliers/SupplierManagementPage.test.tsx`
+  - 本轮前端全量验证通过：`pnpm lint`、`pnpm test`（92 个测试通过）、`pnpm build`
+  - 本轮客户/供应商权限迁移验证通过：`mvn -Dtest=AdminMasterPermissionBackfillMigrationTest test`
   - `mvn test` 本轮未通过，原因是当前执行环境中 Mockito/ByteBuddy 无法 self-attach，且 Spring 集成测试无法连接本机 PostgreSQL；失败与本轮迁移修复无关
   - `pnpm dev` 在默认沙箱中会因端口监听被拒绝失败：`listen EPERM`
   - `pnpm dev` 使用提升权限在沙箱外启动通过：`http://127.0.0.1:5173/`
@@ -194,7 +313,7 @@ pnpm build
 
 ### Stage 2: 系统管理模块
 
-**Status:** In Progress
+**Status:** Done
 
 目标：实现权限、用户、角色、菜单等基础管理能力，为后续业务模块提供权限控制和导航数据。
 
@@ -229,6 +348,14 @@ pnpm build
 - 已封装 `deactivateUser()`，对接 `POST /system/user/deactivate`。
 - 已封装 `assignUserRoles()`，对接 `POST /system/user/assignRoles`。
 - 已封装 `listRoles()`，对接 `POST /system/role/page`。
+- 已封装 `createRole()`，对接 `POST /system/role/create`。
+- 已封装 `updateRole()`，对接 `POST /system/role/update`。
+- 已封装 `listMenus()`，对接 `POST /system/menu/tree`。
+- 已封装 `createMenu()`，对接 `POST /system/menu/create`。
+- 已封装 `updateMenu()`，对接 `POST /system/menu/update`。
+- 已封装 `deleteMenu()`，对接 `POST /system/menu/delete`。
+- 已封装 `getRoleMenuIds()`，对接 `POST /system/menu/roleMenuIds`。
+- 已封装 `assignMenuPermissions()`，对接 `POST /system/menu/assign`。
 - 用户列表支持 keyword 查询、状态筛选入口、分页、刷新。
 - 用户列表支持新建、编辑和停用操作，提交成功后刷新列表。
 - 用户列表支持分配角色操作，提交成功后刷新列表。
@@ -239,11 +366,25 @@ pnpm build
 - 已接入通用 `LoadingState` / `ErrorState` / `EmptyState`。
 - 已实现角色管理列表页基础版，路由为 `/system/roles`。
 - 角色列表支持 keyword 查询、状态筛选入口、分页、刷新。
+- 角色列表支持新建、编辑、分配权限操作，提交成功后刷新或关闭弹窗。
+- 角色管理操作按钮已按 `system:role:create`、`system:role:update`、`system:role:assignPermission` 控制显示。
+- 角色管理页会主动刷新当前用户权限，并回写本地登录会话，避免按钮显示依赖过期权限快照。
 - 角色管理菜单已兼容后端 `/system/role` 单数路径，fallback 菜单包含角色管理入口。
+- 已实现菜单管理列表页，路由为 `/system/menus`。
+- 菜单管理支持树形列表、新建、编辑、删除操作，提交成功后刷新菜单树。
+- 菜单管理操作按钮已按 `system:menu:create`、`system:menu:update`、`system:menu:delete` 控制显示。
+- 菜单管理页会主动刷新当前用户权限，并回写本地登录会话，避免按钮显示依赖过期权限快照。
+- 菜单管理菜单已兼容后端 `/system/menu` 单数路径，fallback 菜单包含菜单管理入口。
+- 已实现系统配置列表页，路由为 `/system/configs`。
+- 系统配置列表支持配置分组筛选、刷新、loading / error / empty 状态。
+- 系统配置支持编辑配置值、说明、是否需重启和修改原因，配置键不可修改。
+- 系统配置编辑按钮按 `system:config:update` 权限控制显示。
+- 系统配置页会主动刷新当前用户权限，并回写本地登录会话，避免按钮显示依赖过期权限快照。
+- 系统配置菜单已兼容后端 `/system/config` 单数路径，fallback 菜单包含系统配置入口。
 
 ### Stage 3: 主数据模块
 
-**Status:** Not Started
+**Status:** In Progress
 
 目标：完成订单、生产、采购、库存依赖的基础资料维护。
 
@@ -273,6 +414,16 @@ pnpm build
 - 表单字段与后端 DTO 保持一致
 - 前端不修改后端接口
 - 复杂选择项抽成可复用组件或 hooks
+
+当前实现：
+
+- 已实现客户管理，路由为 `/master/customers`。
+- 已封装 `listCustomers()`、`createCustomer()`、`updateCustomer()`、`activateCustomer()`、`deactivateCustomer()`、`deleteCustomer()`。
+- 已实现供应商管理，路由为 `/master/suppliers`。
+- 已封装 `listSuppliers()`、`createSupplier()`、`updateSupplier()`、`activateSupplier()`、`deactivateSupplier()`、`deleteSupplier()`。
+- 主布局 fallback 菜单已包含“基础数据 / 客户管理 / 供应商管理”。
+- 已兼容后端单数菜单路径 `/master/customer`、`/master/supplier`。
+- 已新增 `V48__restore_admin_customer_supplier_permissions.sql`，回填 ADMIN 客户/供应商菜单和按钮权限。
 
 ### Stage 4: 销售订单模块
 
@@ -445,6 +596,67 @@ pnpm build
 ---
 
 ## Update Log
+
+### 2026-05-08 Stage 2 - 系统配置分组列显示修正
+
+已完成：
+
+- 系统配置列表“分组”列改为展示中文分组名称。
+- 保留筛选值和接口 payload 使用后端分组 code，不修改接口契约。
+- 未知分组值兜底展示为“未知分组”，避免直接暴露 code。
+
+变更文件：
+
+- `frontend/src/pages/system/configs/SystemConfigPage.tsx`
+- `frontend/src/pages/system/configs/SystemConfigPage.test.tsx`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+
+- `pnpm test src/pages/system/configs/SystemConfigPage.test.tsx` 先失败，确认列表仍显示 `PASSWORD`；修复后通过，8 个测试通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，94 个测试通过。
+- `pnpm build` 通过，存在 Vite chunk size warning，后续可通过路由懒加载和 manual chunks 优化。
+
+后续任务：
+
+- 继续 Stage 3，开始物料分类与物料主数据管理。
+
+### 2026-05-08 Stage 2 - 系统配置新增入口实现
+
+已完成：
+
+- 系统配置页新增“新增配置”按钮，按 `system:config:create` 权限控制显示。
+- 新增配置弹窗支持配置键、配置分组、配置值、配置说明和是否需重启。
+- 新增提交对接 `POST /system/config/create`，提交前 trim 文本并过滤空可选字段。
+- 后端创建接口权限标识调整为 `system:config:create`，避免和修改权限混用。
+- `V47__restore_admin_system_config_permissions.sql` 已补充“新增系统配置”按钮菜单和 ADMIN 授权。
+
+变更文件：
+
+- `frontend/src/pages/system/configs/SystemConfigPage.tsx`
+- `frontend/src/pages/system/configs/SystemConfigPage.test.tsx`
+- `frontend/src/services/system/configService.ts`
+- `frontend/src/services/system/configService.test.ts`
+- `src/main/java/com/jingwei/system/interfaces/controller/SystemExtController.java`
+- `src/main/resources/db/migration/V47__restore_admin_system_config_permissions.sql`
+- `src/test/java/com/jingwei/system/AdminUserPermissionBackfillMigrationTest.java`
+- `api/system/系统管理接口文档.md`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+
+- `pnpm test src/services/system/configService.test.ts src/pages/system/configs/SystemConfigPage.test.tsx` 先失败，确认缺少新增服务和新增按钮；实现后通过。
+- `mvn -Dtest=AdminUserPermissionBackfillMigrationTest test` 通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，94 个测试通过。
+- `pnpm build` 通过，存在 Vite chunk size warning，后续可通过路由懒加载和 manual chunks 优化。
+
+后续任务：
+
+- 继续 Stage 3，开始物料分类与物料主数据管理。
 
 ### 2026-05-07 Stage 2 - 用户管理菜单显示修复
 

@@ -21,6 +21,15 @@ class AdminUserPermissionBackfillMigrationTest {
     private static final Path RESTORE_MIGRATION_PATH = Path.of(
             "src/main/resources/db/migration/V44__restore_admin_user_management_permissions.sql"
     );
+    private static final Path ROLE_RESTORE_MIGRATION_PATH = Path.of(
+            "src/main/resources/db/migration/V45__restore_admin_role_management_permissions.sql"
+    );
+    private static final Path MENU_RESTORE_MIGRATION_PATH = Path.of(
+            "src/main/resources/db/migration/V46__restore_admin_menu_management_permissions.sql"
+    );
+    private static final Path CONFIG_RESTORE_MIGRATION_PATH = Path.of(
+            "src/main/resources/db/migration/V47__restore_admin_system_config_permissions.sql"
+    );
 
     @Test
     @DisplayName("ADMIN用户管理按钮权限回填应按角色编码匹配角色")
@@ -73,6 +82,59 @@ class AdminUserPermissionBackfillMigrationTest {
         assertTrue(migrationSql.contains("permission = 'system:user:update'"));
         assertTrue(migrationSql.contains("permission = 'system:user:deactivate'"));
         assertTrue(migrationSql.contains("permission = 'system:user:assignRole'"));
+        assertTrue(migrationSql.contains("deleted = FALSE"));
+    }
+
+    @Test
+    @DisplayName("被软删除的admin角色管理权限种子数据应恢复为可用")
+    void shouldRestoreSoftDeletedAdminRoleManagementPermissions() throws IOException {
+        assertTrue(Files.exists(ROLE_RESTORE_MIGRATION_PATH), "缺少软删除角色管理权限种子数据恢复迁移");
+
+        String migrationSql = Files.readString(ROLE_RESTORE_MIGRATION_PATH);
+
+        assertTrue(migrationSql.contains("UPDATE t_sys_menu"));
+        assertTrue(migrationSql.contains("UPDATE t_sys_role_menu"));
+        assertTrue(migrationSql.contains("role_code = 'ADMIN'"));
+        assertTrue(migrationSql.contains("name = '角色管理'"));
+        assertTrue(migrationSql.contains("permission = 'system:role:create'"));
+        assertTrue(migrationSql.contains("permission = 'system:role:update'"));
+        assertTrue(migrationSql.contains("permission = 'system:role:assignPermission'"));
+        assertTrue(migrationSql.contains("menu_id IN (120, 121, 122, 123)"));
+        assertTrue(migrationSql.contains("deleted = FALSE"));
+    }
+
+    @Test
+    @DisplayName("被软删除的admin菜单管理权限种子数据应恢复为可用")
+    void shouldRestoreSoftDeletedAdminMenuManagementPermissions() throws IOException {
+        assertTrue(Files.exists(MENU_RESTORE_MIGRATION_PATH), "缺少软删除菜单管理权限种子数据恢复迁移");
+
+        String migrationSql = Files.readString(MENU_RESTORE_MIGRATION_PATH);
+
+        assertTrue(migrationSql.contains("UPDATE t_sys_menu"));
+        assertTrue(migrationSql.contains("UPDATE t_sys_role_menu"));
+        assertTrue(migrationSql.contains("role_code = 'ADMIN'"));
+        assertTrue(migrationSql.contains("name = '菜单管理'"));
+        assertTrue(migrationSql.contains("permission = 'system:menu:create'"));
+        assertTrue(migrationSql.contains("permission = 'system:menu:update'"));
+        assertTrue(migrationSql.contains("permission = 'system:menu:delete'"));
+        assertTrue(migrationSql.contains("menu_id IN (130, 131, 132, 133)"));
+        assertTrue(migrationSql.contains("deleted = FALSE"));
+    }
+
+    @Test
+    @DisplayName("被软删除的admin系统配置权限种子数据应恢复为可用")
+    void shouldRestoreSoftDeletedAdminSystemConfigPermissions() throws IOException {
+        assertTrue(Files.exists(CONFIG_RESTORE_MIGRATION_PATH), "缺少软删除系统配置权限种子数据恢复迁移");
+
+        String migrationSql = Files.readString(CONFIG_RESTORE_MIGRATION_PATH);
+
+        assertTrue(migrationSql.contains("UPDATE t_sys_menu"));
+        assertTrue(migrationSql.contains("UPDATE t_sys_role_menu"));
+        assertTrue(migrationSql.contains("role_code = 'ADMIN'"));
+        assertTrue(migrationSql.contains("name = '系统配置'"));
+        assertTrue(migrationSql.contains("permission = 'system:config:create'"));
+        assertTrue(migrationSql.contains("permission = 'system:config:update'"));
+        assertTrue(migrationSql.contains("menu_id IN (160, 161, 162)"));
         assertTrue(migrationSql.contains("deleted = FALSE"));
     }
 }

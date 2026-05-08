@@ -1,12 +1,18 @@
 import {
   BellOutlined,
   DashboardOutlined,
+  DatabaseOutlined,
+  HomeOutlined,
   InboxOutlined,
   LogoutOutlined,
+  MenuOutlined,
   ShoppingCartOutlined,
   ShopOutlined,
+  SmileOutlined,
+  SolutionOutlined,
   SettingOutlined,
   TeamOutlined,
+  ToolOutlined,
   TruckOutlined,
   UserOutlined,
 } from '@ant-design/icons';
@@ -24,24 +30,21 @@ const fallbackMenuItems: MenuDataItem[] = [
     icon: <DashboardOutlined />,
   },
   {
-    path: '/',
-    name: '销售订单',
-    icon: <ShoppingCartOutlined />,
-  },
-  {
-    path: '/',
-    name: '生产订单',
-    icon: <ShopOutlined />,
-  },
-  {
-    path: '/',
-    name: '库存管理',
-    icon: <InboxOutlined />,
-  },
-  {
-    path: '/',
-    name: '物流发运',
-    icon: <TruckOutlined />,
+    path: '/master',
+    name: '基础数据',
+    icon: <DatabaseOutlined />,
+    children: [
+      {
+        path: '/master/suppliers',
+        name: '供应商管理',
+        icon: <SolutionOutlined />,
+      },
+      {
+        path: '/master/customers',
+        name: '客户管理',
+        icon: <SmileOutlined />,
+      },
+    ],
   },
   {
     path: '/system',
@@ -58,17 +61,33 @@ const fallbackMenuItems: MenuDataItem[] = [
         name: '角色管理',
         icon: <TeamOutlined />,
       },
+      {
+        path: '/system/menus',
+        name: '菜单管理',
+        icon: <MenuOutlined />,
+      },
+      {
+        path: '/system/configs',
+        name: '系统配置',
+        icon: <ToolOutlined />,
+      },
     ],
   },
 ];
 
 const iconMap = {
   DashboardOutlined: <DashboardOutlined />,
+  DatabaseOutlined: <DatabaseOutlined />,
+  HomeOutlined: <HomeOutlined />,
   InboxOutlined: <InboxOutlined />,
+  MenuOutlined: <MenuOutlined />,
   SettingOutlined: <SettingOutlined />,
   ShoppingCartOutlined: <ShoppingCartOutlined />,
   ShopOutlined: <ShopOutlined />,
+  SmileOutlined: <SmileOutlined />,
+  SolutionOutlined: <SolutionOutlined />,
   TeamOutlined: <TeamOutlined />,
+  ToolOutlined: <ToolOutlined />,
   TruckOutlined: <TruckOutlined />,
   UserOutlined: <UserOutlined />,
 };
@@ -145,6 +164,34 @@ function getPageMeta(pathname: string) {
     };
   }
 
+  if (pathname === '/system/menus') {
+    return {
+      title: '菜单管理',
+      subTitle: '维护导航菜单、按钮权限点和前端路由配置',
+    };
+  }
+
+  if (pathname === '/system/configs') {
+    return {
+      title: '系统配置',
+      subTitle: '维护运行参数、密码策略和库存规则配置',
+    };
+  }
+
+  if (pathname === '/master/customers') {
+    return {
+      title: '客户管理',
+      subTitle: '维护客户档案、等级、结算方式和启停状态',
+    };
+  }
+
+  if (pathname === '/master/suppliers') {
+    return {
+      title: '供应商管理',
+      subTitle: '维护供应商档案、资质状态和交货周期',
+    };
+  }
+
   return {
     title: '销售订单',
     subTitle: '按客户、交期、状态跟踪订单履约进度',
@@ -170,6 +217,22 @@ function normalizeMenuPath(path?: string | null): string {
 
   if (path === '/system/role') {
     return '/system/roles';
+  }
+
+  if (path === '/system/menu') {
+    return '/system/menus';
+  }
+
+  if (path === '/system/config') {
+    return '/system/configs';
+  }
+
+  if (path === '/master/customer') {
+    return '/master/customers';
+  }
+
+  if (path === '/master/supplier') {
+    return '/master/suppliers';
   }
 
   return path || '/';
