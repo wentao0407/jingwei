@@ -258,6 +258,45 @@
 后续任务：
 - 进入 Stage 3，开始客户管理列表页基础版。
 
+## 2026-05-08 任务：SPU/SKU 管理与尺码组/尺码管理
+
+已完成：
+- 前端 SPU/SKU 管理页已支持款式列表、状态/分类筛选、新建、编辑、删除、详情、追加颜色、SKU 改价和 SKU 停用。
+- 前端尺码组/尺码管理页已支持尺码组列表、品类/状态筛选、新建、编辑、删除、尺码明细、新增尺码、编辑尺码和删除尺码。
+- 主布局已新增“款式管理”“尺码组管理” fallback 菜单，并兼容后端 `/master/spu`、`/master/sizeGroup`、`/master/size-group` 路径。
+- 新增 `V51__restore_admin_spu_size_group_permissions.sql`，恢复 ADMIN 的款式/SKU、尺码组/尺码菜单和按钮权限。
+
+变更文件：
+- `frontend/src/pages/master/spus/SpuManagementPage.tsx`
+- `frontend/src/pages/master/spus/SpuManagementPage.test.tsx`
+- `frontend/src/pages/master/size-groups/SizeGroupManagementPage.tsx`
+- `frontend/src/pages/master/size-groups/SizeGroupManagementPage.test.tsx`
+- `frontend/src/services/master/spuService.ts`
+- `frontend/src/services/master/spuService.test.ts`
+- `frontend/src/services/master/sizeGroupService.ts`
+- `frontend/src/services/master/sizeGroupService.test.ts`
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `frontend/src/layouts/DashboardLayout.test.tsx`
+- `frontend/src/routes/appRouter.tsx`
+- `src/main/resources/db/migration/V51__restore_admin_spu_size_group_permissions.sql`
+- `src/test/java/com/jingwei/master/AdminMasterPermissionBackfillMigrationTest.java`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+- `pnpm lint` 通过
+- `pnpm test` 通过，128 个测试通过
+- `pnpm build` 通过
+- `mvn -Dtest=AdminMasterPermissionBackfillMigrationTest test` 通过，4 个测试通过
+
+决策：
+- 前端路由使用 `/master/spus` 和 `/master/size-groups`，后端菜单仍保持既有单数路径并在布局层规范化。
+- 尺码明细操作使用后端 Controller 实际校验的 `master:sizeGroup:create/update/delete` 权限点。
+- V51 只准备迁移脚本，不直接连接用户数据库执行。
+
+后续任务：
+- 继续 Stage 3，开始季节/波段与仓库/库位管理。
+
 ## 2026-05-08 任务：系统配置新增入口
 
 已完成：

@@ -38,8 +38,8 @@ pnpm build
 ## Current Frontend Status
 
 **Current Stage:** Stage 3 - 主数据模块  
-**Current Task:** Stage 3 第二批 - 物料分类与物料主数据管理已完成  
-**Next Task:** 继续 Stage 3，开始 SPU/SKU 管理与尺码组/尺码管理。
+**Current Task:** Stage 3 第三批 - SPU/SKU 管理与尺码组/尺码管理已完成  
+**Next Task:** 继续 Stage 3，开始季节/波段与仓库/库位管理。
 
 已完成：
 
@@ -181,6 +181,32 @@ pnpm build
   - 动态属性定义读取 `POST /master/material/attributeDefs`
   - 新建、编辑、停用和动态属性读取按 `master:material:*` 权限控制
   - 后端菜单 path `/master/material` 会规范化为前端路由 `/master/materials`
+- 已实现 SPU/SKU 管理页：
+  - 路由为 `/master/spus`
+  - 读取 `POST /master/spu/list`
+  - 支持状态、分类筛选、刷新、loading / error / empty 状态
+  - 新建款式对接 `POST /master/spu/create`
+  - 编辑款式对接 `POST /master/spu/update`
+  - 删除款式对接 `POST /master/spu/delete`
+  - 款式详情对接 `POST /master/spu/detail`
+  - 追加颜色对接 `POST /master/spu/addColor`
+  - SKU 改价对接 `POST /master/sku/updatePrice`
+  - SKU 停用对接 `POST /master/sku/deactivate`
+  - 新建、编辑、删除、追加颜色、改价、停用 SKU 按 `master:spu:*` 和 `master:sku:*` 权限控制
+  - 后端菜单 path `/master/spu` 会规范化为前端路由 `/master/spus`
+- 已实现尺码组/尺码管理页：
+  - 路由为 `/master/size-groups`
+  - 读取 `POST /master/size-group/list`
+  - 支持适用品类、状态筛选、刷新、loading / error / empty 状态
+  - 新建尺码组对接 `POST /master/size-group/create`
+  - 编辑尺码组对接 `POST /master/size-group/update`
+  - 删除尺码组对接 `POST /master/size-group/delete`
+  - 尺码组详情对接 `POST /master/size-group/detail`
+  - 新增尺码对接 `POST /master/size-group/size/create`
+  - 编辑尺码对接 `POST /master/size-group/size/update`
+  - 删除尺码对接 `POST /master/size-group/size/delete`
+  - 尺码组和尺码操作按后端实际 `master:sizeGroup:*` 权限控制
+  - 后端菜单 path `/master/sizeGroup` 和 `/master/size-group` 会规范化为前端路由 `/master/size-groups`
 - 已新增本地 ADMIN 客户/供应商菜单和按钮权限恢复迁移：
   - 新增 `V48__restore_admin_customer_supplier_permissions.sql`
   - 恢复基础数据、客户管理、供应商管理菜单和客户/供应商按钮权限点
@@ -200,6 +226,10 @@ pnpm build
   - 恢复系统配置菜单和 `system:config:create/update` 权限点
   - 恢复 ADMIN 角色与系统配置菜单、新增按钮、修改按钮的授权关联
   - 本轮沙箱阻止连接本机 PostgreSQL，自动提升审批两次超时，尚未直接应用到当前本地 `jingwei_dev` 数据库
+- 已新增本地 ADMIN 款式/SKU 与尺码组/尺码菜单和按钮权限恢复迁移：
+  - 新增 `V51__restore_admin_spu_size_group_permissions.sql`
+  - 恢复基础数据、款式管理、尺码组管理菜单和按钮权限点
+  - 恢复 ADMIN 角色与款式/SKU、尺码组/尺码菜单和按钮的授权关联
 - 已将前端开发服务默认监听地址从 `0.0.0.0` 收敛为 `127.0.0.1`，避免本地自测默认监听所有网卡。
 - 已补充本地权限数据回填迁移：
   - `V41__backfill_admin_user_permissions.sql`
@@ -274,6 +304,9 @@ pnpm build
   - 本轮物料分类与物料主数据管理验证通过：`pnpm lint`、`pnpm test`（112 个测试通过）、`pnpm build`
   - 本轮物料分类与物料主数据权限迁移验证通过：`mvn -Dtest=AdminMasterPermissionBackfillMigrationTest test`
   - 本轮未新增 V50 脚本；物料分类和物料主数据所需菜单、按钮、ADMIN 授权已由 `V49__restore_admin_category_material_permissions.sql` 覆盖
+  - 本轮 SPU/SKU 与尺码组/尺码管理验证通过：`pnpm lint`、`pnpm test`（128 个测试通过）、`pnpm build`
+  - 本轮 SPU/SKU 与尺码组/尺码权限迁移验证通过：`mvn -Dtest=AdminMasterPermissionBackfillMigrationTest test`
+  - 本轮新增 `V51__restore_admin_spu_size_group_permissions.sql`，用户执行后需要重新登录获取新菜单和按钮权限
   - `mvn test` 本轮未通过，原因是当前执行环境中 Mockito/ByteBuddy 无法 self-attach，且 Spring 集成测试无法连接本机 PostgreSQL；失败与本轮迁移修复无关
   - `pnpm dev` 在默认沙箱中会因端口监听被拒绝失败：`listen EPERM`
   - `pnpm dev` 使用提升权限在沙箱外启动通过：`http://127.0.0.1:5173/`
@@ -453,6 +486,13 @@ pnpm build
 - 主布局 fallback 菜单已包含“基础数据 / 物料管理 / 物料分类”。
 - 已兼容后端单数菜单路径 `/master/material`、`/master/category`。
 - 已新增 `V49__restore_admin_category_material_permissions.sql`，回填 ADMIN 物料分类/物料主数据菜单和按钮权限。
+- 已实现 SPU/SKU 管理，路由为 `/master/spus`。
+- 已封装 `listSpus()`、`getSpuDetail()`、`createSpu()`、`updateSpu()`、`deleteSpu()`、`addSpuColors()`、`updateSkuPrice()`、`batchUpdateSkuPrice()`、`deactivateSku()`。
+- 已实现尺码组/尺码管理，路由为 `/master/size-groups`。
+- 已封装 `listSizeGroups()`、`getSizeGroupDetail()`、`createSizeGroup()`、`updateSizeGroup()`、`deleteSizeGroup()`、`createSize()`、`updateSize()`、`deleteSize()`。
+- 主布局 fallback 菜单已包含“基础数据 / 款式管理 / 尺码组管理”。
+- 已兼容后端菜单路径 `/master/spu`、`/master/sizeGroup`、`/master/size-group`。
+- 已新增 `V51__restore_admin_spu_size_group_permissions.sql`，回填 ADMIN 款式/SKU 与尺码组/尺码菜单和按钮权限。
 
 ### Stage 4: 销售订单模块
 

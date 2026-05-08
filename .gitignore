@@ -33,3 +33,7 @@ frontend/*.config.d.ts
 # Claude Code
 .pnpm-store/
 memory/
+.gstack/
+
+# Playwright CLI
+.playwright-cli/

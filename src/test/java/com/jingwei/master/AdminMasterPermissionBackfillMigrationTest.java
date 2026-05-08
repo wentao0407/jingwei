@@ -20,6 +20,9 @@ class AdminMasterPermissionBackfillMigrationTest {
     private static final Path MASTER_CODE_RULE_MIGRATION_PATH = Path.of(
             "src/main/resources/db/migration/V50__restore_master_code_rules.sql"
     );
+    private static final Path SPU_SIZE_GROUP_MIGRATION_PATH = Path.of(
+            "src/main/resources/db/migration/V51__restore_admin_spu_size_group_permissions.sql"
+    );
 
     @Test
     @DisplayName("ADMIN客户和供应商权限种子数据应恢复为可用")
@@ -81,6 +84,30 @@ class AdminMasterPermissionBackfillMigrationTest {
         assertTrue(migrationSql.contains("t_md_coding_rule_segment"));
         assertTrue(migrationSql.contains("segment_type = 'SEQUENCE'"));
         assertTrue(migrationSql.contains("seq_length = 6"));
+        assertTrue(migrationSql.contains("deleted = FALSE"));
+    }
+
+    @Test
+    @DisplayName("ADMIN款式SKU和尺码组权限种子数据应恢复为可用")
+    void shouldRestoreAdminSpuAndSizeGroupPermissions() throws IOException {
+        assertTrue(Files.exists(SPU_SIZE_GROUP_MIGRATION_PATH), "缺少款式SKU和尺码组权限恢复迁移");
+
+        String migrationSql = Files.readString(SPU_SIZE_GROUP_MIGRATION_PATH);
+
+        assertTrue(migrationSql.contains("name = '基础数据'"));
+        assertTrue(migrationSql.contains("name = '款式管理'"));
+        assertTrue(migrationSql.contains("name = '尺码组管理'"));
+        assertTrue(migrationSql.contains("master:spu:create"));
+        assertTrue(migrationSql.contains("master:spu:update"));
+        assertTrue(migrationSql.contains("master:spu:deactivate"));
+        assertTrue(migrationSql.contains("master:spu:addColor"));
+        assertTrue(migrationSql.contains("master:sku:updatePrice"));
+        assertTrue(migrationSql.contains("master:sku:deactivate"));
+        assertTrue(migrationSql.contains("master:sizeGroup:create"));
+        assertTrue(migrationSql.contains("master:sizeGroup:update"));
+        assertTrue(migrationSql.contains("master:sizeGroup:delete"));
+        assertTrue(migrationSql.contains("role_code = 'ADMIN'"));
+        assertTrue(migrationSql.contains("menu_id IN (200, 220, 221, 222, 223, 224, 225, 226, 280, 281, 282, 283, 284, 285, 286)"));
         assertTrue(migrationSql.contains("deleted = FALSE"));
     }
 }

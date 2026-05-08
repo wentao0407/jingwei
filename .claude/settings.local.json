@@ -4,5 +4,10 @@
     "terminal",
     "github",
     "websearch"
-  ]
+  ],
+  "permissions": {
+    "allow": [
+      "Skill(browse)"
+    ]
+  }
 }

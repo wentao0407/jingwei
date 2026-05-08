@@ -6,6 +6,8 @@ import { LoginPage } from '@/pages/login/LoginPage';
 import { CategoryManagementPage } from '@/pages/master/categories/CategoryManagementPage';
 import { CustomerManagementPage } from '@/pages/master/customers/CustomerManagementPage';
 import { MaterialManagementPage } from '@/pages/master/materials/MaterialManagementPage';
+import { SizeGroupManagementPage } from '@/pages/master/size-groups/SizeGroupManagementPage';
+import { SpuManagementPage } from '@/pages/master/spus/SpuManagementPage';
 import { SupplierManagementPage } from '@/pages/master/suppliers/SupplierManagementPage';
 import { SystemConfigPage } from '@/pages/system/configs/SystemConfigPage';
 import { MenuManagementPage } from '@/pages/system/menus/MenuManagementPage';
@@ -53,6 +55,14 @@ export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRo
         {
           path: 'master/categories',
           element: <CategoryManagementPage />,
+        },
+        {
+          path: 'master/spus',
+          element: <SpuManagementPage />,
+        },
+        {
+          path: 'master/size-groups',
+          element: <SizeGroupManagementPage />,
         },
         {
           path: 'master/customers',

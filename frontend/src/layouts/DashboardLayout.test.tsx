@@ -468,6 +468,82 @@ describe('DashboardLayout', () => {
     expect(screen.getByText('物料分类')).toBeInTheDocument();
     expect(screen.getByText('物料管理页面')).toBeInTheDocument();
   });
+
+  it('normalizes backend SPU and size group menu paths to frontend routes', async () => {
+    setAuthSession({
+      userId: '1',
+      username: 'admin',
+      realName: '系统管理员',
+      roleIds: ['1'],
+      permissions: ['master:spu:create', 'master:sizeGroup:create'],
+      menuTree: [
+        {
+          id: '200',
+          parentId: '0',
+          name: '基础数据',
+          type: 'DIRECTORY',
+          path: '/master',
+          icon: 'DatabaseOutlined',
+          sortOrder: 2,
+          visible: true,
+          status: 'ACTIVE',
+          children: [
+            {
+              id: '220',
+              parentId: '200',
+              name: '款式管理',
+              type: 'MENU',
+              path: '/master/spu',
+              icon: 'SkinOutlined',
+              sortOrder: 2,
+              visible: true,
+              status: 'ACTIVE',
+              children: [],
+            },
+            {
+              id: '280',
+              parentId: '200',
+              name: '尺码组管理',
+              type: 'MENU',
+              path: '/master/sizeGroup',
+              icon: 'ColumnWidthOutlined',
+              sortOrder: 8,
+              visible: true,
+              status: 'ACTIVE',
+              children: [],
+            },
+          ],
+        },
+      ],
+    });
+
+    renderLayout('/');
+
+    fireEvent.click(await screen.findByText('基础数据'));
+    fireEvent.click(await screen.findByText('款式管理'));
+    expect(await screen.findByText('款式管理页面')).toBeInTheDocument();
+    fireEvent.click(await screen.findByText('尺码组管理'));
+    expect(await screen.findByText('尺码组管理页面')).toBeInTheDocument();
+  });
+
+  it('shows SPU and size group menus from fallback when backend menu tree is empty', async () => {
+    setAuthSession({
+      userId: '1',
+      username: 'admin',
+      realName: '系统管理员',
+      roleIds: ['1'],
+      permissions: ['master:spu:create', 'master:sizeGroup:create'],
+      menuTree: [],
+    });
+
+    renderLayout('/master/spus');
+
+    fireEvent.click(await screen.findByText('基础数据'));
+
+    expect(await screen.findAllByText('款式管理')).toHaveLength(2);
+    expect(screen.getByText('尺码组管理')).toBeInTheDocument();
+    expect(screen.getByText('款式管理页面')).toBeInTheDocument();
+  });
 });
 
 function renderLayout(initialPath: string) {
@@ -488,6 +564,8 @@ function renderLayout(initialPath: string) {
             <Route path="master/suppliers" element={<div>供应商管理页面</div>} />
             <Route path="master/materials" element={<div>物料管理页面</div>} />
             <Route path="master/categories" element={<div>物料分类页面</div>} />
+            <Route path="master/spus" element={<div>款式管理页面</div>} />
+            <Route path="master/size-groups" element={<div>尺码组管理页面</div>} />
           </Route>
         </Routes>
       </MemoryRouter>

@@ -1,6 +1,7 @@
 import {
   ApartmentOutlined,
   BellOutlined,
+  ColumnWidthOutlined,
   DashboardOutlined,
   DatabaseOutlined,
   HomeOutlined,
@@ -9,6 +10,7 @@ import {
   MenuOutlined,
   ShoppingCartOutlined,
   ShopOutlined,
+  SkinOutlined,
   SmileOutlined,
   SolutionOutlined,
   SettingOutlined,
@@ -44,6 +46,16 @@ const fallbackMenuItems: MenuDataItem[] = [
         path: '/master/categories',
         name: '物料分类',
         icon: <ApartmentOutlined />,
+      },
+      {
+        path: '/master/spus',
+        name: '款式管理',
+        icon: <SkinOutlined />,
+      },
+      {
+        path: '/master/size-groups',
+        name: '尺码组管理',
+        icon: <ColumnWidthOutlined />,
       },
       {
         path: '/master/suppliers',
@@ -89,6 +101,7 @@ const fallbackMenuItems: MenuDataItem[] = [
 const iconMap = {
   ApartmentOutlined: <ApartmentOutlined />,
   BoxOutlined: <InboxOutlined />,
+  ColumnWidthOutlined: <ColumnWidthOutlined />,
   DashboardOutlined: <DashboardOutlined />,
   DatabaseOutlined: <DatabaseOutlined />,
   HomeOutlined: <HomeOutlined />,
@@ -97,6 +110,7 @@ const iconMap = {
   SettingOutlined: <SettingOutlined />,
   ShoppingCartOutlined: <ShoppingCartOutlined />,
   ShopOutlined: <ShopOutlined />,
+  SkinOutlined: <SkinOutlined />,
   SmileOutlined: <SmileOutlined />,
   SolutionOutlined: <SolutionOutlined />,
   TeamOutlined: <TeamOutlined />,
@@ -198,6 +212,20 @@ function getPageMeta(pathname: string) {
     };
   }
 
+  if (pathname === '/master/spus') {
+    return {
+      title: '款式管理',
+      subTitle: '维护 SPU、颜色和 SKU 价格状态',
+    };
+  }
+
+  if (pathname === '/master/size-groups') {
+    return {
+      title: '尺码组管理',
+      subTitle: '维护尺码组和尺码明细',
+    };
+  }
+
   if (pathname === '/master/categories') {
     return {
       title: '物料分类',
@@ -268,6 +296,14 @@ function normalizeMenuPath(path?: string | null): string {
 
   if (path === '/master/category') {
     return '/master/categories';
+  }
+
+  if (path === '/master/spu') {
+    return '/master/spus';
+  }
+
+  if (path === '/master/sizeGroup' || path === '/master/size-group') {
+    return '/master/size-groups';
   }
 
   return path || '/';
