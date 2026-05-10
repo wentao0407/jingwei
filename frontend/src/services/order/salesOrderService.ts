@@ -57,9 +57,140 @@ export interface SalesOrderRecord {
   updatedAt?: string | null;
 }
 
+export interface SalesOrderSizePayload {
+  sizeId: string;
+  code: string;
+  quantity?: number;
+}
+
+export interface SalesOrderLinePayload {
+  spuId: string;
+  colorWayId: string;
+  sizeGroupId: string;
+  sizes: SalesOrderSizePayload[];
+  unitPrice?: number;
+  discountRate?: number;
+  deliveryDate?: string;
+  remark?: string;
+}
+
+export interface SaveSalesOrderPayload {
+  customerId: string;
+  seasonId?: string;
+  orderDate?: string;
+  deliveryDate?: string;
+  salesRepId?: string;
+  remark?: string;
+  lines: SalesOrderLinePayload[];
+}
+
+export interface ConvertSalesOrderLinePayload {
+  salesOrderLineId: string;
+  skipCutting?: boolean;
+}
+
+export interface ConvertSalesOrderPayload {
+  salesOrderId: string;
+  lines: ConvertSalesOrderLinePayload[];
+  workshopId?: string;
+  deadlineDate?: string;
+  remark?: string;
+}
+
+export interface ProductionOrderLineRecord {
+  id: string;
+  lineNo?: number | null;
+  spuId?: string | null;
+  spuCode?: string | null;
+  spuName?: string | null;
+  colorWayId?: string | null;
+  colorName?: string | null;
+  colorCode?: string | null;
+  bomId?: string | null;
+  sizeMatrix?: Record<string, unknown> | null;
+  totalQuantity?: number | null;
+  completedQuantity?: number | null;
+  stockedQuantity?: number | null;
+  skipCutting?: boolean | null;
+  status?: string | null;
+  statusLabel?: string | null;
+  remark?: string | null;
+}
+
+export interface ProductionOrderRecord {
+  id: string;
+  orderNo: string;
+  planDate?: string | null;
+  deadlineDate?: string | null;
+  status?: string | null;
+  statusLabel?: string | null;
+  sourceType?: string | null;
+  workshopId?: string | null;
+  totalQuantity?: number | null;
+  completedQuantity?: number | null;
+  stockedQuantity?: number | null;
+  remark?: string | null;
+  lines?: ProductionOrderLineRecord[] | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface ConvertSalesOrderResult {
+  productionOrders?: ProductionOrderRecord[] | null;
+  salesOrderId?: string | null;
+  salesOrderNo?: string | null;
+  salesOrderStatus?: string | null;
+  salesOrderStatusLabel?: string | null;
+}
+
+export interface QuantityChangePayload {
+  orderId: string;
+  orderLineId: string;
+  sizeGroupId: string;
+  sizes: SalesOrderSizePayload[];
+  reason: string;
+}
+
+export interface QuantityChangeRecord {
+  id: string;
+  orderId?: string | null;
+  orderLineId?: string | null;
+  sizeMatrixBefore?: unknown;
+  sizeMatrixAfter?: unknown;
+  diffMatrix?: unknown;
+  reason?: string | null;
+  status?: string | null;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
+  createdBy?: string | null;
+  createdAt?: string | null;
+}
+
 export async function pageSalesOrders(params: SalesOrderQueryParams): Promise<PageResult<SalesOrderRecord>> {
   const response = await apiClient.post('/order/sales/page', normalizeQuery(params));
   return unwrapApiResponse<PageResult<SalesOrderRecord>>(response.data);
+}
+
+export async function createSalesOrder(payload: SaveSalesOrderPayload): Promise<SalesOrderRecord> {
+  const response = await apiClient.post('/order/sales/create', normalizeSalesOrderPayload(payload));
+  return unwrapApiResponse<SalesOrderRecord>(response.data);
+}
+
+export async function updateSalesOrder(orderId: string, payload: SaveSalesOrderPayload): Promise<SalesOrderRecord> {
+  const response = await apiClient.post('/order/sales/update', normalizeSalesOrderPayload(payload), {
+    params: { orderId },
+  });
+  return unwrapApiResponse<SalesOrderRecord>(response.data);
+}
+
+export async function convertSalesOrderToProduction(payload: ConvertSalesOrderPayload): Promise<ConvertSalesOrderResult> {
+  const response = await apiClient.post('/order/sales/convert-to-production', normalizeConvertPayload(payload));
+  return unwrapApiResponse<ConvertSalesOrderResult>(response.data);
+}
+
+export async function createQuantityChange(payload: QuantityChangePayload): Promise<QuantityChangeRecord> {
+  const response = await apiClient.post('/order/sales/quantity-change', normalizeQuantityChangePayload(payload));
+  return unwrapApiResponse<QuantityChangeRecord>(response.data);
 }
 
 export async function getSalesOrderDetail(orderId: string): Promise<SalesOrderRecord> {
@@ -93,6 +224,32 @@ function normalizeQuery(params: SalesOrderQueryParams): SalesOrderQueryParams {
     current: Math.max(1, params.current),
     size: Math.max(1, params.size),
   }) as SalesOrderQueryParams;
+}
+
+function normalizeSalesOrderPayload(payload: SaveSalesOrderPayload): Record<string, unknown> {
+  return normalizeOptionalFields({
+    ...payload,
+    lines: payload.lines.map((line) =>
+      normalizeOptionalFields({
+        ...line,
+        sizes: line.sizes.map((size) => normalizeOptionalFields(size)),
+      }),
+    ),
+  }) as Record<string, unknown>;
+}
+
+function normalizeConvertPayload(payload: ConvertSalesOrderPayload): Record<string, unknown> {
+  return normalizeOptionalFields({
+    ...payload,
+    lines: payload.lines.map((line) => normalizeOptionalFields(line)),
+  }) as Record<string, unknown>;
+}
+
+function normalizeQuantityChangePayload(payload: QuantityChangePayload): Record<string, unknown> {
+  return normalizeOptionalFields({
+    ...payload,
+    sizes: payload.sizes.map((size) => normalizeOptionalFields(size)),
+  }) as Record<string, unknown>;
 }
 
 function normalizeOptionalFields<T extends object>(payload: T): Partial<T> {

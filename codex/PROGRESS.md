@@ -34,7 +34,7 @@
 
 推荐下一个任务：
 
-- 继续 Stage 4，开始销售订单新建/编辑表单与明细行录入。
+- 继续 Stage 4，补齐销售退货订单入口；完成后进入 Stage 5 生产订单列表承接。
 
 ## 未开始
 
@@ -80,7 +80,7 @@
 
 测试：
 
-- 前端已建立 Vitest/Testing Library 测试，当前 156 个测试通过。
+- 前端已建立 Vitest/Testing Library 测试，当前 163 个测试通过。
 
 部署：
 
@@ -94,6 +94,34 @@
 - 状态机和审批要尽早做，否则后续容易返工。
 - 前端页面看似简单，但如果早于后端契约稳定，容易偏离业务规则。
 - MRP 和波次逻辑算法复杂，需要专门测试。
+
+## 2026-05-10 任务：销售订单转生产与数量变更入口
+
+已完成：
+- 前端销售订单服务已新增 `convertSalesOrderToProduction()`，对接 `POST /order/sales/convert-to-production`。
+- 前端销售订单服务已新增 `createQuantityChange()`，对接 `POST /order/sales/quantity-change`。
+- 销售订单列表已为 `CONFIRMED` 状态订单展示“生成生产”和“数量变更”入口。
+- 转生产弹窗支持选择订单行、跳过裁剪行、要求完工日期和备注，并校验至少选择一行与日期格式。
+- 数量变更弹窗支持选择订单行、回填尺码矩阵数量、维护变更原因，并提交数量变更申请。
+- 新入口按 `order:sales:convert`、`order:sales:quantity-change` 权限和订单状态共同控制显示。
+
+变更文件：
+- `frontend/src/services/order/salesOrderService.ts`
+- `frontend/src/services/order/salesOrderService.test.ts`
+- `frontend/src/pages/order/sales/SalesOrderListPage.tsx`
+- `frontend/src/pages/order/sales/SalesOrderListPage.test.tsx`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+- `pnpm exec vitest run src/pages/order/sales/SalesOrderListPage.test.tsx src/services/order/salesOrderService.test.ts` 通过，14 个测试通过
+- `pnpm lint` 通过
+- `pnpm test` 通过，163 个测试通过
+- `pnpm build` 通过，存在 Vite chunk size warning
+- 按用户要求，本轮未启动浏览器或沙箱进行页面验证
+
+后续任务：
+- 继续 Stage 4，补齐销售退货订单入口；完成后进入 Stage 5 生产订单列表承接。
 
 ## 2026-05-10 任务：编码规则管理页与销售订单列表页
 
@@ -131,7 +159,36 @@
 - Playwright 浏览器验证通过：销售订单菜单、列表页、非法日期格式提示可用
 
 后续任务：
-- 继续 Stage 4，开始销售订单新建/编辑表单与明细行录入。
+- 继续 Stage 4，开始销售订单转生产订单入口或数量变更入口。
+
+## 2026-05-10 任务：销售订单新建编辑与详情增强
+
+已完成：
+- 前端销售订单服务已新增 `createSalesOrder()`、`updateSalesOrder()`，对接 `POST /order/sales/create` 和 `POST /order/sales/update`。
+- 销售订单新建表单已支持客户、季节、订单日期、整单交期、备注和明细行录入。
+- 销售订单编辑表单已支持从草稿订单列表和详情弹窗进入，并基于订单详情回填明细。
+- 明细行已支持款式、颜色、尺码组、尺码数量、单价、折扣率、行交期和行备注。
+- 新建/编辑保存前已校验日期格式和至少一个大于 0 的尺码数量。
+- 销售订单详情弹窗已补充订单总金额、折扣金额、实际金额、已收金额。
+- Vitest 全局 `testTimeout` 调整为 20 秒，避免 Ant Design/jsdom 高交互用例在全量并行测试时误超时。
+
+变更文件：
+- `frontend/src/services/order/salesOrderService.ts`
+- `frontend/src/services/order/salesOrderService.test.ts`
+- `frontend/src/pages/order/sales/SalesOrderListPage.tsx`
+- `frontend/src/pages/order/sales/SalesOrderListPage.test.tsx`
+- `frontend/vite.config.ts`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+- `pnpm lint` 通过
+- `pnpm test` 通过，160 个测试通过
+- `pnpm build` 通过，存在 Vite chunk size warning
+- 按用户要求，本轮未启动浏览器或沙箱进行页面验证
+
+后续任务：
+- 继续 Stage 4，开始销售订单转生产订单入口或数量变更入口。
 
 ## 2026-05-07 任务：角色管理新增/编辑操作入口
 

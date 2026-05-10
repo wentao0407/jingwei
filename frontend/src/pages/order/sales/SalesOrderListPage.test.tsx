@@ -1,16 +1,24 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { App as AntdApp } from 'antd';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SalesOrderListPage } from './SalesOrderListPage';
 import { getCurrentUserPermissions } from '@/services/auth/authService';
 import {
   cancelSalesOrder,
+  convertSalesOrderToProduction,
+  createSalesOrder,
+  createQuantityChange,
   deleteSalesOrder,
   getSalesOrderDetail,
   pageSalesOrders,
   resubmitSalesOrder,
   submitSalesOrder,
+  updateSalesOrder,
 } from '@/services/order/salesOrderService';
+import { listCustomers } from '@/services/master/customerService';
+import { listSeasons } from '@/services/master/seasonService';
+import { listSpus } from '@/services/master/spuService';
+import { listSizeGroups } from '@/services/master/sizeGroupService';
 import { setAuthSession } from '@/shared/storage/authSessionStorage';
 
 vi.mock('@/services/auth/authService', () => ({
@@ -19,20 +27,53 @@ vi.mock('@/services/auth/authService', () => ({
 
 vi.mock('@/services/order/salesOrderService', () => ({
   cancelSalesOrder: vi.fn(),
+  convertSalesOrderToProduction: vi.fn(),
+  createSalesOrder: vi.fn(),
+  createQuantityChange: vi.fn(),
   deleteSalesOrder: vi.fn(),
   getSalesOrderDetail: vi.fn(),
   pageSalesOrders: vi.fn(),
   resubmitSalesOrder: vi.fn(),
   submitSalesOrder: vi.fn(),
+  updateSalesOrder: vi.fn(),
+}));
+
+vi.mock('@/services/master/customerService', () => ({
+  listCustomers: vi.fn(),
+}));
+
+vi.mock('@/services/master/seasonService', () => ({
+  listSeasons: vi.fn(),
+}));
+
+vi.mock('@/services/master/spuService', () => ({
+  listSpus: vi.fn(),
+}));
+
+vi.mock('@/services/master/sizeGroupService', () => ({
+  listSizeGroups: vi.fn(),
 }));
 
 const mockedCancelSalesOrder = vi.mocked(cancelSalesOrder);
+const mockedConvertSalesOrderToProduction = vi.mocked(convertSalesOrderToProduction);
+const mockedCreateSalesOrder = vi.mocked(createSalesOrder);
+const mockedCreateQuantityChange = vi.mocked(createQuantityChange);
 const mockedDeleteSalesOrder = vi.mocked(deleteSalesOrder);
 const mockedGetCurrentUserPermissions = vi.mocked(getCurrentUserPermissions);
 const mockedGetSalesOrderDetail = vi.mocked(getSalesOrderDetail);
+const mockedListCustomers = vi.mocked(listCustomers);
+const mockedListSeasons = vi.mocked(listSeasons);
+const mockedListSizeGroups = vi.mocked(listSizeGroups);
+const mockedListSpus = vi.mocked(listSpus);
 const mockedPageSalesOrders = vi.mocked(pageSalesOrders);
 const mockedResubmitSalesOrder = vi.mocked(resubmitSalesOrder);
 const mockedSubmitSalesOrder = vi.mocked(submitSalesOrder);
+const mockedUpdateSalesOrder = vi.mocked(updateSalesOrder);
+
+afterEach(() => {
+  cleanup();
+  document.body.innerHTML = '';
+});
 
 const permissions = [
   'order:sales:create',
@@ -41,7 +82,45 @@ const permissions = [
   'order:sales:submit',
   'order:sales:resubmit',
   'order:sales:cancel',
+  'order:sales:convert',
+  'order:sales:quantity-change',
 ];
+
+const optionData = {
+  customers: [
+    { id: '20001', code: 'CUS001', name: '上海一店', type: 'DIRECT', status: 'ACTIVE' },
+    { id: '20002', code: 'CUS002', name: '杭州渠道', type: 'WHOLESALE', status: 'ACTIVE' },
+  ],
+  seasons: [
+    { id: '30001', code: 'SS26', name: '2026春夏', year: 2026, seasonType: 'SPRING_SUMMER', startDate: '2026-01-01', endDate: '2026-06-30', status: 'ACTIVE' },
+  ],
+  spus: [
+    {
+      id: '80001',
+      code: 'SP20260001',
+      name: '女士风衣',
+      sizeGroupId: '60001',
+      status: 'ACTIVE',
+      colorWays: [
+        { id: '70001', spuId: '80001', colorName: '黑色', colorCode: 'BK' },
+        { id: '70002', spuId: '80001', colorName: '米色', colorCode: 'BE' },
+      ],
+    },
+  ],
+  sizeGroups: [
+    {
+      id: '60001',
+      code: 'WOMEN',
+      name: '女装尺码',
+      category: 'CLOTHING',
+      status: 'ACTIVE',
+      sizes: [
+        { id: '50001', sizeGroupId: '60001', code: 'S', name: 'S' },
+        { id: '50002', sizeGroupId: '60001', code: 'M', name: 'M' },
+      ],
+    },
+  ],
+};
 
 const salesOrders = [
   {
@@ -81,6 +160,25 @@ const salesOrders = [
     paymentAmount: 1000,
     lines: [],
   },
+  {
+    id: '10003',
+    orderNo: 'SO-202605-00003',
+    customerId: '20001',
+    customerName: '上海一店',
+    seasonId: '30001',
+    seasonName: '2026春夏',
+    orderDate: '2026-05-05',
+    deliveryDate: '2026-06-25',
+    status: 'CONFIRMED',
+    statusLabel: '已确认',
+    totalQuantity: 140,
+    totalAmount: 14000,
+    discountAmount: 0,
+    actualAmount: 14000,
+    paymentStatus: 'UNPAID',
+    paymentAmount: 0,
+    lines: [],
+  },
 ];
 
 const detail = {
@@ -99,9 +197,36 @@ const detail = {
       unitPrice: 100,
       actualAmount: 11400,
       sizeMatrix: {
+        sizeGroupId: '60001',
         sizes: [
-          { sizeId: '1', code: 'S', quantity: 40 },
-          { sizeId: '2', code: 'M', quantity: 80 },
+          { sizeId: '50001', code: 'S', quantity: 40 },
+          { sizeId: '50002', code: 'M', quantity: 80 },
+        ],
+      },
+    },
+  ],
+};
+
+const confirmedDetail = {
+  ...salesOrders[2],
+  lines: [
+    {
+      id: '90003',
+      lineNo: 1,
+      spuId: '80001',
+      spuCode: 'SP20260001',
+      spuName: '女士风衣',
+      colorWayId: '70001',
+      colorName: '黑色',
+      colorCode: 'BK',
+      totalQuantity: 140,
+      unitPrice: 100,
+      actualAmount: 14000,
+      sizeMatrix: {
+        sizeGroupId: '60001',
+        sizes: [
+          { sizeId: '50001', code: 'S', quantity: 50 },
+          { sizeId: '50002', code: 'M', quantity: 90 },
         ],
       },
     },
@@ -111,20 +236,43 @@ const detail = {
 describe('SalesOrderListPage', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    setAuthSession({ userId: '1', username: 'admin', realName: '系统管理员', roleIds: ['admin'], permissions, menuTree: [] });
     mockedGetCurrentUserPermissions.mockReset();
     mockedGetCurrentUserPermissions.mockResolvedValue({ menuTree: [], permissions });
     mockedCancelSalesOrder.mockReset();
     mockedCancelSalesOrder.mockResolvedValue(undefined);
+    mockedConvertSalesOrderToProduction.mockReset();
+    mockedConvertSalesOrderToProduction.mockResolvedValue({
+      salesOrderId: '10003',
+      salesOrderNo: 'SO-202605-00003',
+      salesOrderStatus: 'PRODUCING',
+      salesOrderStatusLabel: '生产中',
+      productionOrders: [{ id: '50001', orderNo: 'MO-202605-00001', status: 'DRAFT', totalQuantity: 140, lines: [] }],
+    });
+    mockedCreateSalesOrder.mockReset();
+    mockedCreateSalesOrder.mockResolvedValue(salesOrders[0]);
+    mockedCreateQuantityChange.mockReset();
+    mockedCreateQuantityChange.mockResolvedValue({ id: '70001', orderId: '10003', orderLineId: '90003', status: 'PENDING' });
     mockedDeleteSalesOrder.mockReset();
     mockedDeleteSalesOrder.mockResolvedValue(undefined);
     mockedGetSalesOrderDetail.mockReset();
-    mockedGetSalesOrderDetail.mockResolvedValue(detail);
+    mockedGetSalesOrderDetail.mockImplementation((orderId) => Promise.resolve(orderId === '10003' ? confirmedDetail : detail));
     mockedPageSalesOrders.mockReset();
     mockedPageSalesOrders.mockResolvedValue({ current: 1, size: 10, total: 2, pages: 1, records: salesOrders });
+    mockedListCustomers.mockReset();
+    mockedListCustomers.mockResolvedValue({ current: 1, size: 200, total: 2, pages: 1, records: optionData.customers });
+    mockedListSeasons.mockReset();
+    mockedListSeasons.mockResolvedValue(optionData.seasons);
+    mockedListSizeGroups.mockReset();
+    mockedListSizeGroups.mockResolvedValue(optionData.sizeGroups);
+    mockedListSpus.mockReset();
+    mockedListSpus.mockResolvedValue(optionData.spus);
     mockedResubmitSalesOrder.mockReset();
     mockedResubmitSalesOrder.mockResolvedValue(undefined);
     mockedSubmitSalesOrder.mockReset();
     mockedSubmitSalesOrder.mockResolvedValue(undefined);
+    mockedUpdateSalesOrder.mockReset();
+    mockedUpdateSalesOrder.mockResolvedValue(salesOrders[0]);
   });
 
   it('loads and filters sales orders', async () => {
@@ -150,7 +298,25 @@ describe('SalesOrderListPage', () => {
 
     expect(await screen.findByText('女士风衣')).toBeInTheDocument();
     expect(screen.getByText('S: 40')).toBeInTheDocument();
+    expect(screen.getByText('订单总金额')).toBeInTheDocument();
+    expect(screen.getByText('12000.00')).toBeInTheDocument();
+    expect(screen.getByText('折扣金额')).toBeInTheDocument();
+    expect(screen.getByText('600.00')).toBeInTheDocument();
+    expect(screen.getByText('已收金额')).toBeInTheDocument();
+    expect(screen.getByText('0.00')).toBeInTheDocument();
     expect(mockedGetSalesOrderDetail).toHaveBeenCalledWith('10001');
+  });
+
+  it('opens draft edit form from the detail dialog', async () => {
+    renderPage();
+
+    await screen.findByText('SO-202605-00001');
+    fireEvent.click(screen.getByRole('button', { name: '详情 SO-202605-00001' }));
+    await screen.findByText('女士风衣');
+    fireEvent.click(screen.getByRole('button', { name: '详情编辑 SO-202605-00001' }));
+
+    expect(await screen.findByRole('dialog', { name: '编辑销售订单' })).toBeInTheDocument();
+    expect(mockedGetSalesOrderDetail).toHaveBeenCalledTimes(2);
   });
 
   it('validates date filters before querying', async () => {
@@ -162,6 +328,131 @@ describe('SalesOrderListPage', () => {
 
     expect(await screen.findByText('订单日期格式必须为 YYYY-MM-DD')).toBeInTheDocument();
     expect(mockedPageSalesOrders).toHaveBeenCalledTimes(1);
+  });
+
+  it('creates a sales order with line size quantities', async () => {
+    renderPage();
+
+    await screen.findByText('SO-202605-00001');
+    fireEvent.click(screen.getByRole('button', { name: '新建订单' }));
+    await screen.findByRole('dialog', { name: '新建销售订单' });
+
+    openDialogSelect('客户');
+    await chooseOption('上海一店');
+    openDialogSelect('季节');
+    await chooseOption('2026春夏');
+    fireEvent.change(screen.getByLabelText('订单日期'), { target: { value: '2026-05-10' } });
+    fireEvent.change(screen.getByLabelText('整单交期'), { target: { value: '2026-06-10' } });
+    openDialogSelect('款式');
+    await chooseOption('SP20260001 女士风衣');
+    openDialogSelect('颜色');
+    await chooseOption('黑色 / BK');
+    fireEvent.change(screen.getByLabelText('尺码 S'), { target: { value: '20' } });
+    fireEvent.change(screen.getByLabelText('尺码 M'), { target: { value: '30' } });
+    fireEvent.change(screen.getByLabelText('单价'), { target: { value: '129' } });
+    fireEvent.change(screen.getByLabelText('折扣率'), { target: { value: '0.95' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存订单' }));
+
+    await waitFor(() =>
+      expect(mockedCreateSalesOrder).toHaveBeenCalledWith({
+        customerId: '20001',
+        seasonId: '30001',
+        orderDate: '2026-05-10',
+        deliveryDate: '2026-06-10',
+        lines: [
+          {
+            spuId: '80001',
+            colorWayId: '70001',
+            sizeGroupId: '60001',
+            sizes: [
+              { sizeId: '50001', code: 'S', quantity: 20 },
+              { sizeId: '50002', code: 'M', quantity: 30 },
+            ],
+            unitPrice: 129,
+            discountRate: 0.95,
+          },
+        ],
+      }),
+    );
+    expect(mockedPageSalesOrders).toHaveBeenCalledTimes(2);
+  });
+
+  it('updates a draft sales order from its detail data', async () => {
+    renderPage();
+
+    await screen.findByText('SO-202605-00001');
+    fireEvent.click(screen.getByRole('button', { name: '编辑 SO-202605-00001' }));
+    await screen.findByRole('dialog', { name: '编辑销售订单' });
+    fireEvent.change(screen.getByLabelText('整单交期'), { target: { value: '2026-06-20' } });
+    fireEvent.change(screen.getByLabelText('尺码 S'), { target: { value: '45' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存订单' }));
+
+    await waitFor(() =>
+      expect(mockedUpdateSalesOrder).toHaveBeenCalledWith('10001', expect.objectContaining({
+        customerId: '20001',
+        seasonId: '30001',
+        deliveryDate: '2026-06-20',
+        lines: [
+          expect.objectContaining({
+            spuId: '80001',
+            colorWayId: '70001',
+            sizeGroupId: '60001',
+            sizes: [
+              { sizeId: '50001', code: 'S', quantity: 45 },
+              { sizeId: '50002', code: 'M', quantity: 80 },
+            ],
+          }),
+        ],
+      })),
+    );
+  });
+
+  it('converts a confirmed sales order to production', async () => {
+    renderPage();
+
+    await screen.findByText('SO-202605-00003');
+    fireEvent.click(screen.getByRole('button', { name: '生成生产 SO-202605-00003' }));
+    await screen.findByText('生成生产订单');
+    fireEvent.click(screen.getByLabelText('转生产行 90003'));
+    fireEvent.change(screen.getByLabelText('要求完工日期'), { target: { value: '2026-07-15' } });
+    fireEvent.change(getLastByLabelText('转生产备注'), { target: { value: ' 春季订单排产 ' } });
+    fireEvent.click(screen.getByRole('button', { name: '确认生成生产订单' }));
+
+    await waitFor(() =>
+      expect(mockedConvertSalesOrderToProduction).toHaveBeenCalledWith({
+        salesOrderId: '10003',
+        lines: [{ salesOrderLineId: '90003', skipCutting: false }],
+        deadlineDate: '2026-07-15',
+        remark: '春季订单排产',
+      }),
+    );
+    expect(mockedPageSalesOrders).toHaveBeenCalledTimes(2);
+  });
+
+  it('creates a quantity change for a confirmed sales order', async () => {
+    renderPage();
+
+    await screen.findByText('SO-202605-00003');
+    fireEvent.click(screen.getByRole('button', { name: '数量变更 SO-202605-00003' }));
+    await screen.findByText('创建数量变更');
+    fireEvent.change(screen.getByLabelText('变更尺码 S'), { target: { value: '55' } });
+    fireEvent.change(screen.getByLabelText('变更尺码 M'), { target: { value: '95' } });
+    fireEvent.change(screen.getByLabelText('变更原因'), { target: { value: ' 客户追加数量 ' } });
+    fireEvent.click(screen.getByRole('button', { name: '提交数量变更' }));
+
+    await waitFor(() =>
+      expect(mockedCreateQuantityChange).toHaveBeenCalledWith({
+        orderId: '10003',
+        orderLineId: '90003',
+        sizeGroupId: '60001',
+        sizes: [
+          { sizeId: '50001', code: 'S', quantity: 55 },
+          { sizeId: '50002', code: 'M', quantity: 95 },
+        ],
+        reason: '客户追加数量',
+      }),
+    );
+    expect(mockedPageSalesOrders).toHaveBeenCalledTimes(2);
   });
 
   it('runs draft and rejected order actions', async () => {
@@ -192,6 +483,10 @@ describe('SalesOrderListPage', () => {
     await screen.findByText('SO-202605-00001');
     expect(screen.queryByRole('button', { name: '提交 SO-202605-00001' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '删除 SO-202605-00001' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '新建订单' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '编辑 SO-202605-00001' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '生成生产 SO-202605-00003' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '数量变更 SO-202605-00003' })).not.toBeInTheDocument();
   });
 });
 
@@ -208,7 +503,16 @@ function openSelect(label: string) {
   fireEvent.mouseDown(select.querySelector('.ant-select-selector') ?? select);
 }
 
+function openDialogSelect(label: string) {
+  const select = screen.getAllByLabelText(label).find((element) => element.classList.contains('ant-select')) ?? screen.getByLabelText(label);
+  fireEvent.mouseDown(select.querySelector('.ant-select-selector') ?? select);
+}
+
 async function chooseOption(label: string) {
   const optionLabel = (await screen.findAllByText(label)).at(-1)!;
   fireEvent.click(optionLabel.closest('.ant-select-item-option') ?? optionLabel);
+}
+
+function getLastByLabelText(label: string): HTMLElement {
+  return screen.getAllByLabelText(label).at(-1)!;
 }

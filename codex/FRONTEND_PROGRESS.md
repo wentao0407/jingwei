@@ -38,8 +38,8 @@ pnpm build
 ## Current Frontend Status
 
 **Current Stage:** Stage 4 - 销售订单模块  
-**Current Task:** Stage 4 第一批 - 销售订单列表/查询与状态操作入口已完成  
-**Next Task:** 继续 Stage 4，开始销售订单新建/编辑表单与明细行录入。
+**Current Task:** Stage 4 第三批 - 销售订单转生产与数量变更入口已完成
+**Next Task:** 继续 Stage 4，补齐销售退货订单入口；完成后进入 Stage 5 生产订单列表承接。
 
 已完成：
 
@@ -246,8 +246,14 @@ pnpm build
   - 读取 `POST /order/sales/page`
   - 支持订单编号、状态、订单日期筛选、分页、刷新、loading / error / empty 状态
   - 订单日期筛选前端校验 `YYYY-MM-DD` 格式，非法时阻止请求
-  - 详情对接 `POST /order/sales/detail`，展示订单头信息、明细行和尺码矩阵
+  - 新建订单对接 `POST /order/sales/create`，支持客户、季节、订单日期、交期、备注和明细行录入
+  - 编辑订单对接 `POST /order/sales/update`，草稿订单可从列表或详情弹窗进入编辑
+  - 明细行支持款式、颜色、尺码组、尺码数量、单价、折扣率、行交期和行备注录入
+  - 新建/编辑提交前校验日期格式和至少一个大于 0 的尺码数量
+  - 详情对接 `POST /order/sales/detail`，展示订单头信息、金额摘要、明细行和尺码矩阵
   - 提交、重新提交、取消、删除分别对接 `POST /order/sales/submit`、`POST /order/sales/resubmit`、`POST /order/sales/cancel`、`POST /order/sales/delete`
+  - 已确认订单支持转生产入口，对接 `POST /order/sales/convert-to-production`
+  - 已确认订单支持数量变更入口，对接 `POST /order/sales/quantity-change`
   - 状态操作入口按 `order:sales:*` 权限和订单状态共同控制显示
   - 后端菜单 path `/order/sale`、`/order/salesOrder` 会规范化为前端路由 `/order/sales`
 - 已新增本地 ADMIN 客户/供应商菜单和按钮权限恢复迁移：
@@ -363,6 +369,7 @@ pnpm build
   - 本轮季节/波段与仓库/库位权限迁移验证通过：`mvn -Dtest=AdminMasterPermissionBackfillMigrationTest test`
   - 本轮新增 `V52__restore_admin_season_warehouse_permissions.sql`，用户执行后需要重新登录获取新菜单和按钮权限
   - 本轮编码规则与销售订单验证通过：`pnpm lint`、`pnpm test`（156 个测试通过）、`pnpm build`
+  - 本轮销售订单新建/编辑和详情增强验证通过：`pnpm lint`、`pnpm test`（160 个测试通过）、`pnpm build`
   - 本轮新增 `V53__restore_admin_coding_rule_sales_order_permissions.sql`
   - 本轮浏览器验证通过：登录 `http://localhost:5173/login` 后确认“基础数据 / 编码规则”和“订单管理 / 销售订单”菜单可见
   - 本轮浏览器验证通过：编码规则列表、预览弹窗、新建规则必填校验、流水号段校验可用
@@ -605,12 +612,18 @@ pnpm build
 当前实现：
 
 - 已实现销售订单列表，路由为 `/order/sales`。
-- 已封装 `pageSalesOrders()`、`getSalesOrderDetail()`、`submitSalesOrder()`、`resubmitSalesOrder()`、`cancelSalesOrder()`、`deleteSalesOrder()`。
+- 已封装 `pageSalesOrders()`、`createSalesOrder()`、`updateSalesOrder()`、`getSalesOrderDetail()`、`submitSalesOrder()`、`resubmitSalesOrder()`、`cancelSalesOrder()`、`deleteSalesOrder()`。
 - 销售订单列表支持订单编号、状态、订单日期筛选、分页、刷新、loading / error / empty 状态。
 - 订单日期筛选提交前校验 `YYYY-MM-DD`，非法格式会在页面内提示并阻止请求。
-- 订单详情弹窗展示订单头信息、明细行和尺码矩阵。
-- 草稿订单支持提交、取消、删除入口；驳回订单支持重新提交入口；确认订单支持取消入口。
-- 状态操作按钮按 `order:sales:submit/resubmit/cancel/delete` 权限和订单状态共同控制显示。
+- 新建订单弹窗支持客户、季节、订单日期、整单交期、备注和明细行录入。
+- 编辑订单弹窗复用详情数据回填，草稿订单可从列表或详情弹窗进入编辑。
+- 明细行支持款式、颜色、尺码组、尺码数量、单价、折扣率、行交期和行备注录入。
+- 新建/编辑提交前校验日期格式和至少一个大于 0 的尺码数量。
+- 订单详情弹窗展示订单头信息、金额摘要、明细行和尺码矩阵。
+- 草稿订单支持编辑、提交、取消、删除入口；驳回订单支持重新提交入口；确认订单支持取消、转生产、数量变更入口。
+- 转生产弹窗支持选择订单行、跳过裁剪、要求完工日期和备注，提交前校验至少选择一行和日期格式。
+- 数量变更弹窗支持选择订单行、回填尺码矩阵数量、维护变更原因并提交变更申请。
+- 状态操作按钮按 `order:sales:create/update/submit/resubmit/cancel/delete/convert/quantity-change` 权限和订单状态共同控制显示。
 - 主布局 fallback 菜单已包含“订单管理 / 销售订单”。
 - 已兼容后端菜单路径 `/order/sale`、`/order/salesOrder`。
 - 已新增 `V53__restore_admin_coding_rule_sales_order_permissions.sql`，回填 ADMIN 订单管理、销售订单菜单和按钮权限。
@@ -754,6 +767,76 @@ pnpm build
 ---
 
 ## Update Log
+
+### 2026-05-10 Stage 4 - 销售订单转生产与数量变更入口
+
+已完成：
+
+- 前端销售订单服务已新增 `convertSalesOrderToProduction()`，对接 `POST /order/sales/convert-to-production`。
+- 前端销售订单服务已新增 `createQuantityChange()`，对接 `POST /order/sales/quantity-change`。
+- 销售订单列表已为已确认订单展示“生成生产”和“数量变更”入口。
+- 转生产弹窗支持选择订单行、跳过裁剪行、要求完工日期和备注，提交前校验至少选择一行和日期格式。
+- 数量变更弹窗支持选择订单行、回填尺码矩阵数量、调整各尺码数量和填写变更原因。
+- 新入口已按 `order:sales:convert`、`order:sales:quantity-change` 权限和 `CONFIRMED` 状态共同控制显示。
+
+变更文件：
+
+- `frontend/src/services/order/salesOrderService.ts`
+- `frontend/src/services/order/salesOrderService.test.ts`
+- `frontend/src/pages/order/sales/SalesOrderListPage.tsx`
+- `frontend/src/pages/order/sales/SalesOrderListPage.test.tsx`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+
+- 销售订单转生产服务测试先失败，确认缺少接口封装；实现后通过。
+- 销售订单数量变更服务测试先失败，确认缺少接口封装；实现后通过。
+- 已确认订单转生产页面测试先失败，确认缺少入口和弹窗；实现后通过。
+- 已确认订单数量变更页面测试先失败，确认缺少入口和弹窗；实现后通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，163 个测试通过。
+- `pnpm build` 通过，存在 Vite chunk size warning，后续可通过路由懒加载和 manual chunks 优化。
+- 按用户要求，本轮未启动浏览器或沙箱进行页面验证。
+
+后续任务：
+
+- 继续 Stage 4，补齐销售退货订单入口；完成后进入 Stage 5 生产订单列表承接。
+
+### 2026-05-10 Stage 4 - 销售订单新建编辑与详情增强
+
+已完成：
+
+- 完成销售订单新建表单，支持客户、季节、订单日期、整单交期、备注和明细行录入。
+- 完成销售订单编辑表单，草稿订单支持从列表和详情弹窗进入编辑。
+- 明细行支持款式、颜色、尺码组、尺码数量、单价、折扣率、行交期和行备注。
+- 保存前校验日期格式和至少一个大于 0 的尺码数量。
+- 销售订单详情弹窗补充订单总金额、折扣金额、实际金额、已收金额，并保留尺码矩阵展示。
+- Vitest 全局 `testTimeout` 调整为 20 秒，匹配当前 Ant Design/jsdom 高交互测试在全量并行执行时的真实耗时。
+
+变更文件：
+
+- `frontend/src/services/order/salesOrderService.ts`
+- `frontend/src/services/order/salesOrderService.test.ts`
+- `frontend/src/pages/order/sales/SalesOrderListPage.tsx`
+- `frontend/src/pages/order/sales/SalesOrderListPage.test.tsx`
+- `frontend/vite.config.ts`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+
+- 销售订单创建/更新服务测试先失败，确认缺少接口封装；实现后通过。
+- 销售订单新建/编辑页面测试先失败，确认缺少表单和编辑入口；实现后通过。
+- 销售订单详情增强测试先失败，确认缺少金额摘要和详情编辑入口；实现后通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，160 个测试通过。
+- `pnpm build` 通过，存在 Vite chunk size warning，后续可通过路由懒加载和 manual chunks 优化。
+- 按用户要求，本轮未启动浏览器或沙箱进行页面验证。
+
+后续任务：
+
+- 继续 Stage 4，开始销售订单转生产订单入口或数量变更入口。
 
 ### 2026-05-10 Stage 3/4 - 编码规则与销售订单列表实现
 
