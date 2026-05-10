@@ -5,6 +5,20 @@
 -- 编码规则菜单可能被软删除；销售订单原始 300/310 菜单段已被后续
 -- 仓库库位修复脚本占用，因此销售订单使用新的 3200+ 菜单段恢复。
 
+-- 1. 先清理可能存在的重复 permission 记录（保留正确的 id）
+DELETE FROM t_sys_role_menu WHERE menu_id IN (
+    SELECT id FROM t_sys_menu WHERE permission LIKE 'master:codingRule%' AND id NOT IN (261, 262, 263, 264)
+);
+DELETE FROM t_sys_role_menu WHERE menu_id IN (
+    SELECT id FROM t_sys_menu WHERE permission LIKE 'order:sales%' AND id NOT IN (3211, 3212, 3213, 3214, 3215, 3216)
+);
+DELETE FROM t_sys_menu WHERE permission LIKE 'master:codingRule%' AND id NOT IN (261, 262, 263, 264);
+DELETE FROM t_sys_menu WHERE permission LIKE 'order:sales%' AND id NOT IN (3211, 3212, 3213, 3214, 3215, 3216);
+
+-- 2. 先处理可能被软删除的菜单记录
+UPDATE t_sys_menu SET deleted = FALSE, status = 'ACTIVE' WHERE id IN (200, 260, 261, 262, 263, 264, 3200, 3210, 3211, 3212, 3213, 3214, 3215, 3216);
+
+-- 3. 插入或更新菜单记录
 INSERT INTO t_sys_menu (id, parent_id, name, type, path, component, permission, icon, sort_order, visible, status)
 VALUES
     (200, 0, '基础数据', 'DIRECTORY', '/master', '', '', 'DatabaseOutlined', 2, TRUE, 'ACTIVE'),
@@ -21,98 +35,30 @@ VALUES
     (3214, 3210, '重新提交', 'BUTTON', '', '', 'order:sales:resubmit', '', 4, TRUE, 'ACTIVE'),
     (3215, 3210, '取消订单', 'BUTTON', '', '', 'order:sales:cancel', '', 5, TRUE, 'ACTIVE'),
     (3216, 3210, '删除销售订单', 'BUTTON', '', '', 'order:sales:delete', '', 6, TRUE, 'ACTIVE')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+    parent_id = EXCLUDED.parent_id,
+    name = EXCLUDED.name,
+    type = EXCLUDED.type,
+    path = EXCLUDED.path,
+    component = EXCLUDED.component,
+    permission = EXCLUDED.permission,
+    icon = EXCLUDED.icon,
+    sort_order = EXCLUDED.sort_order,
+    visible = EXCLUDED.visible,
+    status = EXCLUDED.status,
+    deleted = FALSE;
 
-UPDATE t_sys_menu
-SET parent_id = 0,
-    name = '基础数据',
-    type = 'DIRECTORY',
-    path = '/master',
-    component = '',
-    permission = '',
-    icon = 'DatabaseOutlined',
-    sort_order = 2,
-    visible = TRUE,
-    status = 'ACTIVE',
-    deleted = FALSE
-WHERE id = 200;
+-- 4. 清理 role_menu 表中的重复数据
+DELETE FROM t_sys_role_menu
+WHERE id IN (
+    SELECT id FROM (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY role_id, menu_id ORDER BY id) as rn
+        FROM t_sys_role_menu
+        WHERE menu_id IN (200, 260, 261, 262, 263, 264, 3200, 3210, 3211, 3212, 3213, 3214, 3215, 3216)
+    ) t WHERE rn > 1
+);
 
-UPDATE t_sys_menu
-SET parent_id = 200,
-    name = '编码规则',
-    type = 'MENU',
-    path = '/master/codingRule',
-    component = 'master/CodingRuleList',
-    permission = '',
-    icon = 'CodeOutlined',
-    sort_order = 6,
-    visible = TRUE,
-    status = 'ACTIVE',
-    deleted = FALSE
-WHERE id = 260;
-
-UPDATE t_sys_menu
-SET parent_id = 260,
-    type = 'BUTTON',
-    path = '',
-    component = '',
-    icon = '',
-    visible = TRUE,
-    status = 'ACTIVE',
-    deleted = FALSE
-WHERE id IN (261, 262, 263, 264);
-
-UPDATE t_sys_menu SET name = '创建规则', permission = 'master:codingRule:create', sort_order = 1 WHERE id = 261;
-UPDATE t_sys_menu SET name = '编辑规则', permission = 'master:codingRule:update', sort_order = 2 WHERE id = 262;
-UPDATE t_sys_menu SET name = '删除规则', permission = 'master:codingRule:delete', sort_order = 3 WHERE id = 263;
-UPDATE t_sys_menu SET name = '生成编码', permission = 'master:codingRule:generate', sort_order = 4 WHERE id = 264;
-
-UPDATE t_sys_menu
-SET parent_id = 0,
-    name = '订单管理',
-    type = 'DIRECTORY',
-    path = '/order',
-    component = '',
-    permission = '',
-    icon = 'ShoppingCartOutlined',
-    sort_order = 3,
-    visible = TRUE,
-    status = 'ACTIVE',
-    deleted = FALSE
-WHERE id = 3200;
-
-UPDATE t_sys_menu
-SET parent_id = 3200,
-    name = '销售订单',
-    type = 'MENU',
-    path = '/order/sales',
-    component = 'order/SalesOrderList',
-    permission = '',
-    icon = 'FileTextOutlined',
-    sort_order = 1,
-    visible = TRUE,
-    status = 'ACTIVE',
-    deleted = FALSE
-WHERE id = 3210;
-
-UPDATE t_sys_menu
-SET parent_id = 3210,
-    type = 'BUTTON',
-    path = '',
-    component = '',
-    icon = '',
-    visible = TRUE,
-    status = 'ACTIVE',
-    deleted = FALSE
-WHERE id IN (3211, 3212, 3213, 3214, 3215, 3216);
-
-UPDATE t_sys_menu SET name = '创建销售订单', permission = 'order:sales:create', sort_order = 1 WHERE id = 3211;
-UPDATE t_sys_menu SET name = '编辑销售订单', permission = 'order:sales:update', sort_order = 2 WHERE id = 3212;
-UPDATE t_sys_menu SET name = '提交审批', permission = 'order:sales:submit', sort_order = 3 WHERE id = 3213;
-UPDATE t_sys_menu SET name = '重新提交', permission = 'order:sales:resubmit', sort_order = 4 WHERE id = 3214;
-UPDATE t_sys_menu SET name = '取消订单', permission = 'order:sales:cancel', sort_order = 5 WHERE id = 3215;
-UPDATE t_sys_menu SET name = '删除销售订单', permission = 'order:sales:delete', sort_order = 6 WHERE id = 3216;
-
+-- 5. 插入角色菜单关联（如果不存在）
 INSERT INTO t_sys_role_menu (id, role_id, menu_id)
 SELECT
     61000 + m.id,
@@ -127,9 +73,9 @@ WHERE r.role_code = 'ADMIN'
       FROM t_sys_role_menu rm
       WHERE rm.role_id = r.id
         AND rm.menu_id = m.id
-        AND rm.deleted = FALSE
   );
 
+-- 6. 更新角色菜单关联状态
 UPDATE t_sys_role_menu
 SET deleted = FALSE
 WHERE role_id IN (

@@ -591,6 +591,28 @@
 后续任务：
 - 继续 Stage 3，开始编码规则前端管理页。
 
+## 2026-05-10 任务：当前菜单关联演示数据种子
+
+已完成：
+- 新增 `V54__seed_demo_data_for_current_menus.sql`，为当前已实现菜单背后的核心列表表补齐至少 30 条演示数据。
+- 演示数据覆盖系统管理、基础数据、销售订单、生产订单、销售退货、BOM、MRP、采购订单、ASN、库存、盘点、预警、入库、出库、收货、波次和拣货链路。
+- 数据保持跨模块关联：基础资料 → 销售订单 → 生产/退货 → BOM/MRP/采购/ASN → 库存/仓库作业。
+- 演示用户使用不可登录占位密码并统一置为 `INACTIVE`，避免新增真实密码或误导为可登录账号。
+- 新增静态迁移测试，校验种子迁移覆盖当前菜单核心表、具备 30 条批量生成逻辑，并避免写入常见明文密码或 BCrypt 密文。
+
+变更文件：
+- `src/main/resources/db/migration/V54__seed_demo_data_for_current_menus.sql`
+- `src/test/java/com/jingwei/system/DemoDataSeedMigrationTest.java`
+- `codex/PROGRESS.md`
+
+验证：
+- `mvn -Dtest=DemoDataSeedMigrationTest test` 通过
+- `git diff --check` 通过
+- 当前沙箱拦截本地 PostgreSQL 直连，`psql` 未能直接写入当前运行中的 `jingwei_dev`；该迁移会在后端下一次 Flyway 执行时进入数据库
+
+后续任务：
+- 在可直连本地 PostgreSQL 的环境执行 V54，并用各菜单列表或聚合计数确认演示数据已落库。
+
 ## 更新模板
 
 ```md
