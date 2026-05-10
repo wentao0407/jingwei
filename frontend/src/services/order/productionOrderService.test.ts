@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  calculateProductionOrderMaterialRequirements,
   fireProductionLineEvent,
   fireProductionOrderEvent,
+  getProductionOrderCostDetail,
+  getProductionOrderCostIssues,
   getProductionLineAvailableActions,
   getProductionOrderAvailableActions,
   getProductionOrderDetail,
+  pageProductionOrderMaterialRequirements,
   pageProductionOrders,
 } from './productionOrderService';
 import { apiClient } from '@/services/http/apiClient';
@@ -81,6 +85,42 @@ describe('productionOrderService', () => {
       orderId: '50001',
       lineId: '60001',
       event: 'START_CUTTING',
+    });
+  });
+
+  it('loads material requirements through MRP batch results', async () => {
+    mockedPost
+      .mockResolvedValueOnce({
+        data: { code: 0, message: 'success', success: true, data: { batchNo: 'MRP-20260510-0001', totalItems: 2 } },
+      })
+      .mockResolvedValueOnce({ data: { code: 0, message: 'success', success: true, data: { records: [], total: 0 } } });
+
+    await calculateProductionOrderMaterialRequirements('50001');
+    await pageProductionOrderMaterialRequirements({ current: 0, size: 0, batchNo: ' MRP-20260510-0001 ' });
+
+    expect(mockedPost).toHaveBeenNthCalledWith(1, '/procurement/mrp/calculate', {
+      productionOrderIds: ['50001'],
+    });
+    expect(mockedPost).toHaveBeenNthCalledWith(2, '/procurement/mrp/results', {
+      current: 1,
+      size: 1,
+      batchNo: 'MRP-20260510-0001',
+    });
+  });
+
+  it('loads production order cost detail and issue records', async () => {
+    mockedPost
+      .mockResolvedValueOnce({ data: { code: 0, message: 'success', success: true, data: { totalCost: 1200 } } })
+      .mockResolvedValueOnce({ data: { code: 0, message: 'success', success: true, data: [] } });
+
+    await getProductionOrderCostDetail('50001', '60001');
+    await getProductionOrderCostIssues('50001');
+
+    expect(mockedPost).toHaveBeenNthCalledWith(1, '/cost/detail', null, {
+      params: { productionOrderId: '50001', productionLineId: '60001' },
+    });
+    expect(mockedPost).toHaveBeenNthCalledWith(2, '/cost/issues', null, {
+      params: { productionOrderId: '50001' },
     });
   });
 });

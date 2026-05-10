@@ -1,6 +1,6 @@
-import { EyeOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { DollarOutlined, EyeOutlined, FileSearchOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { ProCard } from '@ant-design/pro-components';
-import { App, Button, Descriptions, Input, Modal, Select, Space, Table, Tag } from 'antd';
+import { App, Button, Descriptions, Input, Modal, Progress, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { EmptyState, ErrorState, LoadingState } from '@/components/state';
@@ -8,12 +8,19 @@ import { getCurrentUserPermissions } from '@/services/auth/authService';
 import { getApiErrorMessage } from '@/services/http/apiClient';
 import type { PageResult } from '@/services/master/customerService';
 import {
+  calculateProductionOrderMaterialRequirements,
   fireProductionLineEvent,
   fireProductionOrderEvent,
+  getProductionOrderCostDetail,
+  getProductionOrderCostIssues,
   getProductionLineAvailableActions,
   getProductionOrderAvailableActions,
   getProductionOrderDetail,
+  pageProductionOrderMaterialRequirements,
+  type MaterialRequirementRecord,
   pageProductionOrders,
+  type ProductionOrderCostIssueRecord,
+  type ProductionOrderCostRecord,
   type ProductionActionRecord,
   type ProductionOrderLineRecord,
   type ProductionOrderRecord,
@@ -49,8 +56,10 @@ const statusColorMap: Record<string, string> = {
 };
 
 interface ProductionOrderActions {
+  canCalculateMaterialRequirements: boolean;
   canFireLineEvent: boolean;
   canFireOrderEvent: boolean;
+  canViewCostDetail: boolean;
 }
 
 export function ProductionOrderListPage() {
@@ -73,6 +82,15 @@ export function ProductionOrderListPage() {
   const [detail, setDetail] = useState<ProductionOrderRecord | null>(null);
   const [orderActions, setOrderActions] = useState<ProductionActionRecord[]>([]);
   const [lineActions, setLineActions] = useState<Record<string, ProductionActionRecord[]>>({});
+  const [materialRequirementsOpen, setMaterialRequirementsOpen] = useState(false);
+  const [materialRequirementsLoading, setMaterialRequirementsLoading] = useState(false);
+  const [materialRequirements, setMaterialRequirements] = useState<MaterialRequirementRecord[]>([]);
+  const [materialRequirementsBatchNo, setMaterialRequirementsBatchNo] = useState('');
+  const [costOpen, setCostOpen] = useState(false);
+  const [costLoading, setCostLoading] = useState(false);
+  const [costDetail, setCostDetail] = useState<ProductionOrderCostRecord | null>(null);
+  const [costIssues, setCostIssues] = useState<ProductionOrderCostIssueRecord[]>([]);
+  const [selectedCostLine, setSelectedCostLine] = useState<ProductionOrderLineRecord | null>(null);
   const [permissions, setPermissions] = useState<string[]>(() => getAuthSession()?.permissions ?? []);
   const actions = getProductionOrderActions(permissions);
 
@@ -186,6 +204,57 @@ export function ProductionOrderListPage() {
     }
   }
 
+  async function handleShowMaterialRequirements() {
+    if (!detail) {
+      return;
+    }
+
+    setMaterialRequirementsOpen(true);
+    setMaterialRequirementsLoading(true);
+    setMaterialRequirements([]);
+    setMaterialRequirementsBatchNo('');
+    try {
+      const calculation = await calculateProductionOrderMaterialRequirements(detail.id);
+      const results = await pageProductionOrderMaterialRequirements({
+        current: INITIAL_PAGE,
+        size: 50,
+        batchNo: calculation.batchNo,
+      });
+      setMaterialRequirementsBatchNo(calculation.batchNo);
+      setMaterialRequirements(results.records ?? []);
+    } catch (error) {
+      message.error(getApiErrorMessage(error));
+      setMaterialRequirementsOpen(false);
+    } finally {
+      setMaterialRequirementsLoading(false);
+    }
+  }
+
+  async function handleShowCostDetail(line: ProductionOrderLineRecord) {
+    if (!detail) {
+      return;
+    }
+
+    setCostOpen(true);
+    setCostLoading(true);
+    setCostDetail(null);
+    setCostIssues([]);
+    setSelectedCostLine(line);
+    try {
+      const [nextCostDetail, nextCostIssues] = await Promise.all([
+        getProductionOrderCostDetail(detail.id, line.id),
+        getProductionOrderCostIssues(detail.id),
+      ]);
+      setCostDetail(nextCostDetail);
+      setCostIssues(nextCostIssues.filter((issue) => issue.productionLineId === line.id));
+    } catch (error) {
+      message.error(getApiErrorMessage(error));
+      setCostOpen(false);
+    } finally {
+      setCostLoading(false);
+    }
+  }
+
   async function reloadDetail(orderId: string) {
     const [orderDetail, availableActions] = await Promise.all([
       getProductionOrderDetail(orderId),
@@ -285,6 +354,23 @@ export function ProductionOrderListPage() {
         onCancel={() => setDetailOpen(false)}
         onFireLineEvent={handleFireLineEvent}
         onFireOrderEvent={handleFireOrderEvent}
+        onShowCostDetail={handleShowCostDetail}
+        onShowMaterialRequirements={handleShowMaterialRequirements}
+      />
+      <MaterialRequirementsModal
+        batchNo={materialRequirementsBatchNo}
+        loading={materialRequirementsLoading}
+        open={materialRequirementsOpen}
+        records={materialRequirements}
+        onCancel={() => setMaterialRequirementsOpen(false)}
+      />
+      <CostDetailModal
+        costDetail={costDetail}
+        issues={costIssues}
+        line={selectedCostLine}
+        loading={costLoading}
+        open={costOpen}
+        onCancel={() => setCostOpen(false)}
       />
     </div>
   );
@@ -329,6 +415,8 @@ function ProductionDetailModal({
   onCancel,
   onFireLineEvent,
   onFireOrderEvent,
+  onShowCostDetail,
+  onShowMaterialRequirements,
 }: {
   actions: ProductionOrderActions;
   detail: ProductionOrderRecord | null;
@@ -339,6 +427,8 @@ function ProductionDetailModal({
   onCancel: () => void;
   onFireLineEvent: (line: ProductionOrderLineRecord, action: ProductionActionRecord) => void;
   onFireOrderEvent: (action: ProductionActionRecord) => void;
+  onShowCostDetail: (line: ProductionOrderLineRecord) => void;
+  onShowMaterialRequirements: () => void;
 }) {
   return (
     <Modal
@@ -363,20 +453,31 @@ function ProductionDetailModal({
               <Descriptions.Item label="已入库">{detail.stockedQuantity ?? 0}</Descriptions.Item>
               <Descriptions.Item label="备注">{detail.remark || '-'}</Descriptions.Item>
             </Descriptions>
-            {actions.canFireOrderEvent && orderActions.length > 0 ? (
+            <Space wrap>
+              <ProgressSummary label="完工进度" total={detail.totalQuantity} value={detail.completedQuantity} />
+              <ProgressSummary label="入库进度" total={detail.totalQuantity} value={detail.stockedQuantity} />
+            </Space>
+            {(actions.canFireOrderEvent && orderActions.length > 0) || actions.canCalculateMaterialRequirements ? (
               <Space wrap>
-                {orderActions.map((action) => (
-                  <Button key={action.event} type="primary" onClick={() => onFireOrderEvent(action)}>
-                    {action.label}
+                {actions.canCalculateMaterialRequirements ? (
+                  <Button aria-label="物料需求" icon={<FileSearchOutlined />} onClick={onShowMaterialRequirements}>
+                    物料需求
                   </Button>
-                ))}
+                ) : null}
+                {actions.canFireOrderEvent
+                  ? orderActions.map((action) => (
+                    <Button key={action.event} type="primary" onClick={() => onFireOrderEvent(action)}>
+                      {action.label}
+                    </Button>
+                  ))
+                  : null}
               </Space>
             ) : null}
             <Table<ProductionOrderLineRecord>
               rowKey="id"
               size="small"
               pagination={false}
-              columns={buildLineColumns(actions, lineActions, onFireLineEvent)}
+              columns={buildLineColumns(actions, lineActions, onFireLineEvent, onShowCostDetail)}
               dataSource={detail.lines ?? []}
             />
           </Space>
@@ -390,6 +491,7 @@ function buildLineColumns(
   actions: ProductionOrderActions,
   lineActions: Record<string, ProductionActionRecord[]>,
   onFireLineEvent: (line: ProductionOrderLineRecord, action: ProductionActionRecord) => void,
+  onShowCostDetail: (line: ProductionOrderLineRecord) => void,
 ): ColumnsType<ProductionOrderLineRecord> {
   return [
     { title: '行号', dataIndex: 'lineNo', key: 'lineNo', width: 70 },
@@ -419,11 +521,153 @@ function buildLineColumns(
               </Button>
             ))
             : null}
+          {actions.canViewCostDetail ? (
+            <Button icon={<DollarOutlined />} size="small" aria-label={`成本 ${record.id}`} onClick={() => onShowCostDetail(record)}>
+              成本
+            </Button>
+          ) : null}
         </Space>
       ),
     },
   ];
 }
+
+function ProgressSummary({
+  label,
+  total,
+  value,
+}: {
+  label: string;
+  total?: number | null;
+  value?: number | null;
+}) {
+  const safeTotal = Math.max(0, total ?? 0);
+  const safeValue = Math.max(0, value ?? 0);
+  const percent = safeTotal > 0 ? Math.min(100, Math.round((safeValue / safeTotal) * 100)) : 0;
+
+  return (
+    <div style={{ minWidth: 220 }}>
+      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+        <span>{label}</span>
+        <span>{`${safeValue}/${safeTotal}`}</span>
+      </Space>
+      <Progress percent={percent} size="small" />
+    </div>
+  );
+}
+
+function MaterialRequirementsModal({
+  batchNo,
+  loading,
+  open,
+  records,
+  onCancel,
+}: {
+  batchNo: string;
+  loading: boolean;
+  open: boolean;
+  records: MaterialRequirementRecord[];
+  onCancel: () => void;
+}) {
+  return (
+    <Modal
+      footer={null}
+      getContainer={false}
+      onCancel={onCancel}
+      open={open}
+      title="物料需求"
+      width={980}
+    >
+      <Space direction="vertical" style={{ width: '100%' }}>
+        <Descriptions column={2} size="small">
+          <Descriptions.Item label="MRP批次">{batchNo || '-'}</Descriptions.Item>
+          <Descriptions.Item label="需求项数">{records.length}</Descriptions.Item>
+        </Descriptions>
+        <Table<MaterialRequirementRecord>
+          rowKey="id"
+          loading={loading}
+          size="small"
+          pagination={false}
+          columns={materialRequirementColumns}
+          dataSource={records}
+        />
+      </Space>
+    </Modal>
+  );
+}
+
+function CostDetailModal({
+  costDetail,
+  issues,
+  line,
+  loading,
+  open,
+  onCancel,
+}: {
+  costDetail: ProductionOrderCostRecord | null;
+  issues: ProductionOrderCostIssueRecord[];
+  line: ProductionOrderLineRecord | null;
+  loading: boolean;
+  open: boolean;
+  onCancel: () => void;
+}) {
+  return (
+    <Modal
+      footer={null}
+      getContainer={false}
+      onCancel={onCancel}
+      open={open}
+      title="成本归集"
+      width={900}
+    >
+      <Space direction="vertical" style={{ width: '100%' }}>
+        <Descriptions column={3} size="small">
+          <Descriptions.Item label="生产行">{line?.lineNo ?? line?.id ?? '-'}</Descriptions.Item>
+          <Descriptions.Item label="款式">{line?.spuName || line?.spuCode || '-'}</Descriptions.Item>
+          <Descriptions.Item label="颜色">{line?.colorName || line?.colorCode || '-'}</Descriptions.Item>
+          <Descriptions.Item label="面料成本">{formatAmount(costDetail?.materialCost)}</Descriptions.Item>
+          <Descriptions.Item label="辅料成本">{formatAmount(costDetail?.trimCost)}</Descriptions.Item>
+          <Descriptions.Item label="包材成本">{formatAmount(costDetail?.packagingCost)}</Descriptions.Item>
+          <Descriptions.Item label="总成本">{formatAmount(costDetail?.totalCost)}</Descriptions.Item>
+          <Descriptions.Item label="完工数量">{costDetail?.completedQty ?? 0}</Descriptions.Item>
+          <Descriptions.Item label="单位成本">{formatAmount(costDetail?.unitCost)}</Descriptions.Item>
+        </Descriptions>
+        <h3 style={{ fontSize: 14, margin: 0 }}>领料明细</h3>
+        <Table<ProductionOrderCostIssueRecord>
+          rowKey="id"
+          loading={loading}
+          size="small"
+          pagination={false}
+          columns={costIssueColumns}
+          dataSource={issues}
+        />
+      </Space>
+    </Modal>
+  );
+}
+
+const materialRequirementColumns: ColumnsType<MaterialRequirementRecord> = [
+  { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120, render: (value) => value || '-' },
+  { title: '物料名称', dataIndex: 'materialName', key: 'materialName', render: (value) => value || '-' },
+  { title: '毛需求', dataIndex: 'grossDemand', key: 'grossDemand', width: 90, render: formatQuantity },
+  { title: '可用库存', dataIndex: 'allocatedStock', key: 'allocatedStock', width: 90, render: formatQuantity },
+  { title: '在途', dataIndex: 'inTransitQuantity', key: 'inTransitQuantity', width: 80, render: formatQuantity },
+  { title: '净需求', dataIndex: 'netDemand', key: 'netDemand', width: 90, render: formatQuantity },
+  { title: '建议采购', dataIndex: 'suggestedQuantity', key: 'suggestedQuantity', width: 100, render: formatQuantity },
+  { title: '单位', dataIndex: 'unit', key: 'unit', width: 70, render: (value) => value || '-' },
+  { title: '建议供应商', dataIndex: 'suggestedSupplierName', key: 'suggestedSupplierName', width: 140, render: (value) => value || '-' },
+  { title: '预估成本', dataIndex: 'estimatedCost', key: 'estimatedCost', width: 100, render: formatAmount },
+  { title: '状态', dataIndex: 'statusLabel', key: 'statusLabel', width: 90, render: (value) => value || '-' },
+];
+
+const costIssueColumns: ColumnsType<ProductionOrderCostIssueRecord> = [
+  { title: '物料类型', dataIndex: 'materialTypeLabel', key: 'materialTypeLabel', width: 100, render: (value) => value || '-' },
+  { title: '物料ID', dataIndex: 'materialId', key: 'materialId', width: 120, render: (value) => value || '-' },
+  { title: '领料数量', dataIndex: 'issueQty', key: 'issueQty', width: 110, render: formatQuantity },
+  { title: '单位成本', dataIndex: 'unitCost', key: 'unitCost', width: 110, render: formatAmount },
+  { title: '成本金额', dataIndex: 'costAmount', key: 'costAmount', width: 110, render: formatAmount },
+  { title: '领料日期', dataIndex: 'issueDate', key: 'issueDate', width: 120, render: (value) => value || '-' },
+];
 
 function renderSizeMatrix(value?: Record<string, unknown> | null) {
   const sizes = Array.isArray(value?.sizes) ? value.sizes : [];
@@ -443,8 +687,10 @@ function renderSizeMatrix(value?: Record<string, unknown> | null) {
 
 function getProductionOrderActions(permissions: string[]): ProductionOrderActions {
   return {
+    canCalculateMaterialRequirements: permissions.includes('procurement:mrp:calculate'),
     canFireLineEvent: permissions.includes('order:production:fire-line-event'),
     canFireOrderEvent: permissions.includes('order:production:fire-event'),
+    canViewCostDetail: permissions.includes('cost:query:detail'),
   };
 }
 
@@ -468,4 +714,14 @@ function isValidDateFilter(value: string): boolean {
   }
 
   return DATE_FORMAT_PATTERN.test(value);
+}
+
+function formatQuantity(value?: number | null): string {
+  return typeof value === 'number' ? value.toLocaleString('zh-CN') : '0';
+}
+
+function formatAmount(value?: number | null): string {
+  return typeof value === 'number'
+    ? value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : '0.00';
 }

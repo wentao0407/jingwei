@@ -55,6 +55,68 @@ export interface ProductionActionRecord {
   targetStatus?: string | null;
 }
 
+export interface MrpCalculateResultRecord {
+  batchNo: string;
+  totalItems?: number | null;
+}
+
+export interface MaterialRequirementQueryParams {
+  current: number;
+  size: number;
+  batchNo?: string;
+  materialId?: string;
+  status?: string;
+}
+
+export interface MaterialRequirementRecord {
+  id: string;
+  batchNo?: string | null;
+  materialId?: string | null;
+  materialCode?: string | null;
+  materialName?: string | null;
+  materialType?: string | null;
+  grossDemand?: number | null;
+  allocatedStock?: number | null;
+  inTransitQuantity?: number | null;
+  netDemand?: number | null;
+  suggestedQuantity?: number | null;
+  unit?: string | null;
+  suggestedSupplierId?: string | null;
+  suggestedSupplierName?: string | null;
+  estimatedCost?: number | null;
+  status?: string | null;
+  statusLabel?: string | null;
+  snapshotTime?: string | null;
+  remark?: string | null;
+}
+
+export interface ProductionOrderCostRecord {
+  id?: string | null;
+  productionOrderId?: string | null;
+  productionLineId?: string | null;
+  materialCost?: number | null;
+  trimCost?: number | null;
+  packagingCost?: number | null;
+  totalCost?: number | null;
+  completedQty?: number | null;
+  unitCost?: number | null;
+  updatedAt?: string | null;
+}
+
+export interface ProductionOrderCostIssueRecord {
+  id: string;
+  productionOrderId?: string | null;
+  productionLineId?: string | null;
+  materialId?: string | null;
+  materialType?: string | null;
+  materialTypeLabel?: string | null;
+  issueQty?: number | null;
+  unitCost?: number | null;
+  costAmount?: number | null;
+  issueDate?: string | null;
+  createdAt?: string | null;
+}
+
 export interface FireProductionOrderEventPayload {
   orderId: string;
   event: string;
@@ -101,12 +163,53 @@ export async function fireProductionLineEvent(payload: FireProductionLineEventPa
   return unwrapApiResponse<void>(response.data);
 }
 
+export async function calculateProductionOrderMaterialRequirements(
+  productionOrderId: string,
+): Promise<MrpCalculateResultRecord> {
+  const response = await apiClient.post('/procurement/mrp/calculate', {
+    productionOrderIds: [productionOrderId.trim()],
+  });
+  return unwrapApiResponse<MrpCalculateResultRecord>(response.data);
+}
+
+export async function pageProductionOrderMaterialRequirements(
+  params: MaterialRequirementQueryParams,
+): Promise<PageResult<MaterialRequirementRecord>> {
+  const response = await apiClient.post('/procurement/mrp/results', normalizeMaterialRequirementQuery(params));
+  return unwrapApiResponse<PageResult<MaterialRequirementRecord>>(response.data);
+}
+
+export async function getProductionOrderCostDetail(
+  productionOrderId: string,
+  productionLineId: string,
+): Promise<ProductionOrderCostRecord> {
+  const response = await apiClient.post('/cost/detail', null, {
+    params: { productionOrderId, productionLineId },
+  });
+  return unwrapApiResponse<ProductionOrderCostRecord>(response.data);
+}
+
+export async function getProductionOrderCostIssues(
+  productionOrderId: string,
+): Promise<ProductionOrderCostIssueRecord[]> {
+  const response = await apiClient.post('/cost/issues', null, { params: { productionOrderId } });
+  return unwrapApiResponse<ProductionOrderCostIssueRecord[]>(response.data);
+}
+
 function normalizeQuery(params: ProductionOrderQueryParams): ProductionOrderQueryParams {
   return normalizeOptionalFields({
     ...params,
     current: Math.max(1, params.current),
     size: Math.max(1, params.size),
   }) as ProductionOrderQueryParams;
+}
+
+function normalizeMaterialRequirementQuery(params: MaterialRequirementQueryParams): MaterialRequirementQueryParams {
+  return normalizeOptionalFields({
+    ...params,
+    current: Math.max(1, params.current),
+    size: Math.max(1, params.size),
+  }) as MaterialRequirementQueryParams;
 }
 
 function normalizeOptionalFields<T extends object>(payload: T): Partial<T> {

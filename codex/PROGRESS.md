@@ -5,7 +5,7 @@
 
 ## 当前状态
 
-后端已基本完成，前端已完成系统管理、主数据、销售订单模块，并进入生产订单模块。
+后端已基本完成，前端已完成系统管理、主数据、销售订单模块和生产订单模块，并准备进入采购与仓储模块。
 
 目前项目已有 `outputs/` 下的产品/设计文档，以及 `codex/` 下的 AI 协作记忆文档。
 
@@ -30,11 +30,11 @@
 
 ## 进行中
 
-前端 Stage 5 - 生产订单模块。
+前端 Stage 6 - 采购与仓储模块。
 
 推荐下一个任务：
 
-- 继续 Stage 5，补齐生产进度、物料需求展示和成本关联入口；完成后进入 Stage 6 采购与仓储模块。
+- 进入 Stage 6，优先实现采购订单列表与状态流转入口。
 
 ## 未开始
 
@@ -67,7 +67,7 @@
 - 菜单和权限。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
 - 基础数据页面。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
 - 销售订单列表页。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
-- 生产订单列表页。已完成基础列表、详情和状态流转入口，详见 `codex/FRONTEND_PROGRESS.md`。
+- 生产订单列表页。已完成列表、详情、状态流转、生产进度、物料需求展示和成本关联入口，详见 `codex/FRONTEND_PROGRESS.md`。
 - 库存页面。
 - 订单页面。进行中，正在实现生产订单后续承接链路。
 - 采购页面。
@@ -95,6 +95,34 @@
 - 状态机和审批要尽早做，否则后续容易返工。
 - 前端页面看似简单，但如果早于后端契约稳定，容易偏离业务规则。
 - MRP 和波次逻辑算法复杂，需要专门测试。
+
+## 2026-05-10 任务：生产进度、物料需求与成本入口
+
+已完成：
+- 生产订单详情弹窗新增完工进度和入库进度展示。
+- 新增物料需求入口，对接 `POST /procurement/mrp/calculate` 和 `POST /procurement/mrp/results`。
+- 物料需求弹窗展示物料需求、库存抵扣、净需求、建议采购、建议供应商、预估成本和状态。
+- 新增生产行成本入口，对接 `POST /cost/detail` 和 `POST /cost/issues`。
+- 成本弹窗展示成本归集、单位成本和当前生产行领料明细。
+- 物料需求和成本入口分别按 `procurement:mrp:calculate`、`cost:query:detail` 权限控制显示。
+
+变更文件：
+- `frontend/src/services/order/productionOrderService.ts`
+- `frontend/src/services/order/productionOrderService.test.ts`
+- `frontend/src/pages/order/production/ProductionOrderListPage.tsx`
+- `frontend/src/pages/order/production/ProductionOrderListPage.test.tsx`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+- `pnpm exec vitest run src/services/order/productionOrderService.test.ts src/pages/order/production/ProductionOrderListPage.test.tsx` 通过，10 个测试通过
+- `pnpm lint` 通过
+- `pnpm test` 通过，176 个测试通过；存在既有 Ant Design/jsdom act warning
+- `pnpm build` 通过，存在 Vite chunk size warning
+- Playwright 冒烟验证通过：使用 mock API 打开 `http://127.0.0.1:5175/order/production`，确认详情弹窗、完工/入库进度、物料需求弹窗和成本弹窗可渲染；控制台 0 errors、1 个 Vite 开发环境 warning
+
+后续任务：
+- 进入 Stage 6，优先实现采购订单列表与状态流转入口。
 
 ## 2026-05-10 任务：退货入口与生产订单列表详情状态流转
 

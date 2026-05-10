@@ -38,8 +38,8 @@ pnpm build
 ## Current Frontend Status
 
 **Current Stage:** Stage 5 - 生产订单模块
-**Current Task:** Stage 5 第一批 - 生产订单列表、详情和状态流转入口已完成
-**Next Task:** 继续 Stage 5，补齐生产进度、物料需求展示和成本关联入口；完成后进入 Stage 6 采购与仓储模块。
+**Current Task:** Stage 5 第二批 - 生产进度、物料需求展示和成本关联入口已完成
+**Next Task:** 进入 Stage 6，开始采购与仓储模块，优先实现采购订单列表与状态流转入口。
 
 已完成：
 
@@ -270,6 +270,12 @@ pnpm build
   - 状态操作入口按 `order:production:fire-event`、`order:production:fire-line-event` 权限控制显示
   - 主布局 fallback 菜单已包含“订单管理 / 生产订单”
   - 后端菜单 path `/order/productionOrder`、`/order/production-order` 会规范化为前端路由 `/order/production`
+- 已补齐生产订单详情承接信息：
+  - 详情弹窗展示整单完工进度和入库进度
+  - 物料需求入口对接 `POST /procurement/mrp/calculate` 和 `POST /procurement/mrp/results`
+  - 行成本入口对接 `POST /cost/detail` 和 `POST /cost/issues`
+  - 物料需求入口按 `procurement:mrp:calculate` 权限控制显示
+  - 成本入口按 `cost:query:detail` 权限控制显示
 - 已新增本地 ADMIN 客户/供应商菜单和按钮权限恢复迁移：
   - 新增 `V48__restore_admin_customer_supplier_permissions.sql`
   - 恢复基础数据、客户管理、供应商管理菜单和客户/供应商按钮权限点
@@ -650,7 +656,7 @@ pnpm build
 
 ### Stage 5: 生产订单模块
 
-**Status:** In Progress
+**Status:** Done
 
 目标：承接销售订单转生产后的排产和生产状态管理。
 
@@ -681,12 +687,17 @@ pnpm build
 
 - 已实现生产订单列表，路由为 `/order/production`。
 - 已封装 `pageProductionOrders()`、`getProductionOrderDetail()`、`getProductionOrderAvailableActions()`、`getProductionLineAvailableActions()`、`fireProductionOrderEvent()`、`fireProductionLineEvent()`。
+- 已封装 `calculateProductionOrderMaterialRequirements()`、`pageProductionOrderMaterialRequirements()`、`getProductionOrderCostDetail()`、`getProductionOrderCostIssues()`。
 - 生产订单列表支持生产单号、状态、计划日期筛选、分页、刷新、loading / error / empty 状态。
 - 计划日期筛选提交前校验 `YYYY-MM-DD`，非法格式会在页面内提示并阻止请求。
 - 生产订单详情弹窗展示订单头信息、总数量、已完工、已入库、行明细和尺码矩阵。
 - 主表状态流转按后端可用操作动态渲染，操作后刷新详情和列表。
 - 行级状态流转按后端可用操作动态渲染，操作后刷新详情和列表。
+- 详情弹窗已展示完工进度和入库进度，按总数量计算百分比并处理总数为空的边界。
+- 详情弹窗已支持物料需求入口，先按当前生产订单触发 MRP 计算，再按返回批次号查询并展示物料需求、库存抵扣、净需求、建议采购、供应商和预估成本。
+- 详情行已支持成本入口，展示面料、辅料、包材、总成本、完工数量、单位成本和当前行领料明细。
 - 状态操作按钮按 `order:production:fire-event`、`order:production:fire-line-event` 权限控制显示。
+- 物料需求和成本入口分别按 `procurement:mrp:calculate`、`cost:query:detail` 权限控制显示。
 - 主布局 fallback 菜单已包含“订单管理 / 生产订单”。
 - 已兼容后端菜单路径 `/order/productionOrder`、`/order/production-order`。
 - 已新增 `V55__restore_admin_production_return_permissions.sql`，回填 ADMIN 生产订单菜单和按钮权限。
@@ -801,6 +812,37 @@ pnpm build
 ---
 
 ## Update Log
+
+### 2026-05-10 Stage 5 - 生产进度、物料需求与成本入口
+
+已完成：
+
+- 生产订单详情弹窗新增整单完工进度和入库进度展示。
+- 新增物料需求入口，按当前生产订单触发 MRP 计算并按返回批次查询物料需求结果。
+- 物料需求结果展示物料、毛需求、可用库存、在途数量、净需求、建议采购、建议供应商、预估成本和状态。
+- 新增生产行成本入口，展示成本归集、单位成本和当前行领料明细。
+- 物料需求入口按 `procurement:mrp:calculate` 权限控制显示，成本入口按 `cost:query:detail` 权限控制显示。
+
+变更文件：
+
+- `frontend/src/services/order/productionOrderService.ts`
+- `frontend/src/services/order/productionOrderService.test.ts`
+- `frontend/src/pages/order/production/ProductionOrderListPage.tsx`
+- `frontend/src/pages/order/production/ProductionOrderListPage.test.tsx`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+
+- `pnpm exec vitest run src/services/order/productionOrderService.test.ts src/pages/order/production/ProductionOrderListPage.test.tsx` 通过，10 个测试通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，176 个测试通过；存在既有 Ant Design/jsdom act warning。
+- `pnpm build` 通过，存在 Vite chunk size warning。
+- Playwright 冒烟验证通过：使用 mock API 打开 `http://127.0.0.1:5175/order/production`，确认详情弹窗、完工/入库进度、物料需求弹窗和成本弹窗可渲染；控制台 0 errors、1 个 Vite 开发环境 warning。
+
+后续任务：
+
+- 进入 Stage 6，开始采购与仓储模块，优先实现采购订单列表与状态流转入口。
 
 ### 2026-05-10 Stage 4/5 - 退货入口与生产订单列表详情状态流转
 
