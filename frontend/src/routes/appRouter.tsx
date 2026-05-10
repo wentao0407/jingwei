@@ -4,11 +4,15 @@ import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
 import { LoginPage } from '@/pages/login/LoginPage';
 import { CategoryManagementPage } from '@/pages/master/categories/CategoryManagementPage';
+import { CodingRuleManagementPage } from '@/pages/master/coding-rules/CodingRuleManagementPage';
 import { CustomerManagementPage } from '@/pages/master/customers/CustomerManagementPage';
 import { MaterialManagementPage } from '@/pages/master/materials/MaterialManagementPage';
+import { SeasonManagementPage } from '@/pages/master/seasons/SeasonManagementPage';
 import { SizeGroupManagementPage } from '@/pages/master/size-groups/SizeGroupManagementPage';
 import { SpuManagementPage } from '@/pages/master/spus/SpuManagementPage';
 import { SupplierManagementPage } from '@/pages/master/suppliers/SupplierManagementPage';
+import { WarehouseManagementPage } from '@/pages/master/warehouses/WarehouseManagementPage';
+import { SalesOrderListPage } from '@/pages/order/sales/SalesOrderListPage';
 import { SystemConfigPage } from '@/pages/system/configs/SystemConfigPage';
 import { MenuManagementPage } from '@/pages/system/menus/MenuManagementPage';
 import { RoleManagementPage } from '@/pages/system/roles/RoleManagementPage';
@@ -65,12 +69,28 @@ export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRo
           element: <SizeGroupManagementPage />,
         },
         {
+          path: 'master/seasons',
+          element: <SeasonManagementPage />,
+        },
+        {
+          path: 'master/warehouses',
+          element: <WarehouseManagementPage />,
+        },
+        {
+          path: 'master/coding-rules',
+          element: <CodingRuleManagementPage />,
+        },
+        {
           path: 'master/customers',
           element: <CustomerManagementPage />,
         },
         {
           path: 'master/suppliers',
           element: <SupplierManagementPage />,
+        },
+        {
+          path: 'order/sales',
+          element: <SalesOrderListPage />,
         },
       ],
     },

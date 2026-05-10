@@ -19,9 +19,9 @@ VALUES
     (281, 280, '创建尺码组', 'BUTTON', '', '', 'master:sizeGroup:create', '', 1, TRUE, 'ACTIVE'),
     (282, 280, '编辑尺码组', 'BUTTON', '', '', 'master:sizeGroup:update', '', 2, TRUE, 'ACTIVE'),
     (283, 280, '删除尺码组', 'BUTTON', '', '', 'master:sizeGroup:delete', '', 3, TRUE, 'ACTIVE'),
-    (284, 280, '新增尺码', 'BUTTON', '', '', 'master:sizeGroup:create', '', 4, TRUE, 'ACTIVE'),
-    (285, 280, '编辑尺码', 'BUTTON', '', '', 'master:sizeGroup:update', '', 5, TRUE, 'ACTIVE'),
-    (286, 280, '删除尺码', 'BUTTON', '', '', 'master:sizeGroup:delete', '', 6, TRUE, 'ACTIVE')
+    (284, 280, '新增尺码', 'BUTTON', '', '', 'master:size:create', '', 4, TRUE, 'ACTIVE'),
+    (285, 280, '编辑尺码', 'BUTTON', '', '', 'master:size:update', '', 5, TRUE, 'ACTIVE'),
+    (286, 280, '删除尺码', 'BUTTON', '', '', 'master:size:delete', '', 6, TRUE, 'ACTIVE')
 ON CONFLICT (id) DO NOTHING;
 
 UPDATE t_sys_menu
@@ -98,9 +98,9 @@ WHERE id IN (281, 282, 283, 284, 285, 286);
 UPDATE t_sys_menu SET name = '创建尺码组', permission = 'master:sizeGroup:create', sort_order = 1 WHERE id = 281;
 UPDATE t_sys_menu SET name = '编辑尺码组', permission = 'master:sizeGroup:update', sort_order = 2 WHERE id = 282;
 UPDATE t_sys_menu SET name = '删除尺码组', permission = 'master:sizeGroup:delete', sort_order = 3 WHERE id = 283;
-UPDATE t_sys_menu SET name = '新增尺码', permission = 'master:sizeGroup:create', sort_order = 4 WHERE id = 284;
-UPDATE t_sys_menu SET name = '编辑尺码', permission = 'master:sizeGroup:update', sort_order = 5 WHERE id = 285;
-UPDATE t_sys_menu SET name = '删除尺码', permission = 'master:sizeGroup:delete', sort_order = 6 WHERE id = 286;
+UPDATE t_sys_menu SET name = '新增尺码', permission = 'master:size:create', sort_order = 4 WHERE id = 284;
+UPDATE t_sys_menu SET name = '编辑尺码', permission = 'master:size:update', sort_order = 5 WHERE id = 285;
+UPDATE t_sys_menu SET name = '删除尺码', permission = 'master:size:delete', sort_order = 6 WHERE id = 286;
 
 INSERT INTO t_sys_role_menu (id, role_id, menu_id)
 SELECT

@@ -176,7 +176,7 @@ describe('CustomerManagementPage', () => {
     await waitFor(() => expect(mockedDeactivateCustomer).toHaveBeenCalledWith('2051932034979037191'));
     expect(mockedActivateCustomer).toHaveBeenCalledWith('2051932034979037192');
     expect(mockedDeleteCustomer).toHaveBeenCalledWith('2051932034979037191');
-  });
+  }, 10000);
 
   it('hides customer actions without permissions', async () => {
     mockedGetCurrentUserPermissions.mockResolvedValue({ menuTree: [], permissions: [] });

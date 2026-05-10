@@ -2,7 +2,7 @@
 
 > 用途：记录 JingWei 前端开发阶段、当前进度、下一步任务和恢复上下文。  
 > 当前前端风格：Quiet 企业后台风。  
-> 更新时间：2026-05-08。  
+> 更新时间：2026-05-10。  
 > 维护规则：每次完成前端任务后，必须更新本文档的阶段状态、已完成内容、验证结果和下一步任务。
 
 ---
@@ -37,9 +37,9 @@ pnpm build
 
 ## Current Frontend Status
 
-**Current Stage:** Stage 3 - 主数据模块  
-**Current Task:** Stage 3 第三批 - SPU/SKU 管理与尺码组/尺码管理已完成  
-**Next Task:** 继续 Stage 3，开始季节/波段与仓库/库位管理。
+**Current Stage:** Stage 4 - 销售订单模块  
+**Current Task:** Stage 4 第一批 - 销售订单列表/查询与状态操作入口已完成  
+**Next Task:** 继续 Stage 4，开始销售订单新建/编辑表单与明细行录入。
 
 已完成：
 
@@ -207,6 +207,49 @@ pnpm build
   - 删除尺码对接 `POST /master/size-group/size/delete`
   - 尺码组和尺码操作按后端实际 `master:sizeGroup:*` 权限控制
   - 后端菜单 path `/master/sizeGroup` 和 `/master/size-group` 会规范化为前端路由 `/master/size-groups`
+- 已实现季节/波段管理页：
+  - 路由为 `/master/seasons`
+  - 读取 `POST /master/season/list`
+  - 支持年份、季节类型、状态筛选、刷新、loading / error / empty 状态
+  - 新建季节对接 `POST /master/season/create`
+  - 编辑季节对接 `POST /master/season/update`
+  - 关闭季节对接 `POST /master/season/close`
+  - 删除季节对接 `POST /master/season/delete`
+  - 季节详情对接 `POST /master/season/detail`
+  - 新增、编辑、删除波段分别对接 `POST /master/season/wave/create`、`POST /master/season/wave/update`、`POST /master/season/wave/delete`
+  - 季节和波段操作按 `master:season:*`、`master:wave:*` 权限控制
+  - 后端菜单 path `/master/season` 会规范化为前端路由 `/master/seasons`
+- 已实现仓库/库位管理页：
+  - 路由为 `/master/warehouses`
+  - 读取 `POST /master/warehouse/page`
+  - 支持 keyword、仓库类型、状态筛选、分页、刷新、loading / error / empty 状态
+  - 新建仓库对接 `POST /master/warehouse/create`
+  - 编辑仓库对接 `POST /master/warehouse/update`
+  - 启用、停用、删除仓库分别对接 `POST /master/warehouse/activate`、`POST /master/warehouse/deactivate`、`POST /master/warehouse/delete`
+  - 仓库详情对接 `POST /master/warehouse/detail`
+  - 新增、编辑、冻结、解冻、停用、删除库位分别对接 `POST /master/warehouse/location/create`、`POST /master/warehouse/location/update`、`POST /master/warehouse/location/freeze`、`POST /master/warehouse/location/unfreeze`、`POST /master/warehouse/location/deactivate`、`POST /master/warehouse/location/delete`
+  - 仓库和库位操作按 `master:warehouse:*`、`master:location:*` 权限控制
+  - 后端菜单 path `/master/warehouse` 会规范化为前端路由 `/master/warehouses`
+- 已实现编码规则管理页：
+  - 路由为 `/master/coding-rules`
+  - 读取 `POST /master/codingRule/list`
+  - 支持规则编码/名称搜索、状态筛选、刷新、loading / error / empty 状态
+  - 新建规则对接 `POST /master/codingRule/create`
+  - 编辑规则对接 `POST /master/codingRule/update`
+  - 删除规则对接 `POST /master/codingRule/delete`
+  - 编码预览对接 `POST /master/codingRule/preview`
+  - 新建、编辑、删除和生成相关入口按 `master:codingRule:*` 权限控制
+  - 新建表单前端校验至少包含一个流水号段
+  - 后端菜单 path `/master/codingRule` 和 `/master/coding-rule` 会规范化为前端路由 `/master/coding-rules`
+- 已实现销售订单列表页：
+  - 路由为 `/order/sales`
+  - 读取 `POST /order/sales/page`
+  - 支持订单编号、状态、订单日期筛选、分页、刷新、loading / error / empty 状态
+  - 订单日期筛选前端校验 `YYYY-MM-DD` 格式，非法时阻止请求
+  - 详情对接 `POST /order/sales/detail`，展示订单头信息、明细行和尺码矩阵
+  - 提交、重新提交、取消、删除分别对接 `POST /order/sales/submit`、`POST /order/sales/resubmit`、`POST /order/sales/cancel`、`POST /order/sales/delete`
+  - 状态操作入口按 `order:sales:*` 权限和订单状态共同控制显示
+  - 后端菜单 path `/order/sale`、`/order/salesOrder` 会规范化为前端路由 `/order/sales`
 - 已新增本地 ADMIN 客户/供应商菜单和按钮权限恢复迁移：
   - 新增 `V48__restore_admin_customer_supplier_permissions.sql`
   - 恢复基础数据、客户管理、供应商管理菜单和客户/供应商按钮权限点
@@ -230,6 +273,15 @@ pnpm build
   - 新增 `V51__restore_admin_spu_size_group_permissions.sql`
   - 恢复基础数据、款式管理、尺码组管理菜单和按钮权限点
   - 恢复 ADMIN 角色与款式/SKU、尺码组/尺码菜单和按钮的授权关联
+- 已新增本地 ADMIN 季节/波段与仓库/库位菜单和按钮权限恢复迁移：
+  - 新增 `V52__restore_admin_season_warehouse_permissions.sql`
+  - 恢复基础数据、季节波段、仓库库位菜单和按钮权限点
+  - 恢复 ADMIN 角色与季节/波段、仓库/库位菜单和按钮的授权关联
+- 已新增本地 ADMIN 编码规则与销售订单菜单和按钮权限恢复迁移：
+  - 新增 `V53__restore_admin_coding_rule_sales_order_permissions.sql`
+  - 恢复基础数据、编码规则、订单管理、销售订单菜单和按钮权限点
+  - 销售订单使用 `3200+` 菜单 ID 段，避免与仓库库位 `300/310` 段冲突
+  - 已通过浏览器脚本直接补齐当前本地库菜单/权限并刷新当前登录 session
 - 已将前端开发服务默认监听地址从 `0.0.0.0` 收敛为 `127.0.0.1`，避免本地自测默认监听所有网卡。
 - 已补充本地权限数据回填迁移：
   - `V41__backfill_admin_user_permissions.sql`
@@ -307,6 +359,14 @@ pnpm build
   - 本轮 SPU/SKU 与尺码组/尺码管理验证通过：`pnpm lint`、`pnpm test`（128 个测试通过）、`pnpm build`
   - 本轮 SPU/SKU 与尺码组/尺码权限迁移验证通过：`mvn -Dtest=AdminMasterPermissionBackfillMigrationTest test`
   - 本轮新增 `V51__restore_admin_spu_size_group_permissions.sql`，用户执行后需要重新登录获取新菜单和按钮权限
+  - 本轮季节/波段与仓库/库位管理验证通过：`pnpm lint`、`pnpm test`（142 个测试通过）、`pnpm build`
+  - 本轮季节/波段与仓库/库位权限迁移验证通过：`mvn -Dtest=AdminMasterPermissionBackfillMigrationTest test`
+  - 本轮新增 `V52__restore_admin_season_warehouse_permissions.sql`，用户执行后需要重新登录获取新菜单和按钮权限
+  - 本轮编码规则与销售订单验证通过：`pnpm lint`、`pnpm test`（156 个测试通过）、`pnpm build`
+  - 本轮新增 `V53__restore_admin_coding_rule_sales_order_permissions.sql`
+  - 本轮浏览器验证通过：登录 `http://localhost:5173/login` 后确认“基础数据 / 编码规则”和“订单管理 / 销售订单”菜单可见
+  - 本轮浏览器验证通过：编码规则列表、预览弹窗、新建规则必填校验、流水号段校验可用
+  - 本轮浏览器验证通过：销售订单列表页可打开，非法日期 `2026/05/01` 会提示 `订单日期格式必须为 YYYY-MM-DD`
   - `mvn test` 本轮未通过，原因是当前执行环境中 Mockito/ByteBuddy 无法 self-attach，且 Spring 集成测试无法连接本机 PostgreSQL；失败与本轮迁移修复无关
   - `pnpm dev` 在默认沙箱中会因端口监听被拒绝失败：`listen EPERM`
   - `pnpm dev` 使用提升权限在沙箱外启动通过：`http://127.0.0.1:5173/`
@@ -319,6 +379,7 @@ pnpm build
 - 真实页面使用 React + Ant Design ProComponents 实现。
 - 前后端保持分离：开发环境前端 `5173`，后端 API `8080/api`。
 - Vite dev server 使用 `/api` 代理到 `http://localhost:8080`。
+- 季节 ID、波段 ID、仓库 ID、库位 ID、编码规则 ID、销售订单 ID 继续在前端按字符串处理，避免后端 Long 雪花 ID 精度丢失。
 
 ---
 
@@ -439,7 +500,7 @@ pnpm build
 
 ### Stage 3: 主数据模块
 
-**Status:** In Progress
+**Status:** Done
 
 目标：完成订单、生产、采购、库存依赖的基础资料维护。
 
@@ -493,10 +554,25 @@ pnpm build
 - 主布局 fallback 菜单已包含“基础数据 / 款式管理 / 尺码组管理”。
 - 已兼容后端菜单路径 `/master/spu`、`/master/sizeGroup`、`/master/size-group`。
 - 已新增 `V51__restore_admin_spu_size_group_permissions.sql`，回填 ADMIN 款式/SKU 与尺码组/尺码菜单和按钮权限。
+- 已实现季节/波段管理，路由为 `/master/seasons`。
+- 已封装 `listSeasons()`、`getSeasonDetail()`、`createSeason()`、`updateSeason()`、`closeSeason()`、`deleteSeason()`、`createWave()`、`updateWave()`、`deleteWave()`。
+- 已实现仓库/库位管理，路由为 `/master/warehouses`。
+- 已封装 `pageWarehouses()`、`listWarehouses()`、`getWarehouseDetail()`、`createWarehouse()`、`updateWarehouse()`、`activateWarehouse()`、`deactivateWarehouse()`、`deleteWarehouse()`、`createLocation()`、`updateLocation()`、`freezeLocation()`、`unfreezeLocation()`、`deactivateLocation()`、`deleteLocation()`。
+- 主布局 fallback 菜单已包含“基础数据 / 季节波段 / 仓库库位”。
+- 已兼容后端菜单路径 `/master/season`、`/master/warehouse`。
+- 已新增 `V52__restore_admin_season_warehouse_permissions.sql`，回填 ADMIN 季节/波段与仓库/库位菜单和按钮权限。
+- 已实现编码规则管理，路由为 `/master/coding-rules`。
+- 已封装 `listCodingRules()`、`getCodingRuleDetail()`、`createCodingRule()`、`updateCodingRule()`、`deleteCodingRule()`、`previewCode()`、`generateCode()`。
+- 编码规则列表支持 keyword、状态筛选、刷新、loading / error / empty 状态。
+- 编码规则支持新建、编辑、删除、预览操作，新建时校验规则段必须包含流水号段。
+- 编码规则操作按 `master:codingRule:create/update/delete/generate` 权限控制显示。
+- 主布局 fallback 菜单已包含“基础数据 / 编码规则”。
+- 已兼容后端菜单路径 `/master/codingRule`、`/master/coding-rule`。
+- 已新增 `V53__restore_admin_coding_rule_sales_order_permissions.sql`，回填 ADMIN 编码规则菜单和按钮权限。
 
 ### Stage 4: 销售订单模块
 
-**Status:** Not Started
+**Status:** In Progress
 
 目标：实现业务链路入口，让销售订单能完成录入、查询、详情查看和状态流转。
 
@@ -525,6 +601,19 @@ pnpm build
 - 新建/编辑表单支持明细行录入
 - 金额、数量等展示与后端返回一致
 - 状态流转失败时展示后端错误信息
+
+当前实现：
+
+- 已实现销售订单列表，路由为 `/order/sales`。
+- 已封装 `pageSalesOrders()`、`getSalesOrderDetail()`、`submitSalesOrder()`、`resubmitSalesOrder()`、`cancelSalesOrder()`、`deleteSalesOrder()`。
+- 销售订单列表支持订单编号、状态、订单日期筛选、分页、刷新、loading / error / empty 状态。
+- 订单日期筛选提交前校验 `YYYY-MM-DD`，非法格式会在页面内提示并阻止请求。
+- 订单详情弹窗展示订单头信息、明细行和尺码矩阵。
+- 草稿订单支持提交、取消、删除入口；驳回订单支持重新提交入口；确认订单支持取消入口。
+- 状态操作按钮按 `order:sales:submit/resubmit/cancel/delete` 权限和订单状态共同控制显示。
+- 主布局 fallback 菜单已包含“订单管理 / 销售订单”。
+- 已兼容后端菜单路径 `/order/sale`、`/order/salesOrder`。
+- 已新增 `V53__restore_admin_coding_rule_sales_order_permissions.sql`，回填 ADMIN 订单管理、销售订单菜单和按钮权限。
 
 ### Stage 5: 生产订单模块
 
@@ -665,6 +754,49 @@ pnpm build
 ---
 
 ## Update Log
+
+### 2026-05-10 Stage 3/4 - 编码规则与销售订单列表实现
+
+已完成：
+
+- 完成编码规则管理页，覆盖列表、筛选、新建、编辑、删除、预览、权限按钮和规则段校验。
+- 完成销售订单列表页，覆盖列表、筛选、分页、详情、提交、重新提交、取消、删除和权限按钮。
+- 销售订单日期筛选新增 `YYYY-MM-DD` 格式校验，非法格式阻止请求。
+- 补齐路由、菜单 path 兼容和 fallback 菜单。
+- 新增 `V53__restore_admin_coding_rule_sales_order_permissions.sql`，恢复 ADMIN 编码规则与销售订单菜单/按钮权限，并避开仓库库位菜单 ID 冲突。
+- 已通过浏览器脚本直接补齐当前本地库缺失菜单和 ADMIN 授权。
+
+变更文件：
+
+- `frontend/src/services/master/codingRuleService.ts`
+- `frontend/src/services/master/codingRuleService.test.ts`
+- `frontend/src/pages/master/coding-rules/CodingRuleManagementPage.tsx`
+- `frontend/src/pages/master/coding-rules/CodingRuleManagementPage.test.tsx`
+- `frontend/src/services/order/salesOrderService.ts`
+- `frontend/src/services/order/salesOrderService.test.ts`
+- `frontend/src/pages/order/sales/SalesOrderListPage.tsx`
+- `frontend/src/pages/order/sales/SalesOrderListPage.test.tsx`
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `frontend/src/routes/appRouter.tsx`
+- `src/main/resources/db/migration/V53__restore_admin_coding_rule_sales_order_permissions.sql`
+- `frontend/src/pages/master/customers/CustomerManagementPage.test.tsx`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+
+- 编码规则服务和页面测试先失败，确认缺少实现；实现后通过。
+- 销售订单服务和页面测试先失败，确认缺少实现；实现后通过。
+- 销售订单日期格式校验测试先失败，确认非法日期仍触发查询；修复后通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，156 个测试通过。
+- `pnpm build` 通过，存在 Vite chunk size warning，后续可通过路由懒加载和 manual chunks 优化。
+- Playwright 浏览器验证通过：编码规则菜单、列表、预览、必填校验、流水号段校验可用。
+- Playwright 浏览器验证通过：销售订单菜单、列表页、非法日期格式提示可用。
+
+后续任务：
+
+- 继续 Stage 4，开始销售订单新建/编辑表单与明细行录入。
 
 ### 2026-05-08 Stage 2 - 系统配置分组列显示修正
 

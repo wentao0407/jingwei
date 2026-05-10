@@ -23,6 +23,9 @@ class AdminMasterPermissionBackfillMigrationTest {
     private static final Path SPU_SIZE_GROUP_MIGRATION_PATH = Path.of(
             "src/main/resources/db/migration/V51__restore_admin_spu_size_group_permissions.sql"
     );
+    private static final Path SEASON_WAREHOUSE_MIGRATION_PATH = Path.of(
+            "src/main/resources/db/migration/V52__restore_admin_season_warehouse_permissions.sql"
+    );
 
     @Test
     @DisplayName("ADMIN客户和供应商权限种子数据应恢复为可用")
@@ -108,6 +111,39 @@ class AdminMasterPermissionBackfillMigrationTest {
         assertTrue(migrationSql.contains("master:sizeGroup:delete"));
         assertTrue(migrationSql.contains("role_code = 'ADMIN'"));
         assertTrue(migrationSql.contains("menu_id IN (200, 220, 221, 222, 223, 224, 225, 226, 280, 281, 282, 283, 284, 285, 286)"));
+        assertTrue(migrationSql.contains("deleted = FALSE"));
+    }
+
+    @Test
+    @DisplayName("ADMIN季节波段和仓库库位权限种子数据应恢复为可用")
+    void shouldRestoreAdminSeasonAndWarehousePermissions() throws IOException {
+        assertTrue(Files.exists(SEASON_WAREHOUSE_MIGRATION_PATH), "缺少季节波段和仓库库位权限恢复迁移");
+
+        String migrationSql = Files.readString(SEASON_WAREHOUSE_MIGRATION_PATH);
+
+        assertTrue(migrationSql.contains("name = '基础数据'"));
+        assertTrue(migrationSql.contains("name = '季节波段'"));
+        assertTrue(migrationSql.contains("name = '仓库库位'"));
+        assertTrue(migrationSql.contains("master:season:create"));
+        assertTrue(migrationSql.contains("master:season:update"));
+        assertTrue(migrationSql.contains("master:season:close"));
+        assertTrue(migrationSql.contains("master:season:delete"));
+        assertTrue(migrationSql.contains("master:wave:create"));
+        assertTrue(migrationSql.contains("master:wave:update"));
+        assertTrue(migrationSql.contains("master:wave:delete"));
+        assertTrue(migrationSql.contains("master:warehouse:create"));
+        assertTrue(migrationSql.contains("master:warehouse:update"));
+        assertTrue(migrationSql.contains("master:warehouse:activate"));
+        assertTrue(migrationSql.contains("master:warehouse:deactivate"));
+        assertTrue(migrationSql.contains("master:warehouse:delete"));
+        assertTrue(migrationSql.contains("master:location:create"));
+        assertTrue(migrationSql.contains("master:location:update"));
+        assertTrue(migrationSql.contains("master:location:freeze"));
+        assertTrue(migrationSql.contains("master:location:unfreeze"));
+        assertTrue(migrationSql.contains("master:location:deactivate"));
+        assertTrue(migrationSql.contains("master:location:delete"));
+        assertTrue(migrationSql.contains("role_code = 'ADMIN'"));
+        assertTrue(migrationSql.contains("menu_id IN (200, 250, 251, 252, 253, 254, 255, 256, 257, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311)"));
         assertTrue(migrationSql.contains("deleted = FALSE"));
     }
 }

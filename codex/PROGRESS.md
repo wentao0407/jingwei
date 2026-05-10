@@ -1,11 +1,11 @@
 # 经纬项目进度
 
 > 用途：记录当前实现状态。每次编码任务完成后都要更新本文档。
-> 更新时间：2026-04-30。
+> 更新时间：2026-05-10。
 
 ## 当前状态
 
-后端已基本完成，前端工程已开始。
+后端已基本完成，前端已完成系统管理、主数据模块，并进入销售订单模块。
 
 目前项目已有 `outputs/` 下的产品/设计文档，以及 `codex/` 下的 AI 协作记忆文档。
 
@@ -30,11 +30,11 @@
 
 ## 进行中
 
-暂无正在进行的实现任务。
+前端 Stage 4 - 销售订单模块。
 
 推荐下一个任务：
 
-- 按 `TASKS.md` 从 `T-0001` 开始创建后端项目骨架，或先创建前端骨架 `T-0002`。
+- 继续 Stage 4，开始销售订单新建/编辑表单与明细行录入。
 
 ## 未开始
 
@@ -62,12 +62,13 @@
 前端：
 
 - React 项目骨架。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
-- 登录页。进行中，正在按 Quiet 企业后台风改造。
-- 主布局。进行中，正在按 Quiet 企业后台风改造。
-- 菜单和权限。
-- 基础数据页面。
+- 登录页。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
+- 主布局。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
+- 菜单和权限。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
+- 基础数据页面。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
+- 销售订单列表页。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
 - 库存页面。
-- 订单页面。
+- 订单页面。进行中，正在实现销售订单完整录入链路。
 - 采购页面。
 - 仓库作业页面。
 - 报表和系统页面。
@@ -79,11 +80,11 @@
 
 测试：
 
-- 尚未建立自动化测试。
+- 前端已建立 Vitest/Testing Library 测试，当前 156 个测试通过。
 
 部署：
 
-- 尚未建立本地开发脚本。
+- 前端已建立本地开发脚本。
 - 尚未建立生产部署脚本。
 
 ## 当前风险
@@ -93,6 +94,44 @@
 - 状态机和审批要尽早做，否则后续容易返工。
 - 前端页面看似简单，但如果早于后端契约稳定，容易偏离业务规则。
 - MRP 和波次逻辑算法复杂，需要专门测试。
+
+## 2026-05-10 任务：编码规则管理页与销售订单列表页
+
+已完成：
+- 前端编码规则管理页已支持列表、筛选、新建、编辑、删除和预览。
+- 编码规则新建表单已校验必填字段和至少一个流水号段。
+- 前端销售订单列表页已支持订单编号、状态、订单日期筛选、分页、详情查看和状态操作入口。
+- 销售订单日期筛选已校验 `YYYY-MM-DD`，非法格式阻止请求并展示页面错误。
+- 销售订单提交、重新提交、取消、删除入口按权限和订单状态控制显示。
+- 已补齐编码规则、订单管理、销售订单菜单 path 兼容和 fallback 菜单。
+- 新增 `V53__restore_admin_coding_rule_sales_order_permissions.sql`，恢复 ADMIN 编码规则与销售订单菜单/按钮权限，并避开仓库库位菜单 ID 冲突。
+- 已通过浏览器脚本直接补齐当前本地库缺失菜单和 ADMIN 授权。
+
+变更文件：
+- `frontend/src/services/master/codingRuleService.ts`
+- `frontend/src/services/master/codingRuleService.test.ts`
+- `frontend/src/pages/master/coding-rules/CodingRuleManagementPage.tsx`
+- `frontend/src/pages/master/coding-rules/CodingRuleManagementPage.test.tsx`
+- `frontend/src/services/order/salesOrderService.ts`
+- `frontend/src/services/order/salesOrderService.test.ts`
+- `frontend/src/pages/order/sales/SalesOrderListPage.tsx`
+- `frontend/src/pages/order/sales/SalesOrderListPage.test.tsx`
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `frontend/src/routes/appRouter.tsx`
+- `frontend/src/pages/master/customers/CustomerManagementPage.test.tsx`
+- `src/main/resources/db/migration/V53__restore_admin_coding_rule_sales_order_permissions.sql`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+- `pnpm lint` 通过
+- `pnpm test` 通过，156 个测试通过
+- `pnpm build` 通过，存在 Vite chunk size warning
+- Playwright 浏览器验证通过：编码规则菜单、列表、预览、必填校验、流水号段校验可用
+- Playwright 浏览器验证通过：销售订单菜单、列表页、非法日期格式提示可用
+
+后续任务：
+- 继续 Stage 4，开始销售订单新建/编辑表单与明细行录入。
 
 ## 2026-05-07 任务：角色管理新增/编辑操作入口
 
@@ -449,6 +488,51 @@
 
 后续任务：
 - 用户执行 V50 后重新验证新增客户、物料、供应商。
+
+## 2026-05-08 任务：季节/波段与仓库/库位管理
+
+已完成：
+- 前端季节/波段管理页已支持季节列表查询、新建季节、编辑季节、关闭季节和删除季节。
+- 季节列表对接 `POST /master/season/list`，详情对接 `POST /master/season/detail`。
+- 季节操作对接 `POST /master/season/create`、`POST /master/season/update`、`POST /master/season/close`、`POST /master/season/delete`。
+- 波段操作对接 `POST /master/season/wave/create`、`POST /master/season/wave/update`、`POST /master/season/wave/delete`。
+- 前端仓库/库位管理页已支持仓库分页查询、新建仓库、编辑仓库、启用、停用和删除仓库。
+- 仓库分页对接 `POST /master/warehouse/page`，详情对接 `POST /master/warehouse/detail`。
+- 仓库操作对接 `POST /master/warehouse/create`、`POST /master/warehouse/update`、`POST /master/warehouse/activate`、`POST /master/warehouse/deactivate`、`POST /master/warehouse/delete`。
+- 库位操作对接 `POST /master/warehouse/location/create`、`POST /master/warehouse/location/update`、`POST /master/warehouse/location/freeze`、`POST /master/warehouse/location/unfreeze`、`POST /master/warehouse/location/deactivate`、`POST /master/warehouse/location/delete`。
+- 新增路由 `/master/seasons`、`/master/warehouses`，并兼容后端菜单路径 `/master/season`、`/master/warehouse`。
+- 新增迁移恢复 ADMIN 季节/波段与仓库/库位菜单和按钮权限。
+
+变更文件：
+- `frontend/src/pages/master/seasons/SeasonManagementPage.tsx`
+- `frontend/src/pages/master/seasons/SeasonManagementPage.test.tsx`
+- `frontend/src/pages/master/warehouses/WarehouseManagementPage.tsx`
+- `frontend/src/pages/master/warehouses/WarehouseManagementPage.test.tsx`
+- `frontend/src/services/master/seasonService.ts`
+- `frontend/src/services/master/seasonService.test.ts`
+- `frontend/src/services/master/warehouseService.ts`
+- `frontend/src/services/master/warehouseService.test.ts`
+- `frontend/src/routes/appRouter.tsx`
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `src/main/resources/db/migration/V52__restore_admin_season_warehouse_permissions.sql`
+- `src/test/java/com/jingwei/master/AdminMasterPermissionBackfillMigrationTest.java`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+- `pnpm lint` 通过
+- `pnpm test` 通过，142 个测试通过
+- `pnpm build` 通过
+- `mvn -Dtest=AdminMasterPermissionBackfillMigrationTest test` 通过，5 个测试通过
+
+决策：
+- 季节、波段、仓库、库位 ID 在前端继续按字符串处理，避免 Long 雪花 ID 精度丢失。
+- 季节/波段复用“列表 + 详情弹窗维护子项”模式，不新增独立波段页面。
+- 仓库/库位复用“分页列表 + 详情弹窗维护子项”模式，库位冻结、解冻、停用和删除由后端业务规则裁决。
+- 新增 V52 权限迁移后，用户需要执行迁移并重新登录获取新菜单和按钮权限。
+
+后续任务：
+- 继续 Stage 3，开始编码规则前端管理页。
 
 ## 更新模板
 

@@ -1,9 +1,12 @@
 import {
   ApartmentOutlined,
   BellOutlined,
+  CalendarOutlined,
+  CodeOutlined,
   ColumnWidthOutlined,
   DashboardOutlined,
   DatabaseOutlined,
+  FileTextOutlined,
   HomeOutlined,
   InboxOutlined,
   LogoutOutlined,
@@ -33,6 +36,18 @@ const fallbackMenuItems: MenuDataItem[] = [
     icon: <DashboardOutlined />,
   },
   {
+    path: '/order',
+    name: '订单管理',
+    icon: <ShoppingCartOutlined />,
+    children: [
+      {
+        path: '/order/sales',
+        name: '销售订单',
+        icon: <FileTextOutlined />,
+      },
+    ],
+  },
+  {
     path: '/master',
     name: '基础数据',
     icon: <DatabaseOutlined />,
@@ -56,6 +71,21 @@ const fallbackMenuItems: MenuDataItem[] = [
         path: '/master/size-groups',
         name: '尺码组管理',
         icon: <ColumnWidthOutlined />,
+      },
+      {
+        path: '/master/seasons',
+        name: '季节波段',
+        icon: <CalendarOutlined />,
+      },
+      {
+        path: '/master/warehouses',
+        name: '仓库库位',
+        icon: <ShopOutlined />,
+      },
+      {
+        path: '/master/coding-rules',
+        name: '编码规则',
+        icon: <CodeOutlined />,
       },
       {
         path: '/master/suppliers',
@@ -101,9 +131,12 @@ const fallbackMenuItems: MenuDataItem[] = [
 const iconMap = {
   ApartmentOutlined: <ApartmentOutlined />,
   BoxOutlined: <InboxOutlined />,
+  CalendarOutlined: <CalendarOutlined />,
+  CodeOutlined: <CodeOutlined />,
   ColumnWidthOutlined: <ColumnWidthOutlined />,
   DashboardOutlined: <DashboardOutlined />,
   DatabaseOutlined: <DatabaseOutlined />,
+  FileTextOutlined: <FileTextOutlined />,
   HomeOutlined: <HomeOutlined />,
   InboxOutlined: <InboxOutlined />,
   MenuOutlined: <MenuOutlined />,
@@ -226,6 +259,27 @@ function getPageMeta(pathname: string) {
     };
   }
 
+  if (pathname === '/master/seasons') {
+    return {
+      title: '季节波段',
+      subTitle: '维护季节周期、上市波段和关闭状态',
+    };
+  }
+
+  if (pathname === '/master/warehouses') {
+    return {
+      title: '仓库库位',
+      subTitle: '维护仓库档案、库位容量和冻结状态',
+    };
+  }
+
+  if (pathname === '/master/coding-rules') {
+    return {
+      title: '编码规则',
+      subTitle: '维护编码规则、规则段和流水号预览',
+    };
+  }
+
   if (pathname === '/master/categories') {
     return {
       title: '物料分类',
@@ -244,6 +298,13 @@ function getPageMeta(pathname: string) {
     return {
       title: '供应商管理',
       subTitle: '维护供应商档案、资质状态和交货周期',
+    };
+  }
+
+  if (pathname === '/order/sales') {
+    return {
+      title: '销售订单',
+      subTitle: '按客户、交期、状态跟踪订单履约进度',
     };
   }
 
@@ -304,6 +365,22 @@ function normalizeMenuPath(path?: string | null): string {
 
   if (path === '/master/sizeGroup' || path === '/master/size-group') {
     return '/master/size-groups';
+  }
+
+  if (path === '/master/season') {
+    return '/master/seasons';
+  }
+
+  if (path === '/master/warehouse') {
+    return '/master/warehouses';
+  }
+
+  if (path === '/master/codingRule' || path === '/master/coding-rule') {
+    return '/master/coding-rules';
+  }
+
+  if (path === '/order/sale' || path === '/order/salesOrder') {
+    return '/order/sales';
   }
 
   return path || '/';
