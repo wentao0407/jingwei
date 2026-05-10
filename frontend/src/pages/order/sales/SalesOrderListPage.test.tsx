@@ -19,6 +19,7 @@ import { listCustomers } from '@/services/master/customerService';
 import { listSeasons } from '@/services/master/seasonService';
 import { listSpus } from '@/services/master/spuService';
 import { listSizeGroups } from '@/services/master/sizeGroupService';
+import { createReturnOrder } from '@/services/order/returnOrderService';
 import { setAuthSession } from '@/shared/storage/authSessionStorage';
 
 vi.mock('@/services/auth/authService', () => ({
@@ -36,6 +37,10 @@ vi.mock('@/services/order/salesOrderService', () => ({
   resubmitSalesOrder: vi.fn(),
   submitSalesOrder: vi.fn(),
   updateSalesOrder: vi.fn(),
+}));
+
+vi.mock('@/services/order/returnOrderService', () => ({
+  createReturnOrder: vi.fn(),
 }));
 
 vi.mock('@/services/master/customerService', () => ({
@@ -58,6 +63,7 @@ const mockedCancelSalesOrder = vi.mocked(cancelSalesOrder);
 const mockedConvertSalesOrderToProduction = vi.mocked(convertSalesOrderToProduction);
 const mockedCreateSalesOrder = vi.mocked(createSalesOrder);
 const mockedCreateQuantityChange = vi.mocked(createQuantityChange);
+const mockedCreateReturnOrder = vi.mocked(createReturnOrder);
 const mockedDeleteSalesOrder = vi.mocked(deleteSalesOrder);
 const mockedGetCurrentUserPermissions = vi.mocked(getCurrentUserPermissions);
 const mockedGetSalesOrderDetail = vi.mocked(getSalesOrderDetail);
@@ -84,6 +90,7 @@ const permissions = [
   'order:sales:cancel',
   'order:sales:convert',
   'order:sales:quantity-change',
+  'order:return:create',
 ];
 
 const optionData = {
@@ -179,6 +186,25 @@ const salesOrders = [
     paymentAmount: 0,
     lines: [],
   },
+  {
+    id: '10004',
+    orderNo: 'SO-202605-00004',
+    customerId: '20001',
+    customerName: '上海一店',
+    seasonId: '30001',
+    seasonName: '2026春夏',
+    orderDate: '2026-05-06',
+    deliveryDate: '2026-06-28',
+    status: 'SHIPPED',
+    statusLabel: '已发货',
+    totalQuantity: 60,
+    totalAmount: 6000,
+    discountAmount: 0,
+    actualAmount: 6000,
+    paymentStatus: 'PAID',
+    paymentAmount: 6000,
+    lines: [],
+  },
 ];
 
 const detail = {
@@ -233,6 +259,32 @@ const confirmedDetail = {
   ],
 };
 
+const shippedDetail = {
+  ...salesOrders[3],
+  lines: [
+    {
+      id: '90004',
+      lineNo: 1,
+      spuId: '80001',
+      spuCode: 'SP20260001',
+      spuName: '女士风衣',
+      colorWayId: '70001',
+      colorName: '黑色',
+      colorCode: 'BK',
+      totalQuantity: 60,
+      unitPrice: 100,
+      actualAmount: 6000,
+      sizeMatrix: {
+        sizeGroupId: '60001',
+        sizes: [
+          { sizeId: '50001', code: 'S', quantity: 20 },
+          { sizeId: '50002', code: 'M', quantity: 40 },
+        ],
+      },
+    },
+  ],
+};
+
 describe('SalesOrderListPage', () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -253,10 +305,20 @@ describe('SalesOrderListPage', () => {
     mockedCreateSalesOrder.mockResolvedValue(salesOrders[0]);
     mockedCreateQuantityChange.mockReset();
     mockedCreateQuantityChange.mockResolvedValue({ id: '70001', orderId: '10003', orderLineId: '90003', status: 'PENDING' });
+    mockedCreateReturnOrder.mockReset();
+    mockedCreateReturnOrder.mockResolvedValue({ id: '71001', returnNo: 'RT-202605-0001', status: 'DRAFT' });
     mockedDeleteSalesOrder.mockReset();
     mockedDeleteSalesOrder.mockResolvedValue(undefined);
     mockedGetSalesOrderDetail.mockReset();
-    mockedGetSalesOrderDetail.mockImplementation((orderId) => Promise.resolve(orderId === '10003' ? confirmedDetail : detail));
+    mockedGetSalesOrderDetail.mockImplementation((orderId) => {
+      if (orderId === '10003') {
+        return Promise.resolve(confirmedDetail);
+      }
+      if (orderId === '10004') {
+        return Promise.resolve(shippedDetail);
+      }
+      return Promise.resolve(detail);
+    });
     mockedPageSalesOrders.mockReset();
     mockedPageSalesOrders.mockResolvedValue({ current: 1, size: 10, total: 2, pages: 1, records: salesOrders });
     mockedListCustomers.mockReset();
@@ -455,6 +517,46 @@ describe('SalesOrderListPage', () => {
     expect(mockedPageSalesOrders).toHaveBeenCalledTimes(2);
   });
 
+  it('creates a return order from a shipped sales order', async () => {
+    renderPage();
+
+    await screen.findByText('SO-202605-00004');
+    fireEvent.click(screen.getByRole('button', { name: '创建退货 SO-202605-00004' }));
+    await screen.findByText('创建退货单');
+    fireEvent.click(screen.getByLabelText('退货行 90004'));
+    fireEvent.change(screen.getByLabelText('退货尺码 S'), { target: { value: '3' } });
+    fireEvent.change(screen.getByLabelText('退货尺码 M'), { target: { value: '2' } });
+    fireEvent.change(screen.getByLabelText('退货原因'), { target: { value: ' 尺码问题 ' } });
+    fireEvent.click(screen.getByRole('button', { name: '提交退货单' }));
+
+    await waitFor(() =>
+      expect(mockedCreateReturnOrder).toHaveBeenCalledWith({
+        returnType: 'CUSTOMER_REJECT',
+        salesOrderId: '10004',
+        salesOrderNo: 'SO-202605-00004',
+        customerId: '20001',
+        reason: '尺码问题',
+        lines: [
+          {
+            salesOrderLineId: '90004',
+            spuId: '80001',
+            colorWayId: '70001',
+            sizeMatrixJson: JSON.stringify({
+              sizeGroupId: '60001',
+              sizes: [
+                { sizeId: '50001', code: 'S', quantity: 3 },
+                { sizeId: '50002', code: 'M', quantity: 2 },
+              ],
+              totalQuantity: 5,
+            }),
+            totalQuantity: 5,
+          },
+        ],
+      }),
+    );
+    expect(mockedPageSalesOrders).toHaveBeenCalledTimes(2);
+  });
+
   it('runs draft and rejected order actions', async () => {
     renderPage();
 
@@ -487,6 +589,7 @@ describe('SalesOrderListPage', () => {
     expect(screen.queryByRole('button', { name: '编辑 SO-202605-00001' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '生成生产 SO-202605-00003' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '数量变更 SO-202605-00003' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '创建退货 SO-202605-00004' })).not.toBeInTheDocument();
   });
 });
 

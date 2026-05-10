@@ -5,7 +5,7 @@
 
 ## 当前状态
 
-后端已基本完成，前端已完成系统管理、主数据模块，并进入销售订单模块。
+后端已基本完成，前端已完成系统管理、主数据、销售订单模块，并进入生产订单模块。
 
 目前项目已有 `outputs/` 下的产品/设计文档，以及 `codex/` 下的 AI 协作记忆文档。
 
@@ -30,11 +30,11 @@
 
 ## 进行中
 
-前端 Stage 4 - 销售订单模块。
+前端 Stage 5 - 生产订单模块。
 
 推荐下一个任务：
 
-- 继续 Stage 4，补齐销售退货订单入口；完成后进入 Stage 5 生产订单列表承接。
+- 继续 Stage 5，补齐生产进度、物料需求展示和成本关联入口；完成后进入 Stage 6 采购与仓储模块。
 
 ## 未开始
 
@@ -67,20 +67,21 @@
 - 菜单和权限。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
 - 基础数据页面。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
 - 销售订单列表页。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
+- 生产订单列表页。已完成基础列表、详情和状态流转入口，详见 `codex/FRONTEND_PROGRESS.md`。
 - 库存页面。
-- 订单页面。进行中，正在实现销售订单完整录入链路。
+- 订单页面。进行中，正在实现生产订单后续承接链路。
 - 采购页面。
 - 仓库作业页面。
 - 报表和系统页面。
 
 数据库：
 
-- 尚未创建 migration。
-- 尚未创建种子数据。
+- 已有多批权限恢复 migration 和当前菜单演示数据 migration。
+- 当前运行库的部分新增 migration 仍需由 Flyway 或可直连 PostgreSQL 的环境执行。
 
 测试：
 
-- 前端已建立 Vitest/Testing Library 测试，当前 163 个测试通过。
+- 前端已建立 Vitest/Testing Library 测试，当前全量约 172 个测试。
 
 部署：
 
@@ -94,6 +95,44 @@
 - 状态机和审批要尽早做，否则后续容易返工。
 - 前端页面看似简单，但如果早于后端契约稳定，容易偏离业务规则。
 - MRP 和波次逻辑算法复杂，需要专门测试。
+
+## 2026-05-10 任务：退货入口与生产订单列表详情状态流转
+
+已完成：
+- 销售订单页新增“创建退货”入口，已发货/已完成订单可从原销售订单行创建退货单。
+- 新增退货服务 `createReturnOrder()`、`submitReturnOrder()`，对接 `POST /order/return/create` 和 `POST /order/return/submit`。
+- 退货弹窗支持退货类型、退货行、尺码退货数量、原因和备注，提交前校验至少选择一行且退货数量大于 0。
+- 新增生产订单服务，覆盖分页、详情、主表可用操作、行可用操作、主表事件和行事件接口。
+- 新增生产订单列表页，支持生产单号、状态、计划日期筛选、分页、详情弹窗、主表状态流转和行级状态流转。
+- 已补齐 `/order/production` 路由、主布局 fallback 菜单、后端菜单 path 兼容。
+- 新增 `V55__restore_admin_production_return_permissions.sql`，恢复 ADMIN 销售退货入口、生产订单菜单和状态流转按钮权限。
+
+变更文件：
+- `frontend/src/services/order/returnOrderService.ts`
+- `frontend/src/services/order/returnOrderService.test.ts`
+- `frontend/src/services/order/productionOrderService.ts`
+- `frontend/src/services/order/productionOrderService.test.ts`
+- `frontend/src/pages/order/sales/SalesOrderListPage.tsx`
+- `frontend/src/pages/order/sales/SalesOrderListPage.test.tsx`
+- `frontend/src/pages/order/production/ProductionOrderListPage.tsx`
+- `frontend/src/pages/order/production/ProductionOrderListPage.test.tsx`
+- `frontend/src/routes/appRouter.tsx`
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `src/main/resources/db/migration/V55__restore_admin_production_return_permissions.sql`
+- `src/test/java/com/jingwei/order/AdminOrderPermissionBackfillMigrationTest.java`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+- `pnpm exec vitest run src/services/order/returnOrderService.test.ts src/services/order/productionOrderService.test.ts src/pages/order/sales/SalesOrderListPage.test.tsx src/pages/order/production/ProductionOrderListPage.test.tsx src/layouts/DashboardLayout.test.tsx` 通过，34 个测试通过
+- `mvn -Dtest=AdminOrderPermissionBackfillMigrationTest test` 通过
+- `pnpm lint` 通过
+- `pnpm build` 通过，存在 Vite chunk size warning
+- `pnpm test` 全量执行时 172 个测试中 171 个通过，`WarehouseManagementPage > manages locations inside selected warehouse` 在并行全量中 10 秒超时；单独重跑该测试文件通过
+- 按用户要求，本轮未启动浏览器或沙箱进行页面验证
+
+后续任务：
+- 继续 Stage 5，补齐生产进度、物料需求展示和成本关联入口；完成后进入 Stage 6 采购与仓储模块。
 
 ## 2026-05-10 任务：销售订单转生产与数量变更入口
 

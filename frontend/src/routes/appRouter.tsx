@@ -12,6 +12,7 @@ import { SizeGroupManagementPage } from '@/pages/master/size-groups/SizeGroupMan
 import { SpuManagementPage } from '@/pages/master/spus/SpuManagementPage';
 import { SupplierManagementPage } from '@/pages/master/suppliers/SupplierManagementPage';
 import { WarehouseManagementPage } from '@/pages/master/warehouses/WarehouseManagementPage';
+import { ProductionOrderListPage } from '@/pages/order/production/ProductionOrderListPage';
 import { SalesOrderListPage } from '@/pages/order/sales/SalesOrderListPage';
 import { SystemConfigPage } from '@/pages/system/configs/SystemConfigPage';
 import { MenuManagementPage } from '@/pages/system/menus/MenuManagementPage';
@@ -91,6 +92,10 @@ export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRo
         {
           path: 'order/sales',
           element: <SalesOrderListPage />,
+        },
+        {
+          path: 'order/production',
+          element: <ProductionOrderListPage />,
         },
       ],
     },

@@ -37,9 +37,9 @@ pnpm build
 
 ## Current Frontend Status
 
-**Current Stage:** Stage 4 - 销售订单模块  
-**Current Task:** Stage 4 第三批 - 销售订单转生产与数量变更入口已完成
-**Next Task:** 继续 Stage 4，补齐销售退货订单入口；完成后进入 Stage 5 生产订单列表承接。
+**Current Stage:** Stage 5 - 生产订单模块
+**Current Task:** Stage 5 第一批 - 生产订单列表、详情和状态流转入口已完成
+**Next Task:** 继续 Stage 5，补齐生产进度、物料需求展示和成本关联入口；完成后进入 Stage 6 采购与仓储模块。
 
 已完成：
 
@@ -254,8 +254,22 @@ pnpm build
   - 提交、重新提交、取消、删除分别对接 `POST /order/sales/submit`、`POST /order/sales/resubmit`、`POST /order/sales/cancel`、`POST /order/sales/delete`
   - 已确认订单支持转生产入口，对接 `POST /order/sales/convert-to-production`
   - 已确认订单支持数量变更入口，对接 `POST /order/sales/quantity-change`
-  - 状态操作入口按 `order:sales:*` 权限和订单状态共同控制显示
+  - 已发货/已完成订单支持创建退货入口，对接 `POST /order/return/create`
+  - 状态操作入口按 `order:sales:*`、`order:return:create` 权限和订单状态共同控制显示
   - 后端菜单 path `/order/sale`、`/order/salesOrder` 会规范化为前端路由 `/order/sales`
+- 已实现生产订单列表页：
+  - 路由为 `/order/production`
+  - 读取 `POST /order/production/page`
+  - 支持生产单号、状态、计划日期筛选、分页、刷新、loading / error / empty 状态
+  - 计划日期筛选前端校验 `YYYY-MM-DD` 格式，非法时阻止请求
+  - 详情对接 `POST /order/production/detail`，展示订单头信息、生产进度、行明细和尺码矩阵
+  - 主表可用操作对接 `POST /order/production/available-actions`
+  - 行级可用操作对接 `POST /order/production/line-available-actions`
+  - 主表状态流转对接 `POST /order/production/fire-event`
+  - 行级状态流转对接 `POST /order/production/fire-line-event`
+  - 状态操作入口按 `order:production:fire-event`、`order:production:fire-line-event` 权限控制显示
+  - 主布局 fallback 菜单已包含“订单管理 / 生产订单”
+  - 后端菜单 path `/order/productionOrder`、`/order/production-order` 会规范化为前端路由 `/order/production`
 - 已新增本地 ADMIN 客户/供应商菜单和按钮权限恢复迁移：
   - 新增 `V48__restore_admin_customer_supplier_permissions.sql`
   - 恢复基础数据、客户管理、供应商管理菜单和客户/供应商按钮权限点
@@ -288,6 +302,10 @@ pnpm build
   - 恢复基础数据、编码规则、订单管理、销售订单菜单和按钮权限点
   - 销售订单使用 `3200+` 菜单 ID 段，避免与仓库库位 `300/310` 段冲突
   - 已通过浏览器脚本直接补齐当前本地库菜单/权限并刷新当前登录 session
+- 已新增本地 ADMIN 生产订单与退货入口权限恢复迁移：
+  - 新增 `V55__restore_admin_production_return_permissions.sql`
+  - 恢复销售订单转生产、数量变更、创建退货按钮权限点
+  - 恢复生产订单菜单、主表状态流转、行级状态流转按钮权限点
 - 已将前端开发服务默认监听地址从 `0.0.0.0` 收敛为 `127.0.0.1`，避免本地自测默认监听所有网卡。
 - 已补充本地权限数据回填迁移：
   - `V41__backfill_admin_user_permissions.sql`
@@ -579,7 +597,7 @@ pnpm build
 
 ### Stage 4: 销售订单模块
 
-**Status:** In Progress
+**Status:** Done
 
 目标：实现业务链路入口，让销售订单能完成录入、查询、详情查看和状态流转。
 
@@ -623,14 +641,16 @@ pnpm build
 - 草稿订单支持编辑、提交、取消、删除入口；驳回订单支持重新提交入口；确认订单支持取消、转生产、数量变更入口。
 - 转生产弹窗支持选择订单行、跳过裁剪、要求完工日期和备注，提交前校验至少选择一行和日期格式。
 - 数量变更弹窗支持选择订单行、回填尺码矩阵数量、维护变更原因并提交变更申请。
-- 状态操作按钮按 `order:sales:create/update/submit/resubmit/cancel/delete/convert/quantity-change` 权限和订单状态共同控制显示。
+- 已发货/已完成订单支持创建退货入口，退货弹窗支持选择订单行、维护尺码退货数量、退货类型、原因和备注。
+- 状态操作按钮按 `order:sales:create/update/submit/resubmit/cancel/delete/convert/quantity-change`、`order:return:create` 权限和订单状态共同控制显示。
 - 主布局 fallback 菜单已包含“订单管理 / 销售订单”。
 - 已兼容后端菜单路径 `/order/sale`、`/order/salesOrder`。
-- 已新增 `V53__restore_admin_coding_rule_sales_order_permissions.sql`，回填 ADMIN 订单管理、销售订单菜单和按钮权限。
+- 已新增 `V53__restore_admin_coding_rule_sales_order_permissions.sql`，回填 ADMIN 订单管理、销售订单菜单和基础按钮权限。
+- 已新增 `V55__restore_admin_production_return_permissions.sql`，补齐销售订单转生产、数量变更、退货入口权限。
 
 ### Stage 5: 生产订单模块
 
-**Status:** Not Started
+**Status:** In Progress
 
 目标：承接销售订单转生产后的排产和生产状态管理。
 
@@ -656,6 +676,20 @@ pnpm build
 - 行状态和主状态展示不混淆
 - 状态操作前有必要确认
 - 异常和空状态有 fallback UI
+
+当前实现：
+
+- 已实现生产订单列表，路由为 `/order/production`。
+- 已封装 `pageProductionOrders()`、`getProductionOrderDetail()`、`getProductionOrderAvailableActions()`、`getProductionLineAvailableActions()`、`fireProductionOrderEvent()`、`fireProductionLineEvent()`。
+- 生产订单列表支持生产单号、状态、计划日期筛选、分页、刷新、loading / error / empty 状态。
+- 计划日期筛选提交前校验 `YYYY-MM-DD`，非法格式会在页面内提示并阻止请求。
+- 生产订单详情弹窗展示订单头信息、总数量、已完工、已入库、行明细和尺码矩阵。
+- 主表状态流转按后端可用操作动态渲染，操作后刷新详情和列表。
+- 行级状态流转按后端可用操作动态渲染，操作后刷新详情和列表。
+- 状态操作按钮按 `order:production:fire-event`、`order:production:fire-line-event` 权限控制显示。
+- 主布局 fallback 菜单已包含“订单管理 / 生产订单”。
+- 已兼容后端菜单路径 `/order/productionOrder`、`/order/production-order`。
+- 已新增 `V55__restore_admin_production_return_permissions.sql`，回填 ADMIN 生产订单菜单和按钮权限。
 
 ### Stage 6: 采购与仓储模块
 
@@ -767,6 +801,48 @@ pnpm build
 ---
 
 ## Update Log
+
+### 2026-05-10 Stage 4/5 - 退货入口与生产订单列表详情状态流转
+
+已完成：
+
+- 销售订单页新增创建退货入口，已发货/已完成订单可从原销售订单行创建退货单。
+- 新增退货服务 `createReturnOrder()`、`submitReturnOrder()`，创建接口对接 `POST /order/return/create`。
+- 退货弹窗支持退货类型、退货行、尺码退货数量、原因和备注，提交前校验至少选择一行且退货数量大于 0。
+- 新增生产订单服务，覆盖分页、详情、主表可用操作、行可用操作、主表事件和行事件。
+- 新增生产订单列表页，支持筛选、分页、详情弹窗、主表状态流转和行级状态流转。
+- 主布局新增“订单管理 / 生产订单” fallback 菜单，并兼容 `/order/productionOrder`、`/order/production-order` 后端菜单 path。
+- 新增 `V55__restore_admin_production_return_permissions.sql`，补齐销售订单转生产、数量变更、创建退货、生产订单菜单和状态流转权限。
+
+变更文件：
+
+- `frontend/src/services/order/returnOrderService.ts`
+- `frontend/src/services/order/returnOrderService.test.ts`
+- `frontend/src/services/order/productionOrderService.ts`
+- `frontend/src/services/order/productionOrderService.test.ts`
+- `frontend/src/pages/order/sales/SalesOrderListPage.tsx`
+- `frontend/src/pages/order/sales/SalesOrderListPage.test.tsx`
+- `frontend/src/pages/order/production/ProductionOrderListPage.tsx`
+- `frontend/src/pages/order/production/ProductionOrderListPage.test.tsx`
+- `frontend/src/routes/appRouter.tsx`
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `src/main/resources/db/migration/V55__restore_admin_production_return_permissions.sql`
+- `src/test/java/com/jingwei/order/AdminOrderPermissionBackfillMigrationTest.java`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+
+- `pnpm exec vitest run src/services/order/returnOrderService.test.ts src/services/order/productionOrderService.test.ts src/pages/order/sales/SalesOrderListPage.test.tsx src/pages/order/production/ProductionOrderListPage.test.tsx src/layouts/DashboardLayout.test.tsx` 通过。
+- `mvn -Dtest=AdminOrderPermissionBackfillMigrationTest test` 通过。
+- `pnpm lint` 通过。
+- `pnpm build` 通过，存在 Vite chunk size warning。
+- `pnpm test` 本轮全量执行时 172 个测试中 171 个通过，`WarehouseManagementPage > manages locations inside selected warehouse` 在并行全量中 10 秒超时；单独重跑 `pnpm exec vitest run src/pages/master/warehouses/WarehouseManagementPage.test.tsx` 通过，判断为既有高交互用例的并行耗时抖动。
+- 按用户要求，本轮未启动浏览器或沙箱进行页面验证。
+
+后续任务：
+
+- 继续 Stage 5，补齐生产进度、物料需求展示和成本关联入口；完成后进入 Stage 6 采购与仓储模块。
 
 ### 2026-05-10 Stage 4 - 销售订单转生产与数量变更入口
 

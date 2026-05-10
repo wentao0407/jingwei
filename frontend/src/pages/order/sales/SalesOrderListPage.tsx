@@ -27,6 +27,10 @@ import {
   type QuantityChangePayload,
   type SaveSalesOrderPayload,
 } from '@/services/order/salesOrderService';
+import {
+  createReturnOrder,
+  type CreateReturnOrderPayload,
+} from '@/services/order/returnOrderService';
 import { getAuthSession, setAuthSession } from '@/shared/storage/authSessionStorage';
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -68,6 +72,7 @@ interface SalesOrderActions {
   canCreate: boolean;
   canDelete: boolean;
   canQuantityChange: boolean;
+  canReturn: boolean;
   canUpdate: boolean;
   canResubmit: boolean;
   canSubmit: boolean;
@@ -108,11 +113,20 @@ interface QuantityChangeFormValues {
   reason?: string;
 }
 
+interface ReturnOrderFormValues {
+  lineIds?: string[];
+  returnType?: string;
+  sizes?: Record<string, Record<string, number>>;
+  reason?: string;
+  remark?: string;
+}
+
 export function SalesOrderListPage() {
   const { message } = App.useApp();
   const [form] = Form.useForm<SalesOrderFormValues>();
   const [convertForm] = Form.useForm<ConvertFormValues>();
   const [quantityChangeForm] = Form.useForm<QuantityChangeFormValues>();
+  const [returnOrderForm] = Form.useForm<ReturnOrderFormValues>();
   const [orderNoInput, setOrderNoInput] = useState('');
   const [orderNo, setOrderNo] = useState('');
   const [status, setStatus] = useState('');
@@ -146,6 +160,10 @@ export function SalesOrderListPage() {
   const [quantityChangeLoading, setQuantityChangeLoading] = useState(false);
   const [quantityChangeSaving, setQuantityChangeSaving] = useState(false);
   const [quantityChangeOrder, setQuantityChangeOrder] = useState<SalesOrderRecord | null>(null);
+  const [returnOrderOpen, setReturnOrderOpen] = useState(false);
+  const [returnOrderLoading, setReturnOrderLoading] = useState(false);
+  const [returnOrderSaving, setReturnOrderSaving] = useState(false);
+  const [returnOrder, setReturnOrder] = useState<SalesOrderRecord | null>(null);
   const [permissions, setPermissions] = useState<string[]>(() => getAuthSession()?.permissions ?? []);
   const actions = getSalesOrderActions(permissions);
 
@@ -353,6 +371,51 @@ export function SalesOrderListPage() {
     }
   }
 
+  async function openReturnOrderForm(order: SalesOrderRecord) {
+    setReturnOrderOpen(true);
+    setReturnOrderLoading(true);
+    try {
+      const orderDetail = await getSalesOrderDetail(order.id);
+      setReturnOrder(orderDetail);
+      returnOrderForm.setFieldsValue({
+        lineIds: [],
+        returnType: 'CUSTOMER_REJECT',
+        sizes: {},
+        reason: '',
+        remark: '',
+      });
+    } catch (error) {
+      message.error(getApiErrorMessage(error));
+      setReturnOrderOpen(false);
+    } finally {
+      setReturnOrderLoading(false);
+    }
+  }
+
+  async function handleCreateReturnOrder() {
+    try {
+      const values = await returnOrderForm.validateFields();
+      const validationMessage = validateReturnOrderFormValues(returnOrder, values);
+      if (validationMessage || !returnOrder) {
+        message.error(validationMessage ?? '销售订单数据不存在');
+        return;
+      }
+
+      setReturnOrderSaving(true);
+      await createReturnOrder(toReturnOrderPayload(returnOrder, values));
+      message.success('退货单已创建');
+      setReturnOrderOpen(false);
+      await loadOrders();
+    } catch (error) {
+      if (isFormValidationError(error)) {
+        return;
+      }
+      message.error(getApiErrorMessage(error));
+    } finally {
+      setReturnOrderSaving(false);
+    }
+  }
+
   async function runAction(action: () => Promise<void>, successMessage: string) {
     try {
       await action();
@@ -457,6 +520,7 @@ export function SalesOrderListPage() {
               onEdit: openEditForm,
               onConvert: openConvertForm,
               onQuantityChange: openQuantityChangeForm,
+              onReturn: openReturnOrderForm,
               onResubmit: (order) => runAction(() => resubmitSalesOrder(order.id), '订单已重新提交'),
               onSubmit: (order) => runAction(() => submitSalesOrder(order.id), '订单已提交审批'),
             })}
@@ -573,6 +637,26 @@ export function SalesOrderListPage() {
           </ProCard>
         </Modal>
       ) : null}
+
+      {returnOrderOpen ? (
+        <Modal
+          title="创建退货单"
+          aria-label="创建退货单"
+          open={returnOrderOpen}
+          width={820}
+          getContainer={false}
+          confirmLoading={returnOrderSaving}
+          okText="提交退货"
+          cancelText="取消"
+          okButtonProps={{ 'aria-label': '提交退货单' }}
+          onCancel={() => setReturnOrderOpen(false)}
+          onOk={handleCreateReturnOrder}
+        >
+          <ProCard loading={returnOrderLoading} bordered={false}>
+            <ReturnOrderForm form={returnOrderForm} order={returnOrder} />
+          </ProCard>
+        </Modal>
+      ) : null}
     </div>
   );
 }
@@ -586,6 +670,7 @@ function buildColumns(
     onDetail: (order: SalesOrderRecord) => void;
     onEdit: (order: SalesOrderRecord) => void;
     onQuantityChange: (order: SalesOrderRecord) => void;
+    onReturn: (order: SalesOrderRecord) => void;
     onResubmit: (order: SalesOrderRecord) => void;
     onSubmit: (order: SalesOrderRecord) => void;
   },
@@ -637,6 +722,11 @@ function buildColumns(
           {actions.canQuantityChange && record.status === 'CONFIRMED' ? (
             <Button size="small" aria-label={`数量变更 ${record.orderNo}`} onClick={() => handlers.onQuantityChange(record)}>
               数量变更
+            </Button>
+          ) : null}
+          {actions.canReturn && ['SHIPPED', 'COMPLETED'].includes(record.status) ? (
+            <Button size="small" aria-label={`创建退货 ${record.orderNo}`} onClick={() => handlers.onReturn(record)}>
+              创建退货
             </Button>
           ) : null}
           {actions.canCancel && ['DRAFT', 'CONFIRMED'].includes(record.status) ? (
@@ -717,10 +807,62 @@ function getSalesOrderActions(permissions: string[]): SalesOrderActions {
     canCreate: permissions.includes('order:sales:create'),
     canDelete: permissions.includes('order:sales:delete'),
     canQuantityChange: permissions.includes('order:sales:quantity-change'),
+    canReturn: permissions.includes('order:return:create'),
     canUpdate: permissions.includes('order:sales:update'),
     canResubmit: permissions.includes('order:sales:resubmit'),
     canSubmit: permissions.includes('order:sales:submit'),
   };
+}
+
+function ReturnOrderForm({
+  form,
+  order,
+}: {
+  form: ReturnType<typeof Form.useForm<ReturnOrderFormValues>>[0];
+  order: SalesOrderRecord | null;
+}) {
+  const lines = order?.lines ?? [];
+
+  return (
+    <Form<ReturnOrderFormValues> form={form} layout="vertical" preserve={false}>
+      <Form.Item label="退货类型" name="returnType" rules={[{ required: true, message: '请选择退货类型' }]}>
+        <Select
+          aria-label="退货类型"
+          options={[
+            { label: '客户退货', value: 'CUSTOMER_REJECT' },
+            { label: '物流拒收', value: 'LOGISTICS_REJECT' },
+            { label: '经销商退货', value: 'DISTRIBUTOR_RETURN' },
+          ]}
+        />
+      </Form.Item>
+      <Form.Item label="退货明细" name="lineIds" rules={[{ required: true, message: '请选择至少一行退货明细' }]}>
+        <Checkbox.Group style={{ width: '100%' }}>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            {lines.map((line) => (
+              <Checkbox aria-label={`退货行 ${line.id}`} key={line.id} value={line.id}>
+                {formatLineLabel(line)}
+              </Checkbox>
+            ))}
+          </Space>
+        </Checkbox.Group>
+      </Form.Item>
+      {lines.map((line) => (
+        <Space key={line.id} wrap>
+          {getSizeEntries(line).map((size) => (
+            <Form.Item key={size.sizeId} label={`退货尺码 ${size.code}`} name={['sizes', line.id, size.sizeId]}>
+              <InputNumber min={0} max={size.quantity} precision={0} />
+            </Form.Item>
+          ))}
+        </Space>
+      ))}
+      <Form.Item label="退货原因" name="reason" normalize={normalizeTextInput} rules={[{ required: true, message: '请输入退货原因' }]}>
+        <Input.TextArea aria-label="退货原因" maxLength={MAX_REMARK_LENGTH} rows={3} />
+      </Form.Item>
+      <Form.Item label="退货备注" name="remark" normalize={normalizeTextInput}>
+        <Input.TextArea aria-label="退货备注" maxLength={MAX_REMARK_LENGTH} rows={2} />
+      </Form.Item>
+    </Form>
+  );
 }
 
 function getStatusLabel(order: SalesOrderRecord): string {
@@ -858,6 +1000,56 @@ function toQuantityChangePayload(order: SalesOrderRecord, values: QuantityChange
       quantity: Number(values.sizes?.[size.sizeId] ?? 0),
     })),
     reason: values.reason ?? '',
+  };
+}
+
+function validateReturnOrderFormValues(order: SalesOrderRecord | null, values: ReturnOrderFormValues): string | null {
+  if (!order) {
+    return '销售订单数据不存在';
+  }
+  if (!values.lineIds || values.lineIds.length === 0) {
+    return '请选择至少一行退货明细';
+  }
+
+  const hasQuantity = values.lineIds.some((lineId) =>
+    Object.values(values.sizes?.[lineId] ?? {}).some((quantity) => Number(quantity ?? 0) > 0),
+  );
+
+  return hasQuantity ? null : '退货数量必须大于 0';
+}
+
+function toReturnOrderPayload(order: SalesOrderRecord, values: ReturnOrderFormValues): CreateReturnOrderPayload {
+  const selectedLineIds = new Set(values.lineIds ?? []);
+  return {
+    returnType: values.returnType ?? 'CUSTOMER_REJECT',
+    salesOrderId: order.id,
+    salesOrderNo: order.orderNo,
+    customerId: order.customerId ?? '',
+    ...(values.reason ? { reason: values.reason } : {}),
+    ...(values.remark ? { remark: values.remark } : {}),
+    lines: (order.lines ?? [])
+      .filter((line) => selectedLineIds.has(line.id))
+      .map((line) => toReturnOrderLinePayload(line, values.sizes?.[line.id] ?? {})),
+  };
+}
+
+function toReturnOrderLinePayload(line: SalesOrderLineRecord, quantities: Record<string, number>) {
+  const sizeEntries = getSizeEntries(line).map((size) => ({
+    sizeId: size.sizeId,
+    code: size.code,
+    quantity: Number(quantities[size.sizeId] ?? 0),
+  }));
+  const totalQuantity = sizeEntries.reduce((sum, size) => sum + size.quantity, 0);
+  return {
+    salesOrderLineId: line.id,
+    spuId: line.spuId ?? '',
+    colorWayId: line.colorWayId ?? '',
+    sizeMatrixJson: JSON.stringify({
+      sizeGroupId: getSizeGroupId(line),
+      sizes: sizeEntries,
+      totalQuantity,
+    }),
+    totalQuantity,
   };
 }
 

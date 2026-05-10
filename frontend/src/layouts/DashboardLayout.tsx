@@ -45,6 +45,11 @@ const fallbackMenuItems: MenuDataItem[] = [
         name: '销售订单',
         icon: <FileTextOutlined />,
       },
+      {
+        path: '/order/production',
+        name: '生产订单',
+        icon: <ToolOutlined />,
+      },
     ],
   },
   {
@@ -308,6 +313,13 @@ function getPageMeta(pathname: string) {
     };
   }
 
+  if (pathname === '/order/production') {
+    return {
+      title: '生产订单',
+      subTitle: '跟踪生产计划、工序状态、完工和入库进度',
+    };
+  }
+
   return {
     title: '销售订单',
     subTitle: '按客户、交期、状态跟踪订单履约进度',
@@ -381,6 +393,10 @@ function normalizeMenuPath(path?: string | null): string {
 
   if (path === '/order/sale' || path === '/order/salesOrder') {
     return '/order/sales';
+  }
+
+  if (path === '/order/productionOrder' || path === '/order/production-order') {
+    return '/order/production';
   }
 
   return path || '/';
