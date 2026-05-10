@@ -5,7 +5,26 @@
 -- 编码规则菜单可能被软删除；销售订单原始 300/310 菜单段已被后续
 -- 仓库库位修复脚本占用，因此销售订单使用新的 3200+ 菜单段恢复。
 
--- 1. 先清理可能存在的重复 permission 记录（保留正确的 id）
+-- 1. 清理可能存在的错误记录（雪花算法 ID 的重复记录）
+-- 删除错误的编码规则记录（保留正确的 id=260）
+DELETE FROM t_sys_role_menu WHERE menu_id IN (
+    SELECT id FROM t_sys_menu WHERE name = '编码规则' AND id != 260 AND parent_id = 200
+);
+DELETE FROM t_sys_menu WHERE name = '编码规则' AND id != 260 AND parent_id = 200;
+
+-- 删除错误的订单管理记录（保留正确的 id=3200）
+DELETE FROM t_sys_role_menu WHERE menu_id IN (
+    SELECT id FROM t_sys_menu WHERE name = '订单管理' AND id != 3200 AND parent_id = 0
+);
+DELETE FROM t_sys_menu WHERE name = '订单管理' AND id != 3200 AND parent_id = 0;
+
+-- 删除错误的销售订单记录（保留正确的 id=3210）
+DELETE FROM t_sys_role_menu WHERE menu_id IN (
+    SELECT id FROM t_sys_menu WHERE name = '销售订单' AND id != 3210 AND parent_id = 3200
+);
+DELETE FROM t_sys_menu WHERE name = '销售订单' AND id != 3210 AND parent_id = 3200;
+
+-- 2. 清理可能存在的重复 permission 记录（保留正确的 id）
 DELETE FROM t_sys_role_menu WHERE menu_id IN (
     SELECT id FROM t_sys_menu WHERE permission LIKE 'master:codingRule%' AND id NOT IN (261, 262, 263, 264)
 );
@@ -15,10 +34,10 @@ DELETE FROM t_sys_role_menu WHERE menu_id IN (
 DELETE FROM t_sys_menu WHERE permission LIKE 'master:codingRule%' AND id NOT IN (261, 262, 263, 264);
 DELETE FROM t_sys_menu WHERE permission LIKE 'order:sales%' AND id NOT IN (3211, 3212, 3213, 3214, 3215, 3216);
 
--- 2. 先处理可能被软删除的菜单记录
+-- 3. 先处理可能被软删除的菜单记录
 UPDATE t_sys_menu SET deleted = FALSE, status = 'ACTIVE' WHERE id IN (200, 260, 261, 262, 263, 264, 3200, 3210, 3211, 3212, 3213, 3214, 3215, 3216);
 
--- 3. 插入或更新菜单记录
+-- 4. 插入或更新菜单记录
 INSERT INTO t_sys_menu (id, parent_id, name, type, path, component, permission, icon, sort_order, visible, status)
 VALUES
     (200, 0, '基础数据', 'DIRECTORY', '/master', '', '', 'DatabaseOutlined', 2, TRUE, 'ACTIVE'),
@@ -48,7 +67,7 @@ ON CONFLICT (id) DO UPDATE SET
     status = EXCLUDED.status,
     deleted = FALSE;
 
--- 4. 清理 role_menu 表中的重复数据
+-- 5. 清理 role_menu 表中的重复数据
 DELETE FROM t_sys_role_menu
 WHERE id IN (
     SELECT id FROM (
@@ -58,7 +77,7 @@ WHERE id IN (
     ) t WHERE rn > 1
 );
 
--- 5. 插入角色菜单关联（如果不存在）
+-- 6. 插入角色菜单关联（如果不存在）
 INSERT INTO t_sys_role_menu (id, role_id, menu_id)
 SELECT
     61000 + m.id,
@@ -75,7 +94,7 @@ WHERE r.role_code = 'ADMIN'
         AND rm.menu_id = m.id
   );
 
--- 6. 更新角色菜单关联状态
+-- 7. 更新角色菜单关联状态
 UPDATE t_sys_role_menu
 SET deleted = FALSE
 WHERE role_id IN (
