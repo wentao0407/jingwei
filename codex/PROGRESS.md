@@ -1,11 +1,11 @@
 # 经纬项目进度
 
 > 用途：记录当前实现状态。每次编码任务完成后都要更新本文档。
-> 更新时间：2026-05-11。
+> 更新时间：2026-05-14。
 
 ## 当前状态
 
-后端已基本完成，前端已完成系统管理、主数据、销售订单模块、生产订单模块和采购与仓储模块，并准备进入库存与物流模块。
+后端已基本完成，前端已完成系统管理、主数据、销售订单模块、生产订单模块、采购与仓储模块，并进入库存与物流模块。
 
 目前项目已有 `outputs/` 下的产品/设计文档，以及 `codex/` 下的 AI 协作记忆文档。
 
@@ -34,7 +34,7 @@
 
 推荐下一个任务：
 
-- 进入 Stage 7，优先实现库存查询入口。
+- 继续 Stage 7，优先实现库存预警、波次拣货和发运单入口。
 
 ## 未开始
 
@@ -68,7 +68,7 @@
 - 基础数据页面。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
 - 销售订单列表页。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
 - 生产订单列表页。已完成列表、详情、状态流转、生产进度、物料需求展示和成本关联入口，详见 `codex/FRONTEND_PROGRESS.md`。
-- 库存页面。
+- 库存页面。已完成库存 SKU、库存物料、入库单、出库单和盘点单首批入口，详见 `codex/FRONTEND_PROGRESS.md`。
 - 订单页面。已完成销售订单和生产订单核心入口，详见 `codex/FRONTEND_PROGRESS.md`。
 - 采购页面。已完成采购订单、ASN、BOM/MRP 入口，详见 `codex/FRONTEND_PROGRESS.md`。
 - 仓库作业页面。已完成收货管理和上架管理入口，详见 `codex/FRONTEND_PROGRESS.md`。
@@ -81,7 +81,7 @@
 
 测试：
 
-- 前端已建立 Vitest/Testing Library 测试，当前全量 194 个测试。
+- 前端已建立 Vitest/Testing Library 测试，当前全量 202 个测试。
 
 部署：
 
@@ -95,6 +95,46 @@
 - 状态机和审批要尽早做，否则后续容易返工。
 - 前端页面看似简单，但如果早于后端契约稳定，容易偏离业务规则。
 - MRP 和波次逻辑算法复杂，需要专门测试。
+
+## 2026-05-14 任务：库存查询、入库、出库与盘点入口
+
+已完成：
+- 新增库存服务 `inventoryService`，封装入库单、出库单、盘点单分页、详情和操作接口。
+- 新增库存 SKU 与库存物料入口；由于当前后端未暴露独立库存查询 REST 接口，前端展示明确 fallback，避免误接不存在接口。
+- 新增入库单页，支持入库单号/仓库查询、详情查看和确认入库。
+- 新增出库单页，支持出库单号/仓库查询、详情查看和确认出库。
+- 新增盘点单页，支持仓库查询、详情查看、开始盘点和录入实盘数量。
+- 已补齐 `/inventory/skus`、`/inventory/materials`、`/inventory/inbounds`、`/inventory/outbounds`、`/inventory/stocktaking` 路由和 fallback 菜单。
+- 新增 `V57__restore_admin_inventory_stage7_permissions.sql`，恢复 ADMIN 库存与物流 Stage 7 首批菜单和按钮权限。
+
+变更文件：
+- `frontend/src/services/inventory/inventoryService.ts`
+- `frontend/src/services/inventory/inventoryService.test.ts`
+- `frontend/src/pages/inventory/stock/InventoryStockPlaceholderPage.tsx`
+- `frontend/src/pages/inventory/stock/InventoryStockPlaceholderPage.test.tsx`
+- `frontend/src/pages/inventory/inbound/InboundOrderPage.tsx`
+- `frontend/src/pages/inventory/inbound/InboundOrderPage.test.tsx`
+- `frontend/src/pages/inventory/outbound/OutboundOrderPage.tsx`
+- `frontend/src/pages/inventory/outbound/OutboundOrderPage.test.tsx`
+- `frontend/src/pages/inventory/stocktaking/StocktakingPage.tsx`
+- `frontend/src/pages/inventory/stocktaking/StocktakingPage.test.tsx`
+- `frontend/src/routes/appRouter.tsx`
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `src/main/resources/db/migration/V57__restore_admin_inventory_stage7_permissions.sql`
+- `src/test/java/com/jingwei/inventory/AdminInventoryPermissionBackfillMigrationTest.java`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+- `pnpm exec vitest run src/services/inventory/inventoryService.test.ts src/pages/inventory/inbound/InboundOrderPage.test.tsx src/pages/inventory/outbound/OutboundOrderPage.test.tsx src/pages/inventory/stocktaking/StocktakingPage.test.tsx src/pages/inventory/stock/InventoryStockPlaceholderPage.test.tsx` 通过，8 个测试通过。
+- `mvn -Dtest=AdminInventoryPermissionBackfillMigrationTest test` 通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，202 个测试通过；存在既有 Ant Design/jsdom act warning。
+- `pnpm build` 通过，存在 Vite chunk size warning。
+- Playwright 冒烟验证通过：使用 mock API 打开 `http://127.0.0.1:5174/inventory/skus`、`/inventory/materials`、`/inventory/inbounds`、`/inventory/outbounds`、`/inventory/stocktaking`，确认库存查询 fallback、入库详情/确认、出库详情/确认、盘点开始和实盘录入流程可用；控制台 0 errors、1 个 Vite 开发环境 warning。
+
+后续任务：
+- 继续 Stage 7，优先实现库存预警、波次拣货和发运单入口。
 
 ## 2026-05-11 任务：采购订单、ASN、BOM/MRP、收货与上架入口
 

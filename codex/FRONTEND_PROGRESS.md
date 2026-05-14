@@ -2,7 +2,7 @@
 
 > 用途：记录 JingWei 前端开发阶段、当前进度、下一步任务和恢复上下文。  
 > 当前前端风格：Quiet 企业后台风。  
-> 更新时间：2026-05-11。
+> 更新时间：2026-05-14。
 > 维护规则：每次完成前端任务后，必须更新本文档的阶段状态、已完成内容、验证结果和下一步任务。
 
 ---
@@ -37,9 +37,9 @@ pnpm build
 
 ## Current Frontend Status
 
-**Current Stage:** Stage 6 - 采购与仓储模块
-**Current Task:** Stage 6 已完成 - 采购订单、ASN、BOM/MRP、收货管理和上架管理入口已完成
-**Next Task:** 进入 Stage 7，开始库存与物流模块，优先实现库存查询入口。
+**Current Stage:** Stage 7 - 库存与物流模块
+**Current Task:** Stage 7 第一批 - 库存 SKU、库存物料、入库单、出库单和盘点单入口已完成
+**Next Task:** 继续 Stage 7，优先实现库存预警、波次拣货和发运单入口。
 
 已完成：
 
@@ -780,7 +780,7 @@ pnpm build
 
 ### Stage 7: 库存与物流模块
 
-**Status:** Not Started
+**Status:** In Progress
 
 目标：完成库存查询、出入库、盘点、预警、波次和发运链路。
 
@@ -809,6 +809,17 @@ pnpm build
 - 库存数量、锁定数量、在途数量区分明确
 - 入库/出库操作有确认和错误提示
 - 盘点差异展示清楚
+
+当前实现：
+
+- 已实现库存 SKU 入口，路由为 `/inventory/skus`；当前后端尚未暴露库存 SKU 查询 REST 接口，前端保留入口并展示明确契约 fallback。
+- 已实现库存物料入口，路由为 `/inventory/materials`；当前后端尚未暴露库存物料查询 REST 接口，前端保留入口并展示明确契约 fallback。
+- 已实现入库单入口，路由为 `/inventory/inbounds`，对接 `POST /inventory/inbound/page`、`POST /inventory/inbound/detail`、`POST /inventory/inbound/confirm`。
+- 已实现出库单入口，路由为 `/inventory/outbounds`，对接 `POST /inventory/outbound/page`、`POST /inventory/outbound/detail`、`POST /inventory/outbound/confirm`。
+- 已实现盘点单入口，路由为 `/inventory/stocktaking`，对接 `POST /inventory/stocktaking/page`、`POST /inventory/stocktaking/detail`、`POST /inventory/stocktaking/start`、`POST /inventory/stocktaking/record-count`。
+- 主布局 fallback 菜单已包含“库存物流 / 库存 SKU / 库存物料 / 入库单 / 出库单 / 盘点单”。
+- 已兼容后端菜单路径 `/inventory/sku`、`/inventory/material`、`/inventory/inbound`、`/inventory/outbound`、`/inventory/stocktaking-order`。
+- 已新增 `V57__restore_admin_inventory_stage7_permissions.sql`，回填 ADMIN 库存与物流 Stage 7 首批菜单和按钮权限。
 
 ### Stage 8: 经营辅助模块
 
@@ -859,6 +870,50 @@ pnpm build
 ---
 
 ## Update Log
+
+### 2026-05-14 Stage 7 - 库存查询、入库、出库与盘点入口
+
+已完成：
+
+- 新增库存服务 `inventoryService`，封装入库单、出库单、盘点单分页、详情和操作接口。
+- 新增库存 SKU 与库存物料入口；由于当前后端未暴露独立库存查询 REST 接口，前端展示明确 fallback，避免误接不存在接口。
+- 新增入库单页，支持入库单号/仓库查询、详情查看和确认入库。
+- 新增出库单页，支持出库单号/仓库查询、详情查看和确认出库。
+- 新增盘点单页，支持仓库查询、详情查看、开始盘点和录入实盘数量。
+- 新增库存物流 fallback 菜单和路由，兼容常见后端菜单 path。
+- 新增 `V57__restore_admin_inventory_stage7_permissions.sql`，恢复 ADMIN 库存与物流 Stage 7 首批菜单和按钮权限。
+
+变更文件：
+
+- `frontend/src/services/inventory/inventoryService.ts`
+- `frontend/src/services/inventory/inventoryService.test.ts`
+- `frontend/src/pages/inventory/stock/InventoryStockPlaceholderPage.tsx`
+- `frontend/src/pages/inventory/stock/InventoryStockPlaceholderPage.test.tsx`
+- `frontend/src/pages/inventory/inbound/InboundOrderPage.tsx`
+- `frontend/src/pages/inventory/inbound/InboundOrderPage.test.tsx`
+- `frontend/src/pages/inventory/outbound/OutboundOrderPage.tsx`
+- `frontend/src/pages/inventory/outbound/OutboundOrderPage.test.tsx`
+- `frontend/src/pages/inventory/stocktaking/StocktakingPage.tsx`
+- `frontend/src/pages/inventory/stocktaking/StocktakingPage.test.tsx`
+- `frontend/src/routes/appRouter.tsx`
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `src/main/resources/db/migration/V57__restore_admin_inventory_stage7_permissions.sql`
+- `src/test/java/com/jingwei/inventory/AdminInventoryPermissionBackfillMigrationTest.java`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+
+- `pnpm exec vitest run src/services/inventory/inventoryService.test.ts src/pages/inventory/inbound/InboundOrderPage.test.tsx src/pages/inventory/outbound/OutboundOrderPage.test.tsx src/pages/inventory/stocktaking/StocktakingPage.test.tsx src/pages/inventory/stock/InventoryStockPlaceholderPage.test.tsx` 通过，8 个测试通过。
+- `mvn -Dtest=AdminInventoryPermissionBackfillMigrationTest test` 通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，202 个测试通过；存在既有 Ant Design/jsdom act warning。
+- `pnpm build` 通过，存在 Vite chunk size warning。
+- Playwright 冒烟验证通过：使用 mock API 打开 `http://127.0.0.1:5174/inventory/skus`、`/inventory/materials`、`/inventory/inbounds`、`/inventory/outbounds`、`/inventory/stocktaking`，确认库存查询 fallback、入库详情/确认、出库详情/确认、盘点开始和实盘录入流程可用；控制台 0 errors、1 个 Vite 开发环境 warning。
+
+后续任务：
+
+- 继续 Stage 7，优先实现库存预警、波次拣货和发运单入口。
 
 ### 2026-05-11 Stage 6 - 采购订单、ASN、BOM/MRP、收货与上架入口
 

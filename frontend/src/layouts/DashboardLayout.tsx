@@ -85,6 +85,18 @@ const fallbackMenuItems: MenuDataItem[] = [
     ],
   },
   {
+    path: '/inventory',
+    name: '库存物流',
+    icon: <DatabaseOutlined />,
+    children: [
+      { path: '/inventory/skus', name: '库存 SKU', icon: <InboxOutlined /> },
+      { path: '/inventory/materials', name: '库存物料', icon: <DatabaseOutlined /> },
+      { path: '/inventory/inbounds', name: '入库单', icon: <InboxOutlined /> },
+      { path: '/inventory/outbounds', name: '出库单', icon: <TruckOutlined /> },
+      { path: '/inventory/stocktaking', name: '盘点单', icon: <FileTextOutlined /> },
+    ],
+  },
+  {
     path: '/master',
     name: '基础数据',
     icon: <DatabaseOutlined />,
@@ -387,6 +399,26 @@ function getPageMeta(pathname: string) {
     };
   }
 
+  if (pathname === '/inventory/skus') {
+    return { title: '库存 SKU', subTitle: '查看成品库存数量、锁定数量和批次分布' };
+  }
+
+  if (pathname === '/inventory/materials') {
+    return { title: '库存物料', subTitle: '查看面辅料库存数量、质检数量和批次分布' };
+  }
+
+  if (pathname === '/inventory/inbounds') {
+    return { title: '入库单', subTitle: '查询入库单、查看明细并确认入库' };
+  }
+
+  if (pathname === '/inventory/outbounds') {
+    return { title: '出库单', subTitle: '查询出库单、查看明细并确认出库' };
+  }
+
+  if (pathname === '/inventory/stocktaking') {
+    return { title: '盘点单', subTitle: '查询盘点单、开始盘点并录入实盘数量' };
+  }
+
   return {
     title: '销售订单',
     subTitle: '按客户、交期、状态跟踪订单履约进度',
@@ -485,6 +517,12 @@ function normalizeMenuPath(path?: string | null): string {
   if (path === '/warehouse/putaway' || path === '/procurement/put-away') {
     return '/procurement/putaway';
   }
+
+  if (path === '/inventory/sku') return '/inventory/skus';
+  if (path === '/inventory/material') return '/inventory/materials';
+  if (path === '/inventory/inbound') return '/inventory/inbounds';
+  if (path === '/inventory/outbound') return '/inventory/outbounds';
+  if (path === '/inventory/stocktaking-order') return '/inventory/stocktaking';
 
   return path || '/';
 }

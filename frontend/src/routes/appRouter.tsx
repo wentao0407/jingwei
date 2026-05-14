@@ -2,6 +2,10 @@ import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { AuthGuard } from '@/routes/AuthGuard';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
+import { InboundOrderPage } from '@/pages/inventory/inbound/InboundOrderPage';
+import { OutboundOrderPage } from '@/pages/inventory/outbound/OutboundOrderPage';
+import { InventoryStockPlaceholderPage } from '@/pages/inventory/stock/InventoryStockPlaceholderPage';
+import { StocktakingPage } from '@/pages/inventory/stocktaking/StocktakingPage';
 import { LoginPage } from '@/pages/login/LoginPage';
 import { CategoryManagementPage } from '@/pages/master/categories/CategoryManagementPage';
 import { CodingRuleManagementPage } from '@/pages/master/coding-rules/CodingRuleManagementPage';
@@ -121,6 +125,26 @@ export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRo
         {
           path: 'procurement/putaway',
           element: <PutawayManagementPage />,
+        },
+        {
+          path: 'inventory/skus',
+          element: <InventoryStockPlaceholderPage inventoryType="SKU" />,
+        },
+        {
+          path: 'inventory/materials',
+          element: <InventoryStockPlaceholderPage inventoryType="MATERIAL" />,
+        },
+        {
+          path: 'inventory/inbounds',
+          element: <InboundOrderPage />,
+        },
+        {
+          path: 'inventory/outbounds',
+          element: <OutboundOrderPage />,
+        },
+        {
+          path: 'inventory/stocktaking',
+          element: <StocktakingPage />,
         },
       ],
     },
