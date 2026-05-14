@@ -37,9 +37,9 @@ pnpm build
 
 ## Current Frontend Status
 
-**Current Stage:** Stage 7 - 库存与物流模块
-**Current Task:** Stage 7 第一批 - 库存 SKU、库存物料、入库单、出库单和盘点单入口已完成
-**Next Task:** 继续 Stage 7，优先实现库存预警、波次拣货和发运单入口。
+**Current Stage:** Stage 8 - 经营辅助模块
+**Current Task:** Stage 8 - 工作台首页、审批中心、通知中心、报表中心和成本核算入口已完成
+**Next Task:** 前端阶段计划已完成；后续可优先做全链路联调、路由懒加载和生产部署优化。
 
 已完成：
 
@@ -780,7 +780,7 @@ pnpm build
 
 ### Stage 7: 库存与物流模块
 
-**Status:** In Progress
+**Status:** Done
 
 目标：完成库存查询、出入库、盘点、预警、波次和发运链路。
 
@@ -817,13 +817,17 @@ pnpm build
 - 已实现入库单入口，路由为 `/inventory/inbounds`，对接 `POST /inventory/inbound/page`、`POST /inventory/inbound/detail`、`POST /inventory/inbound/confirm`。
 - 已实现出库单入口，路由为 `/inventory/outbounds`，对接 `POST /inventory/outbound/page`、`POST /inventory/outbound/detail`、`POST /inventory/outbound/confirm`。
 - 已实现盘点单入口，路由为 `/inventory/stocktaking`，对接 `POST /inventory/stocktaking/page`、`POST /inventory/stocktaking/detail`、`POST /inventory/stocktaking/start`、`POST /inventory/stocktaking/record-count`。
-- 主布局 fallback 菜单已包含“库存物流 / 库存 SKU / 库存物料 / 入库单 / 出库单 / 盘点单”。
-- 已兼容后端菜单路径 `/inventory/sku`、`/inventory/material`、`/inventory/inbound`、`/inventory/outbound`、`/inventory/stocktaking-order`。
+- 已实现库存预警入口，路由为 `/inventory/alerts`，对接 `POST /inventory/alert/list`、`POST /inventory/alert/scan`、`POST /inventory/alert/acknowledge`。
+- 已实现波次拣货入口，路由为 `/warehouse/waves`，对接 `POST /warehouse/wave/create`、`POST /warehouse/wave/confirm-pick`、`POST /warehouse/wave/complete-pick-list`、`POST /warehouse/wave/cancel`。
+- 已实现发运单入口，路由为 `/warehouse/shipments`，对接 `POST /warehouse/shipment/confirm`。
+- 主布局 fallback 菜单已包含“库存物流 / 库存 SKU / 库存物料 / 入库单 / 出库单 / 盘点单 / 库存预警 / 波次拣货 / 发运单”。
+- 已兼容后端菜单路径 `/inventory/sku`、`/inventory/material`、`/inventory/inbound`、`/inventory/outbound`、`/inventory/stocktaking-order`、`/inventory/alert`、`/warehouse/wave`、`/warehouse/pick`、`/warehouse/ship`、`/warehouse/shipment`。
 - 已新增 `V57__restore_admin_inventory_stage7_permissions.sql`，回填 ADMIN 库存与物流 Stage 7 首批菜单和按钮权限。
+- 已新增 `V58__restore_admin_stage7_stage8_followup_permissions.sql`，回填 ADMIN 库存预警、波次拣货、发运单和审批中心菜单权限。
 
 ### Stage 8: 经营辅助模块
 
-**Status:** Not Started
+**Status:** Done
 
 目标：完成审批、通知、报表、成本和工作台首页等横向能力。
 
@@ -850,6 +854,15 @@ pnpm build
 - 通知支持未读/已读状态
 - 报表和成本页面不阻塞核心业务链路
 
+当前实现：
+
+- 已将工作台首页从订单静态视图升级为经营工作台，展示待审批、生产中、库存预警、待发运指标，以及履约待办和今日重点。
+- 已实现审批中心入口，路由为 `/approval/tasks`，对接 `POST /approval/task/myPending` 和 `POST /approval/approve`。
+- 已实现通知中心入口，路由为 `/notification/list` 和 `/notification/preference`，对接 `POST /notification/page`、`POST /notification/mark-read`、`POST /notification/mark-all-read`、`POST /notification/preference/detail`、`POST /notification/preference/update`。
+- 已实现报表中心入口，路由为 `/report/ledger`、`/report/flow`、`/report/age`、`/report/turnover`，对接库存台账、出入库流水、库龄分析和畅滞销分析查询接口。
+- 已实现成本核算入口，路由为 `/cost/query` 和 `/cost/report`，对接 `POST /cost/detail` 和 `POST /cost/issues`。
+- 主布局 fallback 菜单已新增“审批中心 / 我的审批”、“通知中心 / 我的通知 / 通知偏好”、“报表中心”和“成本核算”，并兼容后端菜单路径。
+
 ---
 
 ## Implementation Order
@@ -870,6 +883,103 @@ pnpm build
 ---
 
 ## Update Log
+
+### 2026-05-14 Stage 8 - 通知中心、报表中心与成本核算
+
+已完成：
+
+- 新增通知中心服务与页面，支持我的通知分页查询、单条已读、全部已读、通知偏好查询和偏好保存。
+- 新增报表中心服务与页面，支持库存台账、出入库流水、库龄分析和畅滞销分析四类查询。
+- 新增成本核算服务与页面，支持按生产订单 ID 和生产行 ID 查询成本归集，并展示领料成本明细。
+- 新增 `/notification/list`、`/notification/preference`、`/report/ledger`、`/report/flow`、`/report/age`、`/report/turnover`、`/cost/query`、`/cost/report` 路由。
+- 主布局 fallback 菜单补齐通知中心、报表中心和成本核算，并补齐常见后端菜单 path 兼容。
+- 新增 `V59__restore_admin_stage8_operation_permissions.sql`，恢复 ADMIN 通知、报表和成本菜单与按钮权限。
+
+变更文件：
+
+- `frontend/src/services/notification/notificationService.ts`
+- `frontend/src/services/notification/notificationService.test.ts`
+- `frontend/src/services/report/reportService.ts`
+- `frontend/src/services/report/reportService.test.ts`
+- `frontend/src/services/cost/costService.ts`
+- `frontend/src/services/cost/costService.test.ts`
+- `frontend/src/pages/notification/NotificationCenterPage.tsx`
+- `frontend/src/pages/notification/NotificationCenterPage.test.tsx`
+- `frontend/src/pages/report/ReportCenterPage.tsx`
+- `frontend/src/pages/report/ReportCenterPage.test.tsx`
+- `frontend/src/pages/cost/CostAccountingPage.tsx`
+- `frontend/src/pages/cost/CostAccountingPage.test.tsx`
+- `frontend/src/routes/appRouter.tsx`
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `src/main/resources/db/migration/V59__restore_admin_stage8_operation_permissions.sql`
+- `src/test/java/com/jingwei/operation/AdminStage8OperationPermissionMigrationTest.java`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+
+- `pnpm exec vitest run src/services/notification/notificationService.test.ts src/services/report/reportService.test.ts src/services/cost/costService.test.ts src/pages/notification/NotificationCenterPage.test.tsx src/pages/report/ReportCenterPage.test.tsx src/pages/cost/CostAccountingPage.test.tsx` 通过，7 个测试通过。
+- `mvn -Dtest=AdminStage8OperationPermissionMigrationTest test` 通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，217 个测试通过；存在既有 Ant Design/jsdom act warning。
+- `pnpm build` 通过，存在 Vite chunk size warning。
+- Playwright 冒烟验证通过：使用 mock API 打开 `http://127.0.0.1:5174/notification/list`、`/report/ledger`、`/cost/query`，确认通知已读/偏好保存、报表四个 tab 查询和成本查询流程可用；控制台 0 errors、1 个 Vite 开发环境 warning。
+
+后续任务：
+
+- 前端阶段计划已完成；后续可优先做全链路联调、路由懒加载和生产部署优化。
+
+### 2026-05-14 Stage 7/8 - 库存预警、波次拣货、发运、工作台与审批中心
+
+已完成：
+
+- 新增库存预警服务与页面，支持预警状态查询、扫描库存预警和确认 ACTIVE 预警。
+- 新增波次拣货服务与操作台，支持创建波次、确认拣货、完成拣货单和取消波次。
+- 新增发运单服务与操作台，支持按出库单确认发运并可选关联销售订单。
+- 将工作台首页升级为经营工作台，展示待审批、生产中、库存预警、待发运指标，以及履约待办和今日重点。
+- 新增审批中心服务与页面，支持查询我的待审批任务并提交通过/驳回意见。
+- 新增 `/inventory/alerts`、`/warehouse/waves`、`/warehouse/shipments`、`/approval/tasks` 路由、fallback 菜单和后端菜单路径兼容。
+- 新增 `V58__restore_admin_stage7_stage8_followup_permissions.sql`，恢复 ADMIN 库存预警、波次拣货、发运单和审批中心菜单权限。
+
+变更文件：
+
+- `frontend/src/services/inventory/alertService.ts`
+- `frontend/src/services/inventory/alertService.test.ts`
+- `frontend/src/services/warehouse/waveService.ts`
+- `frontend/src/services/warehouse/waveService.test.ts`
+- `frontend/src/services/warehouse/shipmentService.ts`
+- `frontend/src/services/warehouse/shipmentService.test.ts`
+- `frontend/src/services/approval/approvalService.ts`
+- `frontend/src/services/approval/approvalService.test.ts`
+- `frontend/src/pages/inventory/alerts/InventoryAlertPage.tsx`
+- `frontend/src/pages/inventory/alerts/InventoryAlertPage.test.tsx`
+- `frontend/src/pages/warehouse/waves/WavePickingPage.tsx`
+- `frontend/src/pages/warehouse/waves/WavePickingPage.test.tsx`
+- `frontend/src/pages/warehouse/shipments/ShipmentPage.tsx`
+- `frontend/src/pages/warehouse/shipments/ShipmentPage.test.tsx`
+- `frontend/src/pages/approval/ApprovalCenterPage.tsx`
+- `frontend/src/pages/approval/ApprovalCenterPage.test.tsx`
+- `frontend/src/pages/dashboard/DashboardPage.tsx`
+- `frontend/src/pages/dashboard/DashboardPage.test.tsx`
+- `frontend/src/routes/appRouter.tsx`
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `src/main/resources/db/migration/V58__restore_admin_stage7_stage8_followup_permissions.sql`
+- `src/test/java/com/jingwei/inventory/AdminStage7Stage8FollowupPermissionMigrationTest.java`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+
+- `pnpm exec vitest run src/services/inventory/alertService.test.ts src/services/warehouse/waveService.test.ts src/services/warehouse/shipmentService.test.ts src/services/approval/approvalService.test.ts src/pages/inventory/alerts/InventoryAlertPage.test.tsx src/pages/warehouse/waves/WavePickingPage.test.tsx src/pages/warehouse/shipments/ShipmentPage.test.tsx src/pages/approval/ApprovalCenterPage.test.tsx src/pages/dashboard/DashboardPage.test.tsx` 通过，9 个测试通过。
+- `mvn -Dtest=AdminStage7Stage8FollowupPermissionMigrationTest test` 通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，210 个测试通过；存在既有 Ant Design/jsdom act warning。
+- `pnpm build` 通过，存在 Vite chunk size warning。
+- Playwright 冒烟验证通过：使用 mock API 打开 `http://127.0.0.1:5174/`、`/inventory/alerts`、`/warehouse/waves`、`/warehouse/shipments`、`/approval/tasks`，确认工作台、预警扫描/确认、波次拣货、发运确认和审批通过流程可用；控制台 0 errors、1 个 Vite 开发环境 warning。
+
+后续任务：
+
+- 继续 Stage 8，优先实现通知中心、报表中心和成本核算入口。
 
 ### 2026-05-14 Stage 7 - 库存查询、入库、出库与盘点入口
 

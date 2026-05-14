@@ -1,15 +1,23 @@
 import {
   ApartmentOutlined,
+  AlertOutlined,
+  AppstoreOutlined,
+  AuditOutlined,
+  BarChartOutlined,
   BellOutlined,
+  BookOutlined,
   CalendarOutlined,
+  CarryOutOutlined,
   CodeOutlined,
   ColumnWidthOutlined,
   DashboardOutlined,
   DatabaseOutlined,
+  DollarOutlined,
   FileTextOutlined,
   HomeOutlined,
   InboxOutlined,
   LogoutOutlined,
+  MailOutlined,
   MenuOutlined,
   ShoppingCartOutlined,
   ShopOutlined,
@@ -17,6 +25,7 @@ import {
   SmileOutlined,
   SolutionOutlined,
   SettingOutlined,
+  SendOutlined,
   TeamOutlined,
   ToolOutlined,
   TruckOutlined,
@@ -94,6 +103,46 @@ const fallbackMenuItems: MenuDataItem[] = [
       { path: '/inventory/inbounds', name: '入库单', icon: <InboxOutlined /> },
       { path: '/inventory/outbounds', name: '出库单', icon: <TruckOutlined /> },
       { path: '/inventory/stocktaking', name: '盘点单', icon: <FileTextOutlined /> },
+      { path: '/inventory/alerts', name: '库存预警', icon: <AlertOutlined /> },
+      { path: '/warehouse/waves', name: '波次拣货', icon: <AppstoreOutlined /> },
+      { path: '/warehouse/shipments', name: '发运单', icon: <SendOutlined /> },
+    ],
+  },
+  {
+    path: '/approval',
+    name: '审批中心',
+    icon: <AuditOutlined />,
+    children: [
+      { path: '/approval/tasks', name: '我的审批', icon: <AuditOutlined /> },
+    ],
+  },
+  {
+    path: '/notification',
+    name: '通知中心',
+    icon: <BellOutlined />,
+    children: [
+      { path: '/notification/list', name: '我的通知', icon: <MailOutlined /> },
+      { path: '/notification/preference', name: '通知偏好', icon: <SettingOutlined /> },
+    ],
+  },
+  {
+    path: '/report',
+    name: '报表中心',
+    icon: <BarChartOutlined />,
+    children: [
+      { path: '/report/ledger', name: '库存台账', icon: <BookOutlined /> },
+      { path: '/report/flow', name: '出入库流水', icon: <FileTextOutlined /> },
+      { path: '/report/age', name: '库龄分析', icon: <CalendarOutlined /> },
+      { path: '/report/turnover', name: '畅滞销分析', icon: <BarChartOutlined /> },
+    ],
+  },
+  {
+    path: '/cost',
+    name: '成本核算',
+    icon: <DollarOutlined />,
+    children: [
+      { path: '/cost/query', name: '成本查询', icon: <DollarOutlined /> },
+      { path: '/cost/report', name: '成本报表', icon: <BarChartOutlined /> },
     ],
   },
   {
@@ -178,18 +227,27 @@ const fallbackMenuItems: MenuDataItem[] = [
 ];
 
 const iconMap = {
+  AlertOutlined: <AlertOutlined />,
   ApartmentOutlined: <ApartmentOutlined />,
+  AppstoreOutlined: <AppstoreOutlined />,
+  AuditOutlined: <AuditOutlined />,
+  BarChartOutlined: <BarChartOutlined />,
+  BookOutlined: <BookOutlined />,
   BoxOutlined: <InboxOutlined />,
   CalendarOutlined: <CalendarOutlined />,
+  CarryOutOutlined: <CarryOutOutlined />,
   CodeOutlined: <CodeOutlined />,
   ColumnWidthOutlined: <ColumnWidthOutlined />,
   DashboardOutlined: <DashboardOutlined />,
   DatabaseOutlined: <DatabaseOutlined />,
+  DollarOutlined: <DollarOutlined />,
   FileTextOutlined: <FileTextOutlined />,
   HomeOutlined: <HomeOutlined />,
   InboxOutlined: <InboxOutlined />,
+  MailOutlined: <MailOutlined />,
   MenuOutlined: <MenuOutlined />,
   SettingOutlined: <SettingOutlined />,
+  SendOutlined: <SendOutlined />,
   ShoppingCartOutlined: <ShoppingCartOutlined />,
   ShopOutlined: <ShopOutlined />,
   SkinOutlined: <SkinOutlined />,
@@ -419,9 +477,37 @@ function getPageMeta(pathname: string) {
     return { title: '盘点单', subTitle: '查询盘点单、开始盘点并录入实盘数量' };
   }
 
+  if (pathname === '/inventory/alerts') {
+    return { title: '库存预警', subTitle: '扫描库存阈值、查询预警记录并确认处理' };
+  }
+
+  if (pathname === '/warehouse/waves') {
+    return { title: '波次拣货', subTitle: '创建波次、确认拣货、完成拣货单和取消波次' };
+  }
+
+  if (pathname === '/warehouse/shipments') {
+    return { title: '发运单', subTitle: '按出库单确认发运并关联销售订单' };
+  }
+
+  if (pathname === '/approval/tasks') {
+    return { title: '审批中心', subTitle: '查看我的待审批任务并提交审批意见' };
+  }
+
+  if (pathname === '/notification/list' || pathname === '/notification/preference') {
+    return { title: '通知中心', subTitle: '查看站内通知、标记已读并维护通知偏好' };
+  }
+
+  if (pathname.startsWith('/report')) {
+    return { title: '报表中心', subTitle: '查询库存台账、出入库流水、库龄和畅滞销分析' };
+  }
+
+  if (pathname.startsWith('/cost')) {
+    return { title: '成本核算', subTitle: '查询生产订单成本归集和领料成本明细' };
+  }
+
   return {
-    title: '销售订单',
-    subTitle: '按客户、交期、状态跟踪订单履约进度',
+    title: '工作台首页',
+    subTitle: '集中查看订单、生产、库存、审批和发运待办',
   };
 }
 
@@ -523,6 +609,14 @@ function normalizeMenuPath(path?: string | null): string {
   if (path === '/inventory/inbound') return '/inventory/inbounds';
   if (path === '/inventory/outbound') return '/inventory/outbounds';
   if (path === '/inventory/stocktaking-order') return '/inventory/stocktaking';
+  if (path === '/inventory/alert') return '/inventory/alerts';
+  if (path === '/warehouse/wave' || path === '/warehouse/pick') return '/warehouse/waves';
+  if (path === '/warehouse/ship' || path === '/warehouse/shipment') return '/warehouse/shipments';
+  if (path === '/approval' || path === '/approval/task') return '/approval/tasks';
+  if (path === '/notification' || path === '/notification/message') return '/notification/list';
+  if (path === '/notification/prefs' || path === '/notification/preferences') return '/notification/preference';
+  if (path === '/report') return '/report/ledger';
+  if (path === '/cost') return '/cost/query';
 
   return path || '/';
 }

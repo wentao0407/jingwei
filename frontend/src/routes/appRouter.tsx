@@ -1,7 +1,10 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { AuthGuard } from '@/routes/AuthGuard';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
+import { ApprovalCenterPage } from '@/pages/approval/ApprovalCenterPage';
+import { CostAccountingPage } from '@/pages/cost/CostAccountingPage';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
+import { InventoryAlertPage } from '@/pages/inventory/alerts/InventoryAlertPage';
 import { InboundOrderPage } from '@/pages/inventory/inbound/InboundOrderPage';
 import { OutboundOrderPage } from '@/pages/inventory/outbound/OutboundOrderPage';
 import { InventoryStockPlaceholderPage } from '@/pages/inventory/stock/InventoryStockPlaceholderPage';
@@ -23,10 +26,13 @@ import { BomMrpPage } from '@/pages/procurement/bom-mrp/BomMrpPage';
 import { ProcurementOrderListPage } from '@/pages/procurement/orders/ProcurementOrderListPage';
 import { PutawayManagementPage } from '@/pages/procurement/putaway/PutawayManagementPage';
 import { ReceivingManagementPage } from '@/pages/procurement/receiving/ReceivingManagementPage';
+import { ReportCenterPage } from '@/pages/report/ReportCenterPage';
 import { SystemConfigPage } from '@/pages/system/configs/SystemConfigPage';
 import { MenuManagementPage } from '@/pages/system/menus/MenuManagementPage';
 import { RoleManagementPage } from '@/pages/system/roles/RoleManagementPage';
 import { UserManagementPage } from '@/pages/system/users/UserManagementPage';
+import { ShipmentPage } from '@/pages/warehouse/shipments/ShipmentPage';
+import { WavePickingPage } from '@/pages/warehouse/waves/WavePickingPage';
 
 export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRouter(
   [
@@ -146,6 +152,54 @@ export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRo
           path: 'inventory/stocktaking',
           element: <StocktakingPage />,
         },
+        {
+          path: 'inventory/alerts',
+          element: <InventoryAlertPage />,
+        },
+        {
+          path: 'warehouse/waves',
+          element: <WavePickingPage />,
+        },
+        {
+          path: 'warehouse/shipments',
+          element: <ShipmentPage />,
+        },
+        {
+          path: 'approval/tasks',
+          element: <ApprovalCenterPage />,
+        },
+        {
+          path: 'notification/list',
+          element: <NotificationCenterPage />,
+        },
+        {
+          path: 'notification/preference',
+          element: <NotificationCenterPage />,
+        },
+        {
+          path: 'report/ledger',
+          element: <ReportCenterPage />,
+        },
+        {
+          path: 'report/flow',
+          element: <ReportCenterPage />,
+        },
+        {
+          path: 'report/age',
+          element: <ReportCenterPage />,
+        },
+        {
+          path: 'report/turnover',
+          element: <ReportCenterPage />,
+        },
+        {
+          path: 'cost/query',
+          element: <CostAccountingPage />,
+        },
+        {
+          path: 'cost/report',
+          element: <CostAccountingPage />,
+        },
       ],
     },
     {
@@ -159,3 +213,4 @@ export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRo
     },
   },
 );
+import { NotificationCenterPage } from '@/pages/notification/NotificationCenterPage';
