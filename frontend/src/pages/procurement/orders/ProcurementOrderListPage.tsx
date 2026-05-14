@@ -1,0 +1,317 @@
+import { EyeOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { ProCard } from '@ant-design/pro-components';
+import { App, Button, Descriptions, Input, Modal, Select, Space, Table, Tag } from 'antd';
+import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
+import { useCallback, useEffect, useState } from 'react';
+import { EmptyState, ErrorState, LoadingState } from '@/components/state';
+import { getCurrentUserPermissions } from '@/services/auth/authService';
+import { getApiErrorMessage } from '@/services/http/apiClient';
+import type { PageResult } from '@/services/master/customerService';
+import {
+  fireProcurementOrderEvent,
+  getProcurementOrderAvailableActions,
+  getProcurementOrderDetail,
+  pageProcurementOrders,
+  type ProcurementOrderLineRecord,
+  type ProcurementOrderRecord,
+} from '@/services/procurement/procurementService';
+import { getAuthSession, setAuthSession } from '@/shared/storage/authSessionStorage';
+
+const DEFAULT_PAGE_SIZE = 10;
+const INITIAL_PAGE = 1;
+
+const statusOptions = [
+  { label: '全部状态', value: '' },
+  { label: '草稿', value: 'DRAFT' },
+  { label: '待审批', value: 'PENDING_APPROVAL' },
+  { label: '已审批', value: 'APPROVED' },
+  { label: '已驳回', value: 'REJECTED' },
+  { label: '已下发', value: 'ISSUED' },
+  { label: '收货中', value: 'RECEIVING' },
+  { label: '已完成', value: 'COMPLETED' },
+];
+
+const actionLabelMap: Record<string, string> = {
+  APPROVE: '审批通过',
+  COMPLETE: '完成采购',
+  ISSUE: '下发采购',
+  RECEIVE: '开始收货',
+  REJECT: '审批驳回',
+  RESUBMIT: '重新提交',
+  SUBMIT: '提交审批',
+};
+
+const statusColorMap: Record<string, string> = {
+  APPROVED: 'green',
+  COMPLETED: 'green',
+  DRAFT: 'default',
+  ISSUED: 'blue',
+  PENDING_APPROVAL: 'gold',
+  RECEIVING: 'cyan',
+  REJECTED: 'red',
+};
+
+export function ProcurementOrderListPage() {
+  const { message } = App.useApp();
+  const [supplierInput, setSupplierInput] = useState('');
+  const [supplierId, setSupplierId] = useState('');
+  const [status, setStatus] = useState('');
+  const [currentPage, setCurrentPage] = useState(INITIAL_PAGE);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [pageResult, setPageResult] = useState<PageResult<ProcurementOrderRecord> | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detail, setDetail] = useState<ProcurementOrderRecord | null>(null);
+  const [availableActions, setAvailableActions] = useState<string[]>([]);
+  const [permissions, setPermissions] = useState<string[]>(() => getAuthSession()?.permissions ?? []);
+  const canFireEvent = permissions.includes('procurement:order:fire-event');
+
+  const loadOrders = useCallback(async () => {
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      setPageResult(await pageProcurementOrders({
+        current: currentPage,
+        size: pageSize,
+        ...(supplierId ? { supplierId } : {}),
+        ...(status ? { status } : {}),
+      }));
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, pageSize, supplierId, status]);
+
+  useEffect(() => {
+    void loadOrders();
+  }, [loadOrders]);
+
+  useEffect(() => {
+    void refreshPermissions();
+  }, []);
+
+  async function refreshPermissions() {
+    try {
+      const response = await getCurrentUserPermissions();
+      setPermissions(response.permissions);
+      const session = getAuthSession();
+      if (session) {
+        setAuthSession({ ...session, permissions: response.permissions, menuTree: response.menuTree });
+      }
+    } catch {
+      setPermissions(getAuthSession()?.permissions ?? []);
+    }
+  }
+
+  const handleSearch = () => {
+    setSupplierId(supplierInput.trim());
+    setCurrentPage(INITIAL_PAGE);
+  };
+
+  async function openDetail(record: ProcurementOrderRecord) {
+    setDetailOpen(true);
+    setDetailLoading(true);
+    try {
+      const [nextDetail, nextActions] = await Promise.all([
+        getProcurementOrderDetail(record.id),
+        getProcurementOrderAvailableActions(record.id),
+      ]);
+      setDetail(nextDetail);
+      setAvailableActions(nextActions);
+    } catch (error) {
+      message.error(getApiErrorMessage(error));
+      setDetailOpen(false);
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  async function handleFireEvent(event: string) {
+    if (!detail) {
+      return;
+    }
+    try {
+      await fireProcurementOrderEvent({ orderId: detail.id, event });
+      message.success(`${getActionLabel(event)}成功`);
+      const [nextDetail, nextActions] = await Promise.all([
+        getProcurementOrderDetail(detail.id),
+        getProcurementOrderAvailableActions(detail.id),
+      ]);
+      setDetail(nextDetail);
+      setAvailableActions(nextActions);
+      await loadOrders();
+    } catch (error) {
+      message.error(getApiErrorMessage(error));
+    }
+  }
+
+  if (loading && !pageResult) {
+    return <LoadingState message="正在加载采购订单" />;
+  }
+
+  if (errorMessage && !pageResult) {
+    return <ErrorState message={errorMessage} onRetry={loadOrders} />;
+  }
+
+  return (
+    <div className="system-page procurement-order-list-page">
+      <section className="system-page-topbar">
+        <div>
+          <h1>采购订单</h1>
+          <p>跟踪采购单审批、下发、收货和完成状态。</p>
+        </div>
+      </section>
+
+      <ProCard className="system-page-card" bordered={false}>
+        <Space className="system-page-toolbar" wrap>
+          <Input placeholder="供应商ID" value={supplierInput} onChange={(event) => setSupplierInput(event.target.value)} />
+          <Select aria-label="采购订单状态筛选" options={statusOptions} value={status} onChange={(value) => { setStatus(value); setCurrentPage(INITIAL_PAGE); }} />
+          <Button icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button>
+          <Button icon={<ReloadOutlined />} onClick={loadOrders}>刷新</Button>
+        </Space>
+        {pageResult?.records.length === 0 ? (
+          <EmptyState message="暂无采购订单" />
+        ) : (
+          <Table<ProcurementOrderRecord>
+            rowKey="id"
+            columns={buildColumns(openDetail)}
+            dataSource={pageResult?.records ?? []}
+            loading={loading}
+            pagination={{
+              current: Number(pageResult?.current ?? currentPage),
+              pageSize: Number(pageResult?.size ?? pageSize),
+              total: Number(pageResult?.total ?? 0),
+              showSizeChanger: true,
+            }}
+            onChange={(pagination: TablePaginationConfig) => {
+              setCurrentPage(pagination.current ?? INITIAL_PAGE);
+              setPageSize(pagination.pageSize ?? DEFAULT_PAGE_SIZE);
+            }}
+          />
+        )}
+      </ProCard>
+
+      <ProcurementOrderDetailModal
+        availableActions={availableActions}
+        canFireEvent={canFireEvent}
+        detail={detail}
+        loading={detailLoading}
+        open={detailOpen}
+        onCancel={() => setDetailOpen(false)}
+        onFireEvent={handleFireEvent}
+      />
+    </div>
+  );
+}
+
+function buildColumns(onDetail: (record: ProcurementOrderRecord) => void): ColumnsType<ProcurementOrderRecord> {
+  return [
+    { title: '采购单号', dataIndex: 'orderNo', key: 'orderNo', width: 170 },
+    { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', render: (value) => value || '-' },
+    { title: '订单日期', dataIndex: 'orderDate', key: 'orderDate', width: 120, render: (value) => value || '-' },
+    { title: '交货日期', dataIndex: 'expectedDeliveryDate', key: 'expectedDeliveryDate', width: 120, render: (value) => value || '-' },
+    {
+      title: '状态',
+      key: 'status',
+      width: 120,
+      render: (_, record) => <Tag color={statusColorMap[record.status ?? ''] ?? 'default'}>{record.statusLabel || record.status || '-'}</Tag>,
+    },
+    { title: '总金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 120, render: formatAmount },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 120,
+      render: (_, record) => (
+        <Button icon={<EyeOutlined />} size="small" aria-label={`详情 ${record.orderNo}`} onClick={() => onDetail(record)}>
+          详情
+        </Button>
+      ),
+    },
+  ];
+}
+
+function ProcurementOrderDetailModal({
+  availableActions,
+  canFireEvent,
+  detail,
+  loading,
+  open,
+  onCancel,
+  onFireEvent,
+}: {
+  availableActions: string[];
+  canFireEvent: boolean;
+  detail: ProcurementOrderRecord | null;
+  loading: boolean;
+  open: boolean;
+  onCancel: () => void;
+  onFireEvent: (event: string) => void;
+}) {
+  return (
+    <Modal footer={null} getContainer={false} onCancel={onCancel} open={open} title={detail?.orderNo ?? '采购订单详情'} width={980}>
+      <ProCard loading={loading} bordered={false}>
+        {detail ? (
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Descriptions column={3} size="small">
+              <Descriptions.Item label="采购单号">{detail.orderNo}</Descriptions.Item>
+              <Descriptions.Item label="供应商">{detail.supplierName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="状态">{detail.statusLabel || detail.status || '-'}</Descriptions.Item>
+              <Descriptions.Item label="订单日期">{detail.orderDate || '-'}</Descriptions.Item>
+              <Descriptions.Item label="交货日期">{detail.expectedDeliveryDate || '-'}</Descriptions.Item>
+              <Descriptions.Item label="总金额">{formatAmount(detail.totalAmount)}</Descriptions.Item>
+              <Descriptions.Item label="MRP批次">{detail.mrpBatchNo || '-'}</Descriptions.Item>
+              <Descriptions.Item label="付款状态">{detail.paymentStatus || '-'}</Descriptions.Item>
+              <Descriptions.Item label="备注">{detail.remark || '-'}</Descriptions.Item>
+            </Descriptions>
+            {canFireEvent && availableActions.length > 0 ? (
+              <Space wrap>
+                {availableActions.map((event) => (
+                  <Button key={event} type="primary" onClick={() => onFireEvent(event)}>
+                    {getActionLabel(event)}
+                  </Button>
+                ))}
+              </Space>
+            ) : null}
+            <Table<ProcurementOrderLineRecord>
+              rowKey="id"
+              size="small"
+              pagination={false}
+              columns={lineColumns}
+              dataSource={detail.lines ?? []}
+            />
+          </Space>
+        ) : null}
+      </ProCard>
+    </Modal>
+  );
+}
+
+const lineColumns: ColumnsType<ProcurementOrderLineRecord> = [
+  { title: '行号', dataIndex: 'lineNo', key: 'lineNo', width: 70 },
+  { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120, render: (value) => value || '-' },
+  { title: '物料名称', dataIndex: 'materialName', key: 'materialName', render: (value) => value || '-' },
+  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, render: formatQuantity },
+  { title: '单位', dataIndex: 'unit', key: 'unit', width: 70, render: (value) => value || '-' },
+  { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, render: formatAmount },
+  { title: '金额', dataIndex: 'lineAmount', key: 'lineAmount', width: 100, render: formatAmount },
+  { title: '已到货', dataIndex: 'deliveredQuantity', key: 'deliveredQuantity', width: 90, render: formatQuantity },
+  { title: '合格', dataIndex: 'acceptedQuantity', key: 'acceptedQuantity', width: 80, render: formatQuantity },
+  { title: '不合格', dataIndex: 'rejectedQuantity', key: 'rejectedQuantity', width: 90, render: formatQuantity },
+];
+
+function getActionLabel(event: string): string {
+  return actionLabelMap[event] ?? event;
+}
+
+function formatAmount(value?: number | null): string {
+  return typeof value === 'number'
+    ? value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : '0.00';
+}
+
+function formatQuantity(value?: number | null): string {
+  return typeof value === 'number' ? value.toLocaleString('zh-CN') : '0';
+}

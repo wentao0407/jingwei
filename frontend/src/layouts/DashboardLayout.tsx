@@ -53,6 +53,38 @@ const fallbackMenuItems: MenuDataItem[] = [
     ],
   },
   {
+    path: '/procurement',
+    name: '采购管理',
+    icon: <TruckOutlined />,
+    children: [
+      {
+        path: '/procurement/orders',
+        name: '采购订单',
+        icon: <ShoppingCartOutlined />,
+      },
+      {
+        path: '/procurement/asns',
+        name: '到货通知',
+        icon: <TruckOutlined />,
+      },
+      {
+        path: '/procurement/bom-mrp',
+        name: 'BOM与MRP',
+        icon: <FileTextOutlined />,
+      },
+      {
+        path: '/procurement/receiving',
+        name: '收货管理',
+        icon: <InboxOutlined />,
+      },
+      {
+        path: '/procurement/putaway',
+        name: '上架管理',
+        icon: <ShopOutlined />,
+      },
+    ],
+  },
+  {
     path: '/master',
     name: '基础数据',
     icon: <DatabaseOutlined />,
@@ -320,6 +352,41 @@ function getPageMeta(pathname: string) {
     };
   }
 
+  if (pathname === '/procurement/orders') {
+    return {
+      title: '采购订单',
+      subTitle: '跟踪采购审批、下发、收货和完成状态',
+    };
+  }
+
+  if (pathname === '/procurement/asns') {
+    return {
+      title: '到货通知',
+      subTitle: '跟踪 ASN 到货、收货和质检状态',
+    };
+  }
+
+  if (pathname === '/procurement/bom-mrp') {
+    return {
+      title: 'BOM 与 MRP',
+      subTitle: '查看物料清单和 MRP 采购建议',
+    };
+  }
+
+  if (pathname === '/procurement/receiving') {
+    return {
+      title: '收货管理',
+      subTitle: '从 ASN 创建收货单并逐行确认实收数量',
+    };
+  }
+
+  if (pathname === '/procurement/putaway') {
+    return {
+      title: '上架管理',
+      subTitle: '推荐库位并确认收货行上架位置',
+    };
+  }
+
   return {
     title: '销售订单',
     subTitle: '按客户、交期、状态跟踪订单履约进度',
@@ -397,6 +464,26 @@ function normalizeMenuPath(path?: string | null): string {
 
   if (path === '/order/productionOrder' || path === '/order/production-order') {
     return '/order/production';
+  }
+
+  if (path === '/procurement/order' || path === '/procurement/procurement-order') {
+    return '/procurement/orders';
+  }
+
+  if (path === '/procurement/asn') {
+    return '/procurement/asns';
+  }
+
+  if (path === '/procurement/bom' || path === '/procurement/mrp') {
+    return '/procurement/bom-mrp';
+  }
+
+  if (path === '/warehouse/receiving' || path === '/procurement/receive') {
+    return '/procurement/receiving';
+  }
+
+  if (path === '/warehouse/putaway' || path === '/procurement/put-away') {
+    return '/procurement/putaway';
   }
 
   return path || '/';

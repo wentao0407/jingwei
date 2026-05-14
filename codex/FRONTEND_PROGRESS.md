@@ -2,7 +2,7 @@
 
 > 用途：记录 JingWei 前端开发阶段、当前进度、下一步任务和恢复上下文。  
 > 当前前端风格：Quiet 企业后台风。  
-> 更新时间：2026-05-10。  
+> 更新时间：2026-05-11。
 > 维护规则：每次完成前端任务后，必须更新本文档的阶段状态、已完成内容、验证结果和下一步任务。
 
 ---
@@ -37,9 +37,9 @@ pnpm build
 
 ## Current Frontend Status
 
-**Current Stage:** Stage 5 - 生产订单模块
-**Current Task:** Stage 5 第二批 - 生产进度、物料需求展示和成本关联入口已完成
-**Next Task:** 进入 Stage 6，开始采购与仓储模块，优先实现采购订单列表与状态流转入口。
+**Current Stage:** Stage 6 - 采购与仓储模块
+**Current Task:** Stage 6 已完成 - 采购订单、ASN、BOM/MRP、收货管理和上架管理入口已完成
+**Next Task:** 进入 Stage 7，开始库存与物流模块，优先实现库存查询入口。
 
 已完成：
 
@@ -276,6 +276,42 @@ pnpm build
   - 行成本入口对接 `POST /cost/detail` 和 `POST /cost/issues`
   - 物料需求入口按 `procurement:mrp:calculate` 权限控制显示
   - 成本入口按 `cost:query:detail` 权限控制显示
+- 已实现采购订单列表页：
+  - 路由为 `/procurement/orders`
+  - 读取 `POST /procurement/order/page`
+  - 支持供应商 ID、状态筛选、分页、刷新、loading / error / empty 状态
+  - 详情对接 `POST /procurement/order/detail`
+  - 可用操作对接 `POST /procurement/order/available-actions`
+  - 状态流转对接 `POST /procurement/order/fire-event`
+  - 状态操作入口按 `procurement:order:fire-event` 权限控制显示
+- 已实现 ASN 到货通知页：
+  - 路由为 `/procurement/asns`
+  - 读取 `POST /procurement/asn/page`
+  - 支持采购订单 ID、状态筛选、详情查看、收货和质检入口
+  - 收货对接 `POST /procurement/asn/receive`
+  - 质检对接 `POST /procurement/asn/qc`
+  - 收货、质检表单校验数量必须大于 0
+- 已实现 BOM 与 MRP 页：
+  - 路由为 `/procurement/bom-mrp`
+  - BOM 列表对接 `POST /procurement/bom/page`，详情对接 `POST /procurement/bom/detail`
+  - BOM 审批对接 `POST /procurement/bom/approve`
+  - MRP 计算对接 `POST /procurement/mrp/calculate`
+  - MRP 结果查询对接 `POST /procurement/mrp/results`
+- 已实现收货管理页：
+  - 路由为 `/procurement/receiving`
+  - 从 ASN 创建收货单对接 `POST /warehouse/receiving/create`
+  - 收货单详情对接 `POST /warehouse/receiving/detail`
+  - 逐行确认收货对接 `POST /warehouse/receiving/confirm`
+  - 本次实收数量校验必须大于 0 且不能超过剩余可收数量
+- 已实现上架管理页：
+  - 路由为 `/procurement/putaway`
+  - 收货单详情对接 `POST /warehouse/receiving/detail`
+  - 推荐库位对接 `POST /warehouse/receiving/suggest-locations`
+  - 确认上架对接 `POST /warehouse/receiving/putaway`
+  - 未收货或已完成上架的行不会展示可提交上架操作
+- 主布局 fallback 菜单已包含“采购管理 / 采购订单 / 到货通知 / BOM与MRP / 收货管理 / 上架管理”。
+- 已兼容后端菜单路径 `/procurement/order`、`/procurement/asn`、`/procurement/bom`、`/procurement/mrp`、`/warehouse/receiving`、`/warehouse/putaway`。
+- 已新增 `V56__restore_admin_procurement_stage6_permissions.sql`，回填 ADMIN 采购与仓储 Stage 6 菜单和按钮权限。
 - 已新增本地 ADMIN 客户/供应商菜单和按钮权限恢复迁移：
   - 新增 `V48__restore_admin_customer_supplier_permissions.sql`
   - 恢复基础数据、客户管理、供应商管理菜单和客户/供应商按钮权限点
@@ -704,7 +740,7 @@ pnpm build
 
 ### Stage 6: 采购与仓储模块
 
-**Status:** Not Started
+**Status:** Done
 
 目标：完成采购、到货、收货、上架等库存前置链路。
 
@@ -730,6 +766,17 @@ pnpm build
 - ASN、收货、上架状态可追踪
 - 数量输入有前端校验
 - 后端返回的业务错误不被隐藏
+
+当前实现：
+
+- 已实现采购订单列表、详情和状态流转入口。
+- 已实现 ASN 到货通知列表、详情、收货和质检入口。
+- 已实现 BOM 列表、详情、审批入口和 MRP 计算、结果查询入口。
+- 已实现收货管理作业台，支持从 ASN 创建收货单、查询收货单详情和逐行确认收货。
+- 已实现上架管理作业台，支持查询收货单详情、推荐库位和逐行确认上架。
+- 已补齐 `/procurement/orders`、`/procurement/asns`、`/procurement/bom-mrp`、`/procurement/receiving`、`/procurement/putaway` 路由。
+- 已补齐主布局 fallback 菜单和常见后端菜单路径兼容。
+- 已新增 `V56__restore_admin_procurement_stage6_permissions.sql`，回填 ADMIN 菜单与按钮权限。
 
 ### Stage 7: 库存与物流模块
 
@@ -812,6 +859,56 @@ pnpm build
 ---
 
 ## Update Log
+
+### 2026-05-11 Stage 6 - 采购订单、ASN、BOM/MRP、收货与上架入口
+
+已完成：
+
+- 新增采购订单列表页，支持供应商 ID、状态筛选、详情查看和按后端可用操作执行状态流转。
+- 新增 ASN 到货通知页，支持采购订单 ID、状态筛选、详情查看、确认收货和提交质检。
+- 新增 BOM 与 MRP 页，支持 BOM 列表/详情/审批、MRP 计算和 MRP 结果查询。
+- 新增收货管理页，支持从 ASN 创建收货单、按收货单 ID 查询详情和逐行确认收货。
+- 新增上架管理页，支持按收货单 ID 查询待上架明细、推荐库位和确认上架。
+- 收货、质检、上架表单均处理 loading / error 状态；数量输入在前端校验，避免空数量或 0 数量提交。
+- 主布局新增采购管理 fallback 菜单，并兼容采购、ASN、BOM/MRP、收货、上架的常见后端菜单 path。
+- 新增 `V56__restore_admin_procurement_stage6_permissions.sql`，恢复 ADMIN 采购与仓储 Stage 6 菜单和按钮权限。
+
+变更文件：
+
+- `frontend/src/services/procurement/procurementService.ts`
+- `frontend/src/services/procurement/procurementService.test.ts`
+- `frontend/src/services/warehouse/receivingService.ts`
+- `frontend/src/services/warehouse/receivingService.test.ts`
+- `frontend/src/pages/procurement/orders/ProcurementOrderListPage.tsx`
+- `frontend/src/pages/procurement/orders/ProcurementOrderListPage.test.tsx`
+- `frontend/src/pages/procurement/asns/AsnManagementPage.tsx`
+- `frontend/src/pages/procurement/asns/AsnManagementPage.test.tsx`
+- `frontend/src/pages/procurement/bom-mrp/BomMrpPage.tsx`
+- `frontend/src/pages/procurement/bom-mrp/BomMrpPage.test.tsx`
+- `frontend/src/pages/procurement/receiving/ReceivingManagementPage.tsx`
+- `frontend/src/pages/procurement/receiving/ReceivingManagementPage.test.tsx`
+- `frontend/src/pages/procurement/putaway/PutawayManagementPage.tsx`
+- `frontend/src/pages/procurement/putaway/PutawayManagementPage.test.tsx`
+- `frontend/src/routes/appRouter.tsx`
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `src/main/resources/db/migration/V56__restore_admin_procurement_stage6_permissions.sql`
+- `src/test/java/com/jingwei/procurement/AdminProcurementPermissionBackfillMigrationTest.java`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+
+- `pnpm exec vitest run src/services/procurement/procurementService.test.ts src/pages/procurement/orders/ProcurementOrderListPage.test.tsx src/pages/procurement/asns/AsnManagementPage.test.tsx src/pages/procurement/bom-mrp/BomMrpPage.test.tsx` 通过，11 个测试通过。
+- `pnpm exec vitest run src/services/warehouse/receivingService.test.ts src/pages/procurement/receiving/ReceivingManagementPage.test.tsx src/pages/procurement/putaway/PutawayManagementPage.test.tsx` 通过，7 个测试通过。
+- `mvn -Dtest=AdminProcurementPermissionBackfillMigrationTest test` 通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，194 个测试通过；存在既有 Ant Design/jsdom act warning。
+- `pnpm build` 通过，存在 Vite chunk size warning。
+- Playwright 冒烟验证通过：使用 mock API 打开 `http://127.0.0.1:5174/procurement/receiving` 和 `/procurement/putaway`，确认创建收货单、确认收货、查询待上架明细、推荐库位和确认上架流程可用；控制台 0 errors、1 个 Vite 开发环境 warning。
+
+后续任务：
+
+- 进入 Stage 7，开始库存与物流模块，优先实现库存查询入口。
 
 ### 2026-05-10 Stage 5 - 生产进度、物料需求与成本入口
 

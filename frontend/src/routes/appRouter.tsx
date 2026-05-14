@@ -14,6 +14,11 @@ import { SupplierManagementPage } from '@/pages/master/suppliers/SupplierManagem
 import { WarehouseManagementPage } from '@/pages/master/warehouses/WarehouseManagementPage';
 import { ProductionOrderListPage } from '@/pages/order/production/ProductionOrderListPage';
 import { SalesOrderListPage } from '@/pages/order/sales/SalesOrderListPage';
+import { AsnManagementPage } from '@/pages/procurement/asns/AsnManagementPage';
+import { BomMrpPage } from '@/pages/procurement/bom-mrp/BomMrpPage';
+import { ProcurementOrderListPage } from '@/pages/procurement/orders/ProcurementOrderListPage';
+import { PutawayManagementPage } from '@/pages/procurement/putaway/PutawayManagementPage';
+import { ReceivingManagementPage } from '@/pages/procurement/receiving/ReceivingManagementPage';
 import { SystemConfigPage } from '@/pages/system/configs/SystemConfigPage';
 import { MenuManagementPage } from '@/pages/system/menus/MenuManagementPage';
 import { RoleManagementPage } from '@/pages/system/roles/RoleManagementPage';
@@ -96,6 +101,26 @@ export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRo
         {
           path: 'order/production',
           element: <ProductionOrderListPage />,
+        },
+        {
+          path: 'procurement/orders',
+          element: <ProcurementOrderListPage />,
+        },
+        {
+          path: 'procurement/asns',
+          element: <AsnManagementPage />,
+        },
+        {
+          path: 'procurement/bom-mrp',
+          element: <BomMrpPage />,
+        },
+        {
+          path: 'procurement/receiving',
+          element: <ReceivingManagementPage />,
+        },
+        {
+          path: 'procurement/putaway',
+          element: <PutawayManagementPage />,
         },
       ],
     },
