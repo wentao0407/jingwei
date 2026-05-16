@@ -9,6 +9,8 @@ import {
   getOutboundDetail,
   getStocktakingDetail,
   pageInboundOrders,
+  pageInventoryMaterials,
+  pageInventorySkus,
   pageOutboundOrders,
   pageStocktakingOrders,
   recordStocktakingCount,
@@ -95,6 +97,32 @@ describe('inventoryService', () => {
       stocktakingId: '30001',
       lineId: '31001',
       actualQty: 8,
+    });
+  });
+
+  it('queries sku and material stock with normalized filters', async () => {
+    mockedPost.mockResolvedValue({ data: ok({ records: [], total: 0 }) });
+
+    await pageInventorySkus({ current: 0, size: 0, skuId: ' 90001 ', warehouseId: ' ', batchNo: ' B-01 ' });
+    await pageInventoryMaterials({
+      current: 2,
+      size: 20,
+      materialId: ' 80001 ',
+      warehouseId: ' 30001 ',
+      batchNo: '',
+    });
+
+    expect(mockedPost).toHaveBeenNthCalledWith(1, '/inventory/sku/page', {
+      current: 1,
+      size: 1,
+      skuId: '90001',
+      batchNo: 'B-01',
+    });
+    expect(mockedPost).toHaveBeenNthCalledWith(2, '/inventory/material/page', {
+      current: 2,
+      size: 20,
+      materialId: '80001',
+      warehouseId: '30001',
     });
   });
 });

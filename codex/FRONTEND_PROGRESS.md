@@ -2,7 +2,7 @@
 
 > 用途：记录 JingWei 前端开发阶段、当前进度、下一步任务和恢复上下文。  
 > 当前前端风格：Quiet 企业后台风。  
-> 更新时间：2026-05-14。
+> 更新时间：2026-05-16。
 > 维护规则：每次完成前端任务后，必须更新本文档的阶段状态、已完成内容、验证结果和下一步任务。
 
 ---
@@ -37,9 +37,9 @@ pnpm build
 
 ## Current Frontend Status
 
-**Current Stage:** Stage 8 - 经营辅助模块
-**Current Task:** Stage 8 - 工作台首页、审批中心、通知中心、报表中心和成本核算入口已完成
-**Next Task:** 前端阶段计划已完成；后续可优先做全链路联调、路由懒加载和生产部署优化。
+**Current Stage:** 联调与生产优化
+**Current Task:** 前端代码检视剩余主要查询与管理入口修复已完成
+**Next Task:** 为生产订单、BOM、采购订单和 ASN 的新增/编辑类写操作设计完整业务表单；发运列表需等待后端抽象发运单聚合或 page/detail 契约。
 
 已完成：
 
@@ -56,6 +56,7 @@ pnpm build
 - 已新增登录会话存储，保存当前用户、角色、权限和后端授权菜单树。
 - 主布局已优先使用登录返回的后端菜单树渲染侧边栏，并显示当前用户真实姓名。
 - 已补充 `POST /system/menu/permissions` 前端服务方法，后续可用于刷新权限。
+- 已补齐库存 SKU/物料直接查询、退货列表、波次列表/明细、审批配置、操作日志、数据范围、库存台账矩阵、用户详情/改密、销售订单时间线和数量变更记录入口。
 - 已进入 Stage 2，新增用户管理列表页基础版：
   - 读取 `POST /system/user/page`
   - 支持 keyword 查询
@@ -862,6 +863,27 @@ pnpm build
 - 已实现报表中心入口，路由为 `/report/ledger`、`/report/flow`、`/report/age`、`/report/turnover`，对接库存台账、出入库流水、库龄分析和畅滞销分析查询接口。
 - 已实现成本核算入口，路由为 `/cost/query` 和 `/cost/report`，对接 `POST /cost/detail` 和 `POST /cost/issues`。
 - 主布局 fallback 菜单已新增“审批中心 / 我的审批”、“通知中心 / 我的通知 / 通知偏好”、“报表中心”和“成本核算”，并兼容后端菜单路径。
+- 已完成全应用页面路由懒加载，所有业务页面通过 `React.lazy` + `Suspense` 按需加载。
+- 已完成生产构建拆包，Ant Design、Pro Components、Axios 和业务页面 chunk 已分离，构建不再出现 chunk size warning。
+- 全链路联调时已修复后端菜单归一化路径导致的 ProLayout duplicate key warning，菜单 key 改为使用后端 menu id。
+- 全链路联调时已修复报表接口真实数据 `inventoryId` 为空导致的 Table row key warning。
+- 已新增 `V60__ensure_stage8_runtime_tables.sql`，幂等补齐库存预警和通知中心运行时表，兼容本地数据库跳过历史表结构 migration 的情况。
+- 已完成前端代码检视第一批修复：
+  - 提取 service 层请求参数清洗 helper 到 `frontend/src/services/shared/normalize.ts`。
+  - 为 auth、system user、approval、report 等 service 补充行为测试。
+  - 主布局在后端授权菜单为空时恢复完整 fallback 菜单，避免系统管理以外入口消失。
+- 已完成报表导出集成：
+  - 报表 service 已封装库存台账、出入库流水、库龄分析和畅滞销分析 4 个 export 端点。
+  - 报表中心已新增“导出报表”按钮，按当前 tab 和筛选条件导出 Blob 文件。
+- 已完成审批历史记录：
+  - 审批 service 已封装 `POST /approval/task/records`。
+  - 审批中心待办列表已新增历史入口，可按业务类型、业务 ID 和业务单号查看审批记录。
+- 已完成前端代码检视 5-8 项修复：
+  - 退货 service 已补齐详情、审批通过、审批驳回、确认收货和质检接口封装。
+  - 审批 service 已封装通用 `POST /approval/submit`。
+  - 通知 service 已封装 `POST /notification/unread-count`。
+  - 主布局顶部通知按钮已展示未读数量 badge，并点击跳转通知列表。
+  - 已确认波次/发运列表相关 `page/detail` 端点当前后端未提供，前端暂不伪接不存在接口。
 
 ---
 
@@ -883,6 +905,127 @@ pnpm build
 ---
 
 ## Update Log
+
+### 2026-05-15 代码检视修复 - 5-8 项
+
+已完成：
+
+- 补全退货 service 已存在后端端点：`POST /order/return/detail`、`POST /order/return/approve`、`POST /order/return/reject`、`POST /order/return/receive`、`POST /order/return/qc`。
+- 补全通用审批提交 service：`POST /approval/submit`，保留业务模块后续按需接入。
+- 补全未读通知数 service：`POST /notification/unread-count`。
+- 主布局顶部通知按钮增加未读数量 badge，点击跳转 `/notification/list`。
+- 复核波次/发运列表：当前后端仅提供波次创建/确认拣货/完成拣货单/取消，以及发运确认；未提供 `page/detail`，因此未新增虚假的列表调用。
+
+变更文件：
+
+- `frontend/src/services/order/returnOrderService.ts`
+- `frontend/src/services/order/returnOrderService.test.ts`
+- `frontend/src/services/approval/approvalService.ts`
+- `frontend/src/services/approval/approvalService.test.ts`
+- `frontend/src/services/notification/notificationService.ts`
+- `frontend/src/services/notification/notificationService.test.ts`
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `frontend/src/layouts/DashboardLayout.test.tsx`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+- `codex/FRONTEND_CODE_REVIEW.md`
+
+验证：
+
+- `pnpm exec vitest run src/services/order/returnOrderService.test.ts src/services/approval/approvalService.test.ts src/services/notification/notificationService.test.ts src/layouts/DashboardLayout.test.tsx src/pages/notification/NotificationCenterPage.test.tsx src/pages/order/sales/SalesOrderListPage.test.tsx` 通过，38 个测试通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，70 个测试文件、237 个测试通过；存在既有 React/Ant Design jsdom `act(...)` warning。
+- `pnpm build` 通过，生产构建完成且无 Vite chunk size warning。
+
+后续任务：
+
+- 继续按 `codex/FRONTEND_CODE_REVIEW.md` 处理库存直接查询、审批配置管理、用户详情/改密、订单时间线等后续修复。
+- 波次/发运列表需要后端先新增 `page/detail` 查询契约。
+
+### 2026-05-15 代码检视修复 - 第一批、报表导出、审批历史
+
+已完成：
+
+- 提取重复的 `normalizeOptionalFields` 到共享 helper `frontend/src/services/shared/normalize.ts`，并更新 service 层复用。
+- 新增 service 层测试覆盖：auth、system user、approval、report 和共享 normalize helper。
+- 修复后端授权菜单为空时主布局 fallback 菜单不完整的问题，恢复审批、通知、报表、成本、库存物流、基础数据等入口。
+- 报表中心新增导出能力，对接 `POST /report/ledger/export`、`POST /report/flow/export`、`POST /report/age/export`、`POST /report/turnover/export`，并按当前筛选条件下载 Blob。
+- 审批中心新增审批历史入口，对接 `POST /approval/task/records`，支持查看同一业务单据的审批记录。
+
+变更文件：
+
+- `frontend/src/services/shared/normalize.ts`
+- `frontend/src/services/shared/normalize.test.ts`
+- `frontend/src/services/auth/authService.test.ts`
+- `frontend/src/services/system/userService.test.ts`
+- `frontend/src/services/approval/approvalService.ts`
+- `frontend/src/services/approval/approvalService.test.ts`
+- `frontend/src/services/report/reportService.ts`
+- `frontend/src/services/report/reportService.test.ts`
+- `frontend/src/pages/approval/ApprovalCenterPage.tsx`
+- `frontend/src/pages/approval/ApprovalCenterPage.test.tsx`
+- `frontend/src/pages/report/ReportCenterPage.tsx`
+- `frontend/src/pages/report/ReportCenterPage.test.tsx`
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `frontend/src/layouts/menuItems.tsx`
+- `frontend/src/layouts/DashboardLayout.test.tsx`
+- `frontend/src/layouts/DashboardLayout.menu.test.ts`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+
+- `pnpm exec vitest run src/services/shared/normalize.test.ts src/services/auth/authService.test.ts src/services/system/userService.test.ts src/services/report/reportService.test.ts src/pages/report/ReportCenterPage.test.tsx src/layouts/DashboardLayout.test.tsx src/layouts/DashboardLayout.menu.test.ts src/services/approval/approvalService.test.ts src/pages/approval/ApprovalCenterPage.test.tsx` 通过，31 个测试通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，70 个测试文件、232 个测试通过；存在既有 React/Ant Design jsdom `act(...)` warning。
+- `pnpm build` 通过，生产构建完成且无 Vite chunk size warning。
+
+后续任务：
+
+- 继续按 `codex/FRONTEND_CODE_REVIEW.md` 处理库存直接查询、审批配置管理、用户详情/改密、订单时间线等后续修复。
+- 若继续联调，先复测 `/inventory/alert/list`、`/notification/page`、`/notification/preference/detail`。
+
+### 2026-05-15 联调与生产优化 - 全链路联调、路由懒加载
+
+已完成：
+
+- `frontend/src/routes/appRouter.tsx` 已改为页面级懒加载，所有业务页面通过 `React.lazy` + `Suspense` 加载，并复用 `LoadingState` 作为路由 fallback。
+- `frontend/vite.config.js` 已配置生产构建 `manualChunks`，并同步 `vite.config.ts`，将 `vendor-antd`、`vendor-pro`、`vendor-http` 和其他 vendor 拆包。
+- 修复真实后端菜单树里父子路径归一化后重复导致的 ProLayout duplicate key warning：`buildMenuItems` 改为使用后端 menu id 作为稳定 key，并拆到 `frontend/src/layouts/menuItems.tsx`。
+- 修复报表中心真实接口数据在 `inventoryId` 为空时触发的 Table row key warning：新增 `reportRowKeys` helper，为台账、库龄和畅滞销行生成稳定 `clientRowKey`。
+- 新增 `V60__ensure_stage8_runtime_tables.sql`，幂等创建/补齐库存预警和通知中心运行时表，避免本地库缺少 Stage 8 runtime table 时 `/inventory/alert/list`、`/notification/page`、`/notification/preference/detail` 返回 500。
+- Playwright 全链路冒烟已覆盖 `/`、`/warehouse/waves`、`/warehouse/shipments`、`/approval/tasks`、`/report/*`、`/cost/*`、`/inventory/alerts`、`/notification/list`、`/notification/preference`。当前运行的 8080 后端尚未加载 V60，因此库存预警和通知接口仍需后端重启/迁移后复测。
+
+变更文件：
+
+- `frontend/src/routes/appRouter.tsx`
+- `frontend/src/routes/appRouter.test.ts`
+- `frontend/vite.config.js`
+- `frontend/vite.config.ts`
+- `frontend/src/build/viteConfig.test.ts`
+- `frontend/src/layouts/DashboardLayout.tsx`
+- `frontend/src/layouts/menuItems.tsx`
+- `frontend/src/layouts/DashboardLayout.menu.test.ts`
+- `frontend/src/pages/report/ReportCenterPage.tsx`
+- `frontend/src/pages/report/reportRowKeys.ts`
+- `frontend/src/pages/report/ReportCenterPage.rowKeys.test.ts`
+- `src/main/resources/db/migration/V60__ensure_stage8_runtime_tables.sql`
+- `src/test/java/com/jingwei/operation/Stage8RuntimeTableMigrationTest.java`
+- `codex/FRONTEND_PROGRESS.md`
+- `codex/PROGRESS.md`
+
+验证：
+
+- `mvn -q -Dtest=Stage8RuntimeTableMigrationTest test` 通过。
+- `pnpm exec vitest run src/layouts/DashboardLayout.menu.test.ts src/layouts/DashboardLayout.test.tsx src/pages/report/ReportCenterPage.rowKeys.test.ts src/pages/report/ReportCenterPage.test.tsx src/routes/appRouter.test.ts src/build/viteConfig.test.ts` 通过，20 个测试通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，67 个测试文件、221 个测试通过；存在既有 Ant Design/jsdom `act(...)` warning。
+- `pnpm build` 通过，生产构建完成且无 Vite chunk size warning。
+
+后续任务：
+
+- 重启/迁移当前运行后端后复测 `/inventory/alert/list`、`/notification/page`、`/notification/preference/detail`。
+- 继续生产部署脚本、Nginx/systemd 和环境配置验证。
 
 ### 2026-05-14 Stage 8 - 通知中心、报表中心与成本核算
 

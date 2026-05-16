@@ -1,9 +1,10 @@
-import { AuditOutlined, CheckOutlined, ReloadOutlined } from '@ant-design/icons';
+import { AuditOutlined, CheckOutlined, HistoryOutlined, ReloadOutlined } from '@ant-design/icons';
 import { App, Button, Card, Form, Input, Modal, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import {
   approveApprovalTask,
+  listApprovalRecords,
   listMyPendingApprovalTasks,
   type ApprovalTaskRecord,
 } from '@/services/approval/approvalService';
@@ -13,8 +14,11 @@ export function ApprovalCenterPage() {
   const [form] = Form.useForm<{ opinion: string }>();
   const [tasks, setTasks] = useState<ApprovalTaskRecord[]>([]);
   const [selectedTask, setSelectedTask] = useState<ApprovalTaskRecord | null>(null);
+  const [historyTask, setHistoryTask] = useState<ApprovalTaskRecord | null>(null);
+  const [historyRecords, setHistoryRecords] = useState<ApprovalTaskRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const columns: ColumnsType<ApprovalTaskRecord> = [
     { title: '业务类型', dataIndex: 'businessType', render: (value) => value || '-' },
@@ -25,19 +29,29 @@ export function ApprovalCenterPage() {
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 180,
       render: (_, record) => (
-        <Button
-          size="small"
-          icon={<AuditOutlined />}
-          aria-label={`审批 ${record.id}`}
-          onClick={() => {
-            form.resetFields();
-            setSelectedTask(record);
-          }}
-        >
-          审批
-        </Button>
+        <Space size={8}>
+          <Button
+            size="small"
+            icon={<AuditOutlined />}
+            aria-label={`审批 ${record.id}`}
+            onClick={() => {
+              form.resetFields();
+              setSelectedTask(record);
+            }}
+          >
+            审批
+          </Button>
+          <Button
+            size="small"
+            icon={<HistoryOutlined />}
+            aria-label={`审批历史 ${record.id}`}
+            onClick={() => void openHistory(record)}
+          >
+            历史
+          </Button>
+        </Space>
       ),
     },
   ];
@@ -81,6 +95,29 @@ export function ApprovalCenterPage() {
     }
   };
 
+  const openHistory = async (record: ApprovalTaskRecord) => {
+    if (!record.businessType || !record.businessId) {
+      message.error('缺少业务类型或业务 ID，无法查询审批历史');
+      return;
+    }
+
+    setHistoryTask(record);
+    setHistoryRecords([]);
+    setHistoryLoading(true);
+    try {
+      const records = await listApprovalRecords({
+        businessType: record.businessType,
+        businessId: record.businessId,
+        businessNo: record.businessNo ?? undefined,
+      });
+      setHistoryRecords(records);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '查询审批历史失败');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
       <Card
@@ -118,6 +155,29 @@ export function ApprovalCenterPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      <Modal
+        title="审批历史"
+        open={Boolean(historyTask)}
+        onCancel={() => setHistoryTask(null)}
+        footer={null}
+        destroyOnHidden
+        width={760}
+      >
+        <Space direction="vertical" size={12} style={{ width: '100%' }}>
+          <Typography.Text type="secondary">
+            {historyTask?.businessNo || historyTask?.businessId || '-'}
+          </Typography.Text>
+          <Table
+            rowKey="id"
+            columns={historyColumns}
+            dataSource={historyRecords}
+            pagination={false}
+            loading={historyLoading}
+            size="small"
+          />
+        </Space>
+      </Modal>
     </Space>
   );
 }
@@ -125,3 +185,10 @@ export function ApprovalCenterPage() {
 function renderStatus(value?: string | null) {
   return value ? <Tag color="processing">{value}</Tag> : '-';
 }
+
+const historyColumns: ColumnsType<ApprovalTaskRecord> = [
+  { title: '状态', dataIndex: 'status', width: 120, render: renderStatus },
+  { title: '审批意见', dataIndex: 'opinion', render: (value) => value || '-' },
+  { title: '审批人', dataIndex: 'approverId', width: 140, render: (value) => value || '-' },
+  { title: '审批时间', dataIndex: 'approvedAt', width: 180, render: (_, record) => record.approvedAt || record.createdAt || '-' },
+];

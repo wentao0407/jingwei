@@ -1,263 +1,12 @@
-import {
-  ApartmentOutlined,
-  AlertOutlined,
-  AppstoreOutlined,
-  AuditOutlined,
-  BarChartOutlined,
-  BellOutlined,
-  BookOutlined,
-  CalendarOutlined,
-  CarryOutOutlined,
-  CodeOutlined,
-  ColumnWidthOutlined,
-  DashboardOutlined,
-  DatabaseOutlined,
-  DollarOutlined,
-  FileTextOutlined,
-  HomeOutlined,
-  InboxOutlined,
-  LogoutOutlined,
-  MailOutlined,
-  MenuOutlined,
-  ShoppingCartOutlined,
-  ShopOutlined,
-  SkinOutlined,
-  SmileOutlined,
-  SolutionOutlined,
-  SettingOutlined,
-  SendOutlined,
-  TeamOutlined,
-  ToolOutlined,
-  TruckOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
+import { BellOutlined, LogoutOutlined, ShopOutlined } from '@ant-design/icons';
 import { PageContainer, ProLayout } from '@ant-design/pro-components';
-import type { MenuDataItem } from '@ant-design/pro-components';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Button, Space, Typography } from 'antd';
-import { clearAuthSession, getAuthSession, type AuthMenuItem } from '@/shared/storage/authSessionStorage';
+import { Badge, Button, Space, Typography } from 'antd';
+import { useEffect, useState } from 'react';
+import { buildMenuItems, fallbackMenuItems } from './menuItems';
+import { getUnreadNotificationCount } from '@/services/notification/notificationService';
+import { clearAuthSession, getAuthSession } from '@/shared/storage/authSessionStorage';
 import { clearAccessToken } from '@/shared/storage/tokenStorage';
-
-const fallbackMenuItems: MenuDataItem[] = [
-  {
-    path: '/',
-    name: '工作台',
-    icon: <DashboardOutlined />,
-  },
-  {
-    path: '/order',
-    name: '订单管理',
-    icon: <ShoppingCartOutlined />,
-    children: [
-      {
-        path: '/order/sales',
-        name: '销售订单',
-        icon: <FileTextOutlined />,
-      },
-      {
-        path: '/order/production',
-        name: '生产订单',
-        icon: <ToolOutlined />,
-      },
-    ],
-  },
-  {
-    path: '/procurement',
-    name: '采购管理',
-    icon: <TruckOutlined />,
-    children: [
-      {
-        path: '/procurement/orders',
-        name: '采购订单',
-        icon: <ShoppingCartOutlined />,
-      },
-      {
-        path: '/procurement/asns',
-        name: '到货通知',
-        icon: <TruckOutlined />,
-      },
-      {
-        path: '/procurement/bom-mrp',
-        name: 'BOM与MRP',
-        icon: <FileTextOutlined />,
-      },
-      {
-        path: '/procurement/receiving',
-        name: '收货管理',
-        icon: <InboxOutlined />,
-      },
-      {
-        path: '/procurement/putaway',
-        name: '上架管理',
-        icon: <ShopOutlined />,
-      },
-    ],
-  },
-  {
-    path: '/inventory',
-    name: '库存物流',
-    icon: <DatabaseOutlined />,
-    children: [
-      { path: '/inventory/skus', name: '库存 SKU', icon: <InboxOutlined /> },
-      { path: '/inventory/materials', name: '库存物料', icon: <DatabaseOutlined /> },
-      { path: '/inventory/inbounds', name: '入库单', icon: <InboxOutlined /> },
-      { path: '/inventory/outbounds', name: '出库单', icon: <TruckOutlined /> },
-      { path: '/inventory/stocktaking', name: '盘点单', icon: <FileTextOutlined /> },
-      { path: '/inventory/alerts', name: '库存预警', icon: <AlertOutlined /> },
-      { path: '/warehouse/waves', name: '波次拣货', icon: <AppstoreOutlined /> },
-      { path: '/warehouse/shipments', name: '发运单', icon: <SendOutlined /> },
-    ],
-  },
-  {
-    path: '/approval',
-    name: '审批中心',
-    icon: <AuditOutlined />,
-    children: [
-      { path: '/approval/tasks', name: '我的审批', icon: <AuditOutlined /> },
-    ],
-  },
-  {
-    path: '/notification',
-    name: '通知中心',
-    icon: <BellOutlined />,
-    children: [
-      { path: '/notification/list', name: '我的通知', icon: <MailOutlined /> },
-      { path: '/notification/preference', name: '通知偏好', icon: <SettingOutlined /> },
-    ],
-  },
-  {
-    path: '/report',
-    name: '报表中心',
-    icon: <BarChartOutlined />,
-    children: [
-      { path: '/report/ledger', name: '库存台账', icon: <BookOutlined /> },
-      { path: '/report/flow', name: '出入库流水', icon: <FileTextOutlined /> },
-      { path: '/report/age', name: '库龄分析', icon: <CalendarOutlined /> },
-      { path: '/report/turnover', name: '畅滞销分析', icon: <BarChartOutlined /> },
-    ],
-  },
-  {
-    path: '/cost',
-    name: '成本核算',
-    icon: <DollarOutlined />,
-    children: [
-      { path: '/cost/query', name: '成本查询', icon: <DollarOutlined /> },
-      { path: '/cost/report', name: '成本报表', icon: <BarChartOutlined /> },
-    ],
-  },
-  {
-    path: '/master',
-    name: '基础数据',
-    icon: <DatabaseOutlined />,
-    children: [
-      {
-        path: '/master/materials',
-        name: '物料管理',
-        icon: <InboxOutlined />,
-      },
-      {
-        path: '/master/categories',
-        name: '物料分类',
-        icon: <ApartmentOutlined />,
-      },
-      {
-        path: '/master/spus',
-        name: '款式管理',
-        icon: <SkinOutlined />,
-      },
-      {
-        path: '/master/size-groups',
-        name: '尺码组管理',
-        icon: <ColumnWidthOutlined />,
-      },
-      {
-        path: '/master/seasons',
-        name: '季节波段',
-        icon: <CalendarOutlined />,
-      },
-      {
-        path: '/master/warehouses',
-        name: '仓库库位',
-        icon: <ShopOutlined />,
-      },
-      {
-        path: '/master/coding-rules',
-        name: '编码规则',
-        icon: <CodeOutlined />,
-      },
-      {
-        path: '/master/suppliers',
-        name: '供应商管理',
-        icon: <SolutionOutlined />,
-      },
-      {
-        path: '/master/customers',
-        name: '客户管理',
-        icon: <SmileOutlined />,
-      },
-    ],
-  },
-  {
-    path: '/system',
-    name: '系统管理',
-    icon: <SettingOutlined />,
-    children: [
-      {
-        path: '/system/users',
-        name: '用户管理',
-        icon: <UserOutlined />,
-      },
-      {
-        path: '/system/roles',
-        name: '角色管理',
-        icon: <TeamOutlined />,
-      },
-      {
-        path: '/system/menus',
-        name: '菜单管理',
-        icon: <MenuOutlined />,
-      },
-      {
-        path: '/system/configs',
-        name: '系统配置',
-        icon: <ToolOutlined />,
-      },
-    ],
-  },
-];
-
-const iconMap = {
-  AlertOutlined: <AlertOutlined />,
-  ApartmentOutlined: <ApartmentOutlined />,
-  AppstoreOutlined: <AppstoreOutlined />,
-  AuditOutlined: <AuditOutlined />,
-  BarChartOutlined: <BarChartOutlined />,
-  BookOutlined: <BookOutlined />,
-  BoxOutlined: <InboxOutlined />,
-  CalendarOutlined: <CalendarOutlined />,
-  CarryOutOutlined: <CarryOutOutlined />,
-  CodeOutlined: <CodeOutlined />,
-  ColumnWidthOutlined: <ColumnWidthOutlined />,
-  DashboardOutlined: <DashboardOutlined />,
-  DatabaseOutlined: <DatabaseOutlined />,
-  DollarOutlined: <DollarOutlined />,
-  FileTextOutlined: <FileTextOutlined />,
-  HomeOutlined: <HomeOutlined />,
-  InboxOutlined: <InboxOutlined />,
-  MailOutlined: <MailOutlined />,
-  MenuOutlined: <MenuOutlined />,
-  SettingOutlined: <SettingOutlined />,
-  SendOutlined: <SendOutlined />,
-  ShoppingCartOutlined: <ShoppingCartOutlined />,
-  ShopOutlined: <ShopOutlined />,
-  SkinOutlined: <SkinOutlined />,
-  SmileOutlined: <SmileOutlined />,
-  SolutionOutlined: <SolutionOutlined />,
-  TeamOutlined: <TeamOutlined />,
-  ToolOutlined: <ToolOutlined />,
-  TruckOutlined: <TruckOutlined />,
-  UserOutlined: <UserOutlined />,
-};
 
 export function DashboardLayout() {
   const navigate = useNavigate();
@@ -265,6 +14,30 @@ export function DashboardLayout() {
   const authSession = getAuthSession();
   const menuItems = buildMenuItems(authSession?.menuTree ?? []);
   const pageMeta = getPageMeta(location.pathname);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadUnreadCount() {
+      try {
+        const count = await getUnreadNotificationCount();
+        if (active) {
+          setUnreadCount(count);
+        }
+      } catch {
+        if (active) {
+          setUnreadCount(0);
+        }
+      }
+    }
+
+    void loadUnreadCount();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleLogout = () => {
     clearAccessToken();
@@ -288,7 +61,14 @@ export function DashboardLayout() {
         </button>
       )}
       actionsRender={() => [
-        <Button key="notice" type="text" icon={<BellOutlined />} aria-label="通知" />,
+        <Badge key="notice" count={unreadCount} size="small">
+          <Button
+            type="text"
+            icon={<BellOutlined />}
+            aria-label="通知"
+            onClick={() => navigate('/notification/list')}
+          />
+        </Badge>,
         <Button
           key="logout"
           type="text"
@@ -342,6 +122,20 @@ function getPageMeta(pathname: string) {
     return {
       title: '系统配置',
       subTitle: '维护运行参数、密码策略和库存规则配置',
+    };
+  }
+
+  if (pathname === '/system/audit-logs') {
+    return {
+      title: '操作日志',
+      subTitle: '查询系统关键操作记录和审计追踪信息',
+    };
+  }
+
+  if (pathname === '/system/data-scopes') {
+    return {
+      title: '数据范围',
+      subTitle: '维护角色可访问的数据范围规则',
     };
   }
 
@@ -422,6 +216,13 @@ function getPageMeta(pathname: string) {
     };
   }
 
+  if (pathname === '/order/returns') {
+    return {
+      title: '退货单',
+      subTitle: '查询客户退货单、状态和质检入库进度',
+    };
+  }
+
   if (pathname === '/procurement/orders') {
     return {
       title: '采购订单',
@@ -493,6 +294,10 @@ function getPageMeta(pathname: string) {
     return { title: '审批中心', subTitle: '查看我的待审批任务并提交审批意见' };
   }
 
+  if (pathname === '/approval/configs') {
+    return { title: '审批配置', subTitle: '维护业务审批模式、审批角色和启停状态' };
+  }
+
   if (pathname === '/notification/list' || pathname === '/notification/preference') {
     return { title: '通知中心', subTitle: '查看站内通知、标记已读并维护通知偏好' };
   }
@@ -509,130 +314,4 @@ function getPageMeta(pathname: string) {
     title: '工作台首页',
     subTitle: '集中查看订单、生产、库存、审批和发运待办',
   };
-}
-
-function buildMenuItems(menuTree: AuthMenuItem[]): MenuDataItem[] {
-  return menuTree
-    .filter(isVisibleMenu)
-    .sort(compareMenu)
-    .map((item) => ({
-      path: normalizeMenuPath(item.path),
-      name: item.name,
-      icon: getMenuIcon(item.icon),
-      children: buildMenuItems(item.children ?? []),
-    }));
-}
-
-function normalizeMenuPath(path?: string | null): string {
-  if (path === '/system/user') {
-    return '/system/users';
-  }
-
-  if (path === '/system/role') {
-    return '/system/roles';
-  }
-
-  if (path === '/system/menu') {
-    return '/system/menus';
-  }
-
-  if (path === '/system/config') {
-    return '/system/configs';
-  }
-
-  if (path === '/master/customer') {
-    return '/master/customers';
-  }
-
-  if (path === '/master/supplier') {
-    return '/master/suppliers';
-  }
-
-  if (path === '/master/material') {
-    return '/master/materials';
-  }
-
-  if (path === '/master/category') {
-    return '/master/categories';
-  }
-
-  if (path === '/master/spu') {
-    return '/master/spus';
-  }
-
-  if (path === '/master/sizeGroup' || path === '/master/size-group') {
-    return '/master/size-groups';
-  }
-
-  if (path === '/master/season') {
-    return '/master/seasons';
-  }
-
-  if (path === '/master/warehouse') {
-    return '/master/warehouses';
-  }
-
-  if (path === '/master/codingRule' || path === '/master/coding-rule') {
-    return '/master/coding-rules';
-  }
-
-  if (path === '/order/sale' || path === '/order/salesOrder') {
-    return '/order/sales';
-  }
-
-  if (path === '/order/productionOrder' || path === '/order/production-order') {
-    return '/order/production';
-  }
-
-  if (path === '/procurement/order' || path === '/procurement/procurement-order') {
-    return '/procurement/orders';
-  }
-
-  if (path === '/procurement/asn') {
-    return '/procurement/asns';
-  }
-
-  if (path === '/procurement/bom' || path === '/procurement/mrp') {
-    return '/procurement/bom-mrp';
-  }
-
-  if (path === '/warehouse/receiving' || path === '/procurement/receive') {
-    return '/procurement/receiving';
-  }
-
-  if (path === '/warehouse/putaway' || path === '/procurement/put-away') {
-    return '/procurement/putaway';
-  }
-
-  if (path === '/inventory/sku') return '/inventory/skus';
-  if (path === '/inventory/material') return '/inventory/materials';
-  if (path === '/inventory/inbound') return '/inventory/inbounds';
-  if (path === '/inventory/outbound') return '/inventory/outbounds';
-  if (path === '/inventory/stocktaking-order') return '/inventory/stocktaking';
-  if (path === '/inventory/alert') return '/inventory/alerts';
-  if (path === '/warehouse/wave' || path === '/warehouse/pick') return '/warehouse/waves';
-  if (path === '/warehouse/ship' || path === '/warehouse/shipment') return '/warehouse/shipments';
-  if (path === '/approval' || path === '/approval/task') return '/approval/tasks';
-  if (path === '/notification' || path === '/notification/message') return '/notification/list';
-  if (path === '/notification/prefs' || path === '/notification/preferences') return '/notification/preference';
-  if (path === '/report') return '/report/ledger';
-  if (path === '/cost') return '/cost/query';
-
-  return path || '/';
-}
-
-function isVisibleMenu(item: AuthMenuItem): boolean {
-  return item.type !== 'BUTTON' && item.visible !== false && item.status !== 'INACTIVE';
-}
-
-function compareMenu(left: AuthMenuItem, right: AuthMenuItem): number {
-  return (left.sortOrder ?? 0) - (right.sortOrder ?? 0);
-}
-
-function getMenuIcon(iconName?: string | null) {
-  if (!iconName) {
-    return undefined;
-  }
-
-  return iconMap[iconName as keyof typeof iconMap];
 }

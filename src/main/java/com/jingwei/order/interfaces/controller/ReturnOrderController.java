@@ -1,5 +1,6 @@
 package com.jingwei.order.interfaces.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.jingwei.common.config.RequirePermission;
 import com.jingwei.common.domain.model.R;
 import com.jingwei.order.application.dto.ReturnOrderCreateDTO;
@@ -34,6 +35,14 @@ public class ReturnOrderController {
     @PostMapping("/order/return/create")
     public R<ReturnOrderVO> createReturnOrder(@Valid @RequestBody ReturnOrderCreateDTO dto) {
         return R.ok(returnOrderApplicationService.createReturnOrder(dto));
+    }
+
+    /**
+     * 分页查询退货单
+     */
+    @PostMapping("/order/return/page")
+    public R<IPage<ReturnOrderVO>> pageReturnOrders(@Valid @RequestBody com.jingwei.order.application.dto.ReturnOrderQueryDTO dto) {
+        return R.ok(returnOrderApplicationService.pageQuery(dto));
     }
 
     /**

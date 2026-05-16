@@ -1,4 +1,5 @@
 import { apiClient, unwrapApiResponse } from '@/services/http/apiClient';
+import { normalizeOptionalFields } from '@/services/shared/normalize';
 
 export interface UserQueryParams {
   current: number;
@@ -24,6 +25,11 @@ export interface UpdateUserPayload {
 
 export interface AssignUserRolesPayload {
   roleIds: string[];
+}
+
+export interface ChangeUserPasswordPayload {
+  oldPassword: string;
+  newPassword: string;
 }
 
 export interface UserRecord {
@@ -58,21 +64,35 @@ export async function createUser(payload: CreateUserPayload): Promise<UserRecord
 
 export async function updateUser(userId: string, payload: UpdateUserPayload): Promise<UserRecord> {
   const response = await apiClient.post('/system/user/update', normalizeOptionalFields(payload), {
-    params: { userId },
+    params: { userId: userId.trim() },
   });
   return unwrapApiResponse<UserRecord>(response.data);
 }
 
+export async function getUserDetail(userId: string): Promise<UserRecord> {
+  const response = await apiClient.post('/system/user/detail', null, {
+    params: { userId: userId.trim() },
+  });
+  return unwrapApiResponse<UserRecord>(response.data);
+}
+
+export async function changeUserPassword(userId: string, payload: ChangeUserPasswordPayload): Promise<void> {
+  const response = await apiClient.post('/system/user/changePassword', normalizeOptionalFields(payload), {
+    params: { userId: userId.trim() },
+  });
+  return unwrapApiResponse<void>(response.data);
+}
+
 export async function deactivateUser(userId: string): Promise<void> {
   const response = await apiClient.post('/system/user/deactivate', null, {
-    params: { userId },
+    params: { userId: userId.trim() },
   });
   return unwrapApiResponse<void>(response.data);
 }
 
 export async function assignUserRoles(userId: string, payload: AssignUserRolesPayload): Promise<void> {
   const response = await apiClient.post('/system/user/assignRoles', payload, {
-    params: { userId },
+    params: { userId: userId.trim() },
   });
   return unwrapApiResponse<void>(response.data);
 }
@@ -86,12 +106,4 @@ function normalizeUserQuery(params: UserQueryParams): UserQueryParams {
     ...(keyword ? { keyword } : {}),
     ...(params.status ? { status: params.status } : {}),
   };
-}
-
-function normalizeOptionalFields<T extends object>(payload: T): T {
-  return Object.fromEntries(
-    Object.entries(payload)
-      .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
-      .filter(([, value]) => value !== undefined && value !== null && value !== ''),
-  ) as T;
 }

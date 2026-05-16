@@ -1,5 +1,6 @@
 import { apiClient, unwrapApiResponse } from '@/services/http/apiClient';
 import type { PageResult } from '@/services/master/customerService';
+import { normalizeOptionalFields } from '@/services/shared/normalize';
 
 export interface WarehouseQueryParams {
   current: number;
@@ -167,10 +168,3 @@ function normalizeWarehouseQuery(params: WarehouseQueryParams): WarehouseQueryPa
   }) as WarehouseQueryParams;
 }
 
-function normalizeOptionalFields<T extends object>(payload: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(payload)
-      .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
-      .filter(([, value]) => value !== undefined && value !== null && value !== ''),
-  ) as Partial<T>;
-}

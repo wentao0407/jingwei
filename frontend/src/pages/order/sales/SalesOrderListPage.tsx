@@ -17,6 +17,8 @@ import {
   createQuantityChange,
   deleteSalesOrder,
   getSalesOrderDetail,
+  getSalesOrderTimeline,
+  listQuantityChanges,
   pageSalesOrders,
   resubmitSalesOrder,
   submitSalesOrder,
@@ -24,8 +26,10 @@ import {
   type SalesOrderLineRecord,
   type SalesOrderRecord,
   type ConvertSalesOrderPayload,
+  type QuantityChangeRecord,
   type QuantityChangePayload,
   type SaveSalesOrderPayload,
+  type SalesOrderTimelineRecord,
 } from '@/services/order/salesOrderService';
 import {
   createReturnOrder,
@@ -143,6 +147,8 @@ export function SalesOrderListPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detail, setDetail] = useState<SalesOrderRecord | null>(null);
+  const [timelineRecords, setTimelineRecords] = useState<SalesOrderTimelineRecord[]>([]);
+  const [quantityChangeRecords, setQuantityChangeRecords] = useState<QuantityChangeRecord[]>([]);
   const [formMode, setFormMode] = useState<FormMode>('create');
   const [formOpen, setFormOpen] = useState(false);
   const [formSaving, setFormSaving] = useState(false);
@@ -220,8 +226,17 @@ export function SalesOrderListPage() {
   async function openDetail(order: SalesOrderRecord) {
     setDetailOpen(true);
     setDetailLoading(true);
+    setTimelineRecords([]);
+    setQuantityChangeRecords([]);
     try {
-      setDetail(await getSalesOrderDetail(order.id));
+      const [orderDetail, timeline, quantityChanges] = await Promise.all([
+        getSalesOrderDetail(order.id),
+        getSalesOrderTimeline(order.id),
+        listQuantityChanges(order.id),
+      ]);
+      setDetail(orderDetail);
+      setTimelineRecords(timeline);
+      setQuantityChangeRecords(quantityChanges);
     } catch (error) {
       message.error(getApiErrorMessage(error));
     } finally {
@@ -593,6 +608,20 @@ export function SalesOrderListPage() {
                 columns={lineColumns}
                 dataSource={detail.lines ?? []}
               />
+              <Table<SalesOrderTimelineRecord>
+                rowKey="id"
+                size="small"
+                pagination={false}
+                columns={timelineColumns}
+                dataSource={timelineRecords}
+              />
+              <Table<QuantityChangeRecord>
+                rowKey="id"
+                size="small"
+                pagination={false}
+                columns={quantityChangeColumns}
+                dataSource={quantityChangeRecords}
+              />
             </Space>
           ) : null}
         </ProCard>
@@ -757,6 +786,22 @@ const lineColumns: ColumnsType<SalesOrderLineRecord> = [
   { title: '数量', dataIndex: 'totalQuantity', key: 'totalQuantity', width: 90, render: (value) => value ?? 0 },
   { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, render: formatMoney },
   { title: '实际金额', dataIndex: 'actualAmount', key: 'actualAmount', width: 110, render: formatMoney },
+];
+
+const timelineColumns: ColumnsType<SalesOrderTimelineRecord> = [
+  { title: '变更类型', dataIndex: 'changeType', key: 'changeType', render: renderNullableText },
+  { title: '字段', dataIndex: 'fieldName', key: 'fieldName', render: renderNullableText },
+  { title: '原因', dataIndex: 'changeReason', key: 'changeReason', render: renderNullableText },
+  { title: '操作人', dataIndex: 'operatedBy', key: 'operatedBy', render: renderNullableText },
+  { title: '操作时间', dataIndex: 'operatedAt', key: 'operatedAt', render: (value) => formatDateTime(String(value || '')) },
+];
+
+const quantityChangeColumns: ColumnsType<QuantityChangeRecord> = [
+  { title: '变更原因', dataIndex: 'reason', key: 'reason', render: renderNullableText },
+  { title: '状态', dataIndex: 'status', key: 'status', render: renderNullableText },
+  { title: '审批人', dataIndex: 'approvedBy', key: 'approvedBy', render: renderNullableText },
+  { title: '创建人', dataIndex: 'createdBy', key: 'createdBy', render: renderNullableText },
+  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', render: (value) => formatDateTime(String(value || '')) },
 ];
 
 function renderDetailFooter(
@@ -1329,6 +1374,18 @@ function toColorOption(color: ColorWayRecord) {
 
 function normalizeTextInput(value?: string): string | undefined {
   return value?.trim();
+}
+
+function renderNullableText(value?: string | null) {
+  return value || '-';
+}
+
+function formatDateTime(value: string): string {
+  if (!value) {
+    return '-';
+  }
+
+  return value.replace('T', ' ').slice(0, 16);
 }
 
 function isFormValidationError(error: unknown): boolean {

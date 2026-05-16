@@ -1,5 +1,6 @@
 package com.jingwei.order.domain.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jingwei.approval.domain.service.ApprovalDomainService;
 import com.jingwei.common.domain.model.BizException;
 import com.jingwei.common.domain.model.ErrorCode;
@@ -284,6 +285,10 @@ public class ReturnOrderDomainService {
         List<ReturnOrderLine> lines = returnOrderLineRepository.selectByReturnId(returnId);
         returnOrder.setLines(lines);
         return returnOrder;
+    }
+
+    public Page<ReturnOrder> pageQuery(Page<ReturnOrder> page, Long customerId, ReturnStatus status) {
+        return returnOrderRepository.selectPage(page, customerId, status);
     }
 
     // ==================== 私有方法 ====================

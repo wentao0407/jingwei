@@ -1,5 +1,6 @@
 import { apiClient, unwrapApiResponse } from '@/services/http/apiClient';
 import type { PageResult } from '@/services/master/customerService';
+import { normalizeOptionalFields } from '@/services/shared/normalize';
 
 export interface ProductionOrderQueryParams {
   current: number;
@@ -126,11 +127,58 @@ export interface FireProductionLineEventPayload extends FireProductionOrderEvent
   lineId: string;
 }
 
+export interface ProductionOrderSizePayload {
+  sizeId: string;
+  code: string;
+  quantity?: number;
+}
+
+export interface SaveProductionOrderLinePayload {
+  spuId: string;
+  colorWayId: string;
+  sizeGroupId: string;
+  sizes: ProductionOrderSizePayload[];
+  bomId?: string;
+  skipCutting?: boolean;
+  remark?: string;
+}
+
+export interface SaveProductionOrderPayload {
+  planDate?: string;
+  deadlineDate?: string;
+  sourceType?: string;
+  workshopId?: string;
+  remark?: string;
+  lines: SaveProductionOrderLinePayload[];
+}
+
 export async function pageProductionOrders(
   params: ProductionOrderQueryParams,
 ): Promise<PageResult<ProductionOrderRecord>> {
   const response = await apiClient.post('/order/production/page', normalizeQuery(params));
   return unwrapApiResponse<PageResult<ProductionOrderRecord>>(response.data);
+}
+
+export async function createProductionOrder(payload: SaveProductionOrderPayload): Promise<ProductionOrderRecord> {
+  const response = await apiClient.post('/order/production/create', normalizeProductionOrderPayload(payload));
+  return unwrapApiResponse<ProductionOrderRecord>(response.data);
+}
+
+export async function updateProductionOrder(
+  orderId: string,
+  payload: SaveProductionOrderPayload,
+): Promise<ProductionOrderRecord> {
+  const response = await apiClient.post('/order/production/update', normalizeProductionOrderPayload(payload), {
+    params: { orderId: orderId.trim() },
+  });
+  return unwrapApiResponse<ProductionOrderRecord>(response.data);
+}
+
+export async function deleteProductionOrder(orderId: string): Promise<void> {
+  const response = await apiClient.post('/order/production/delete', null, {
+    params: { orderId: orderId.trim() },
+  });
+  return unwrapApiResponse<void>(response.data);
 }
 
 export async function getProductionOrderDetail(orderId: string): Promise<ProductionOrderRecord> {
@@ -212,10 +260,14 @@ function normalizeMaterialRequirementQuery(params: MaterialRequirementQueryParam
   }) as MaterialRequirementQueryParams;
 }
 
-function normalizeOptionalFields<T extends object>(payload: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(payload)
-      .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
-      .filter(([, value]) => value !== undefined && value !== null && value !== ''),
-  ) as Partial<T>;
+function normalizeProductionOrderPayload(payload: SaveProductionOrderPayload): Record<string, unknown> {
+  return normalizeOptionalFields({
+    ...payload,
+    lines: payload.lines.map((line) =>
+      normalizeOptionalFields({
+        ...line,
+        sizes: line.sizes.map((size) => normalizeOptionalFields(size)),
+      }),
+    ),
+  }) as Record<string, unknown>;
 }

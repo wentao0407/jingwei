@@ -1,4 +1,5 @@
 import { apiClient, unwrapApiResponse } from '@/services/http/apiClient';
+import { normalizeOptionalFields } from '@/services/shared/normalize';
 
 export interface InventoryAlertRecord {
   id: string;
@@ -49,10 +50,3 @@ export async function acknowledgeAlert(alertId: string): Promise<void> {
   return unwrapApiResponse<void>(response.data);
 }
 
-function normalizeOptionalFields<T extends object>(value: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(value)
-      .map(([key, fieldValue]) => [key, typeof fieldValue === 'string' ? fieldValue.trim() : fieldValue])
-      .filter(([, fieldValue]) => fieldValue !== undefined && fieldValue !== null && fieldValue !== ''),
-  ) as Partial<T>;
-}

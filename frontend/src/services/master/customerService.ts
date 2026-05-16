@@ -1,4 +1,5 @@
 import { apiClient, unwrapApiResponse } from '@/services/http/apiClient';
+import { normalizeOptionalFields } from '@/services/shared/normalize';
 
 export interface PageResult<T> {
   records: T[];
@@ -92,10 +93,3 @@ function normalizeQuery<T extends CustomerQueryParams>(params: T): T {
   }) as T;
 }
 
-function normalizeOptionalFields<T extends object>(payload: T): T {
-  return Object.fromEntries(
-    Object.entries(payload)
-      .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
-      .filter(([, value]) => value !== undefined && value !== null && value !== ''),
-  ) as T;
-}

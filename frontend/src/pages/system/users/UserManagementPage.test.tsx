@@ -4,7 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserManagementPage } from './UserManagementPage';
 import { getCurrentUserPermissions } from '@/services/auth/authService';
 import { listRoles } from '@/services/system/roleService';
-import { assignUserRoles, createUser, deactivateUser, listUsers, updateUser } from '@/services/system/userService';
+import {
+  assignUserRoles,
+  changeUserPassword,
+  createUser,
+  deactivateUser,
+  getUserDetail,
+  listUsers,
+  updateUser,
+} from '@/services/system/userService';
 import { setAuthSession, type AuthSession } from '@/shared/storage/authSessionStorage';
 
 vi.mock('@/services/auth/authService', () => ({
@@ -13,8 +21,10 @@ vi.mock('@/services/auth/authService', () => ({
 
 vi.mock('@/services/system/userService', () => ({
   assignUserRoles: vi.fn(),
+  changeUserPassword: vi.fn(),
   createUser: vi.fn(),
   deactivateUser: vi.fn(),
+  getUserDetail: vi.fn(),
   listUsers: vi.fn(),
   updateUser: vi.fn(),
 }));
@@ -25,8 +35,10 @@ vi.mock('@/services/system/roleService', () => ({
 
 const mockedGetCurrentUserPermissions = vi.mocked(getCurrentUserPermissions);
 const mockedAssignUserRoles = vi.mocked(assignUserRoles);
+const mockedChangeUserPassword = vi.mocked(changeUserPassword);
 const mockedCreateUser = vi.mocked(createUser);
 const mockedDeactivateUser = vi.mocked(deactivateUser);
+const mockedGetUserDetail = vi.mocked(getUserDetail);
 const mockedListUsers = vi.mocked(listUsers);
 const mockedListRoles = vi.mocked(listRoles);
 const mockedUpdateUser = vi.mocked(updateUser);
@@ -60,8 +72,12 @@ describe('UserManagementPage', () => {
       permissions: userActionPermissionCodes,
     });
     mockedAssignUserRoles.mockReset();
+    mockedChangeUserPassword.mockReset();
+    mockedChangeUserPassword.mockResolvedValue(undefined);
     mockedCreateUser.mockReset();
     mockedDeactivateUser.mockReset();
+    mockedGetUserDetail.mockReset();
+    mockedGetUserDetail.mockResolvedValue(activeAdminUser);
     mockedListUsers.mockReset();
     mockedListRoles.mockReset();
     mockedUpdateUser.mockReset();
@@ -421,6 +437,36 @@ describe('UserManagementPage', () => {
       }),
     );
     expect(mockedListUsers).toHaveBeenCalledTimes(2);
+  });
+
+  it('loads user detail and changes password', async () => {
+    mockedListUsers.mockResolvedValue({
+      records: [activeAdminUser],
+      total: 1,
+      size: 10,
+      current: 1,
+      pages: 1,
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('系统管理员')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '详情 admin' }));
+
+    await waitFor(() => expect(mockedGetUserDetail).toHaveBeenCalledWith('1'));
+    expect(await screen.findByText('用户详情 - admin')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '修改密码 admin' }));
+    fireEvent.change(screen.getByLabelText('旧密码'), { target: { value: 'OldPass123' } });
+    fireEvent.change(screen.getByLabelText('新密码'), { target: { value: 'NewPass123' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存密码' }));
+
+    await waitFor(() =>
+      expect(mockedChangeUserPassword).toHaveBeenCalledWith('1', {
+        oldPassword: 'OldPass123',
+        newPassword: 'NewPass123',
+      }),
+    );
   });
 });
 

@@ -329,7 +329,7 @@ class ReportApplicationServiceTest {
         page.setRecords(rows);
         page.setTotal(3);
 
-        when(reportMapper.selectSkuAgePage(any(), isNull(), isNull(), isNull(), isNull()))
+        when(reportMapper.selectSkuAgePage(any(), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(page);
 
         // 模拟全量汇总查询（queryAgeAnalysis 内部调用 selectSkuAgeSummary）
@@ -349,7 +349,7 @@ class ReportApplicationServiceTest {
         ageSummary.put("range180plusqty", BigDecimal.ZERO);
         ageSummary.put("overduecount", 1L);
         ageSummary.put("overdueqty", new BigDecimal("50"));
-        when(reportMapper.selectSkuAgeSummary(isNull(), isNull(), isNull(), isNull()))
+        when(reportMapper.selectSkuAgeSummary(isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(ageSummary);
 
         InventoryAgeSummaryVO result = service.queryAgeAnalysis(dto);
@@ -375,7 +375,7 @@ class ReportApplicationServiceTest {
         page.setRecords(rows);
         page.setTotal(1);
 
-        when(reportMapper.selectSkuAgePage(any(), isNull(), isNull(), isNull(), isNull()))
+        when(reportMapper.selectSkuAgePage(any(), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(page);
 
         // 模拟全量汇总查询
@@ -395,7 +395,7 @@ class ReportApplicationServiceTest {
         ageSummary.put("range180plusqty", new BigDecimal("50"));
         ageSummary.put("overduecount", 1L);
         ageSummary.put("overdueqty", new BigDecimal("50"));
-        when(reportMapper.selectSkuAgeSummary(isNull(), isNull(), isNull(), isNull()))
+        when(reportMapper.selectSkuAgeSummary(isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(ageSummary);
 
         InventoryAgeSummaryVO result = service.queryAgeAnalysis(dto);
@@ -420,7 +420,7 @@ class ReportApplicationServiceTest {
         page.setRecords(rows);
         page.setTotal(1);
 
-        when(reportMapper.selectSkuAgePage(any(), isNull(), isNull(), isNull(), isNull()))
+        when(reportMapper.selectSkuAgePage(any(), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(page);
 
         // 模拟全量汇总查询
@@ -440,7 +440,7 @@ class ReportApplicationServiceTest {
         ageSummary.put("range180plusqty", BigDecimal.ZERO);
         ageSummary.put("overduecount", 0L);
         ageSummary.put("overdueqty", BigDecimal.ZERO);
-        when(reportMapper.selectSkuAgeSummary(isNull(), isNull(), isNull(), isNull()))
+        when(reportMapper.selectSkuAgeSummary(isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(ageSummary);
 
         InventoryAgeSummaryVO result = service.queryAgeAnalysis(dto);
@@ -468,7 +468,7 @@ class ReportApplicationServiceTest {
         page.setRecords(List.of(row));
         page.setTotal(1);
 
-        when(reportMapper.selectSkuTurnoverPage(any(), isNull(), isNull(), isNull(),
+        when(reportMapper.selectSkuTurnoverPage(any(), isNull(), isNull(), isNull(), isNull(),
                 any(), any(), isNull())).thenReturn(page);
 
         IPage<TurnoverAnalysisVO> result = service.queryTurnoverAnalysis(dto);
@@ -492,7 +492,7 @@ class ReportApplicationServiceTest {
         page.setRecords(List.of(row));
         page.setTotal(1);
 
-        when(reportMapper.selectSkuTurnoverPage(any(), isNull(), isNull(), isNull(),
+        when(reportMapper.selectSkuTurnoverPage(any(), isNull(), isNull(), isNull(), isNull(),
                 any(), any(), isNull())).thenReturn(page);
 
         IPage<TurnoverAnalysisVO> result = service.queryTurnoverAnalysis(dto);
@@ -518,7 +518,7 @@ class ReportApplicationServiceTest {
         page.setRecords(List.of(row));
         page.setTotal(1);
 
-        when(reportMapper.selectSkuTurnoverPage(any(), isNull(), isNull(), isNull(),
+        when(reportMapper.selectSkuTurnoverPage(any(), isNull(), isNull(), isNull(), isNull(),
                 any(), any(), isNull())).thenReturn(page);
 
         IPage<TurnoverAnalysisVO> result = service.queryTurnoverAnalysis(dto);

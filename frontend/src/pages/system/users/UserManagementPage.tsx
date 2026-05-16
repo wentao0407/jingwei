@@ -1,6 +1,6 @@
-import { ReloadOutlined, SearchOutlined, TeamOutlined, UserAddOutlined } from '@ant-design/icons';
+import { EyeOutlined, KeyOutlined, ReloadOutlined, SearchOutlined, TeamOutlined, UserAddOutlined } from '@ant-design/icons';
 import { ProCard } from '@ant-design/pro-components';
-import { App, Button, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag } from 'antd';
+import { App, Button, Descriptions, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { EmptyState, ErrorState, LoadingState } from '@/components/state';
@@ -9,8 +9,10 @@ import { getApiErrorMessage } from '@/services/http/apiClient';
 import { listRoles, type RoleRecord } from '@/services/system/roleService';
 import {
   assignUserRoles,
+  changeUserPassword,
   createUser,
   deactivateUser,
+  getUserDetail,
   listUsers,
   updateUser,
   type CreateUserPayload,
@@ -84,10 +86,16 @@ interface RoleAssignmentFormValues {
   roleIds: string[];
 }
 
+interface PasswordFormValues {
+  oldPassword: string;
+  newPassword: string;
+}
+
 export function UserManagementPage() {
   const { message } = App.useApp();
   const [form] = Form.useForm<UserFormValues>();
   const [roleForm] = Form.useForm<RoleAssignmentFormValues>();
+  const [passwordForm] = Form.useForm<PasswordFormValues>();
   const [keywordInput, setKeywordInput] = useState('');
   const [keyword, setKeyword] = useState('');
   const [status, setStatus] = useState('');
@@ -105,6 +113,12 @@ export function UserManagementPage() {
   const [rolesLoading, setRolesLoading] = useState(false);
   const [rolesSaving, setRolesSaving] = useState(false);
   const [rolesErrorMessage, setRolesErrorMessage] = useState('');
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [userDetail, setUserDetail] = useState<UserRecord | null>(null);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [passwordUser, setPasswordUser] = useState<UserRecord | null>(null);
+  const [passwordSaving, setPasswordSaving] = useState(false);
   const [pageResult, setPageResult] = useState<PageResult<UserRecord> | null>(null);
   const [permissions, setPermissions] = useState<string[]>(() => getAuthSession()?.permissions ?? []);
   const userActionPermissions = {
@@ -112,6 +126,7 @@ export function UserManagementPage() {
     canUpdate: hasPermission(permissions, USER_UPDATE_PERMISSION),
     canDeactivate: hasPermission(permissions, USER_DEACTIVATE_PERMISSION),
     canAssignRole: hasPermission(permissions, USER_ASSIGN_ROLE_PERMISSION),
+    canChangePassword: hasPermission(permissions, USER_UPDATE_PERMISSION),
   };
 
   const userColumns = buildUserColumns({
@@ -119,6 +134,8 @@ export function UserManagementPage() {
     onEdit: openEditForm,
     onDeactivate: handleDeactivate,
     onAssignRole: openRoleAssignment,
+    onViewDetail: openUserDetail,
+    onChangePassword: openPasswordForm,
   });
 
   const loadUsers = useCallback(async () => {
@@ -194,6 +211,26 @@ export function UserManagementPage() {
     setRolesErrorMessage('');
     setRoleModalOpen(true);
     void loadRoleOptions();
+  }
+
+  async function openUserDetail(user: UserRecord) {
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setUserDetail(null);
+    try {
+      setUserDetail(await getUserDetail(user.id));
+    } catch (error) {
+      message.error(getApiErrorMessage(error));
+      setDetailOpen(false);
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  function openPasswordForm(user: UserRecord) {
+    setPasswordUser(user);
+    passwordForm.resetFields();
+    setPasswordOpen(true);
   }
 
   const closeRoleAssignment = () => {
@@ -274,6 +311,31 @@ export function UserManagementPage() {
       message.error(getApiErrorMessage(error));
     } finally {
       setRolesSaving(false);
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!passwordUser) {
+      return;
+    }
+
+    const values = await passwordForm.validateFields().catch(() => null);
+    if (!values) {
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      await changeUserPassword(passwordUser.id, {
+        oldPassword: values.oldPassword,
+        newPassword: values.newPassword,
+      });
+      message.success('密码修改成功');
+      setPasswordOpen(false);
+    } catch (error) {
+      message.error(getApiErrorMessage(error));
+    } finally {
+      setPasswordSaving(false);
     }
   }
 
@@ -470,6 +532,47 @@ export function UserManagementPage() {
           </Form.Item>
         </Form>
       </Modal>
+      <Modal
+        title={userDetail ? `用户详情 - ${userDetail.username}` : '用户详情'}
+        open={detailOpen}
+        footer={null}
+        onCancel={() => setDetailOpen(false)}
+        destroyOnHidden
+      >
+        <ProCard loading={detailLoading} bordered={false}>
+          {userDetail ? (
+            <Descriptions column={1} size="small">
+              <Descriptions.Item label="用户名">{userDetail.username}</Descriptions.Item>
+              <Descriptions.Item label="姓名">{userDetail.realName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="手机号">{userDetail.phone || '-'}</Descriptions.Item>
+              <Descriptions.Item label="邮箱">{userDetail.email || '-'}</Descriptions.Item>
+              <Descriptions.Item label="状态"><UserStatusTag status={userDetail.status} /></Descriptions.Item>
+              <Descriptions.Item label="角色 ID">{userDetail.roleIds?.join(', ') || '-'}</Descriptions.Item>
+              <Descriptions.Item label="创建时间">{formatDateTime(userDetail.createdAt || '')}</Descriptions.Item>
+              <Descriptions.Item label="更新时间">{formatDateTime(userDetail.updatedAt || '')}</Descriptions.Item>
+            </Descriptions>
+          ) : null}
+        </ProCard>
+      </Modal>
+      <Modal
+        title={passwordUser ? `修改密码 - ${passwordUser.username}` : '修改密码'}
+        open={passwordOpen}
+        confirmLoading={passwordSaving}
+        okText="保存密码"
+        cancelText="取消"
+        onCancel={() => setPasswordOpen(false)}
+        onOk={() => void handleChangePassword()}
+        destroyOnHidden
+      >
+        <Form<PasswordFormValues> form={passwordForm} layout="vertical" preserve={false}>
+          <Form.Item label="旧密码" name="oldPassword" rules={[{ required: true, message: '请输入旧密码' }]}>
+            <Input.Password autoComplete="current-password" maxLength={PASSWORD_MAX_LENGTH} />
+          </Form.Item>
+          <Form.Item label="新密码" name="newPassword" rules={passwordRules}>
+            <Input.Password autoComplete="new-password" maxLength={PASSWORD_MAX_LENGTH} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
@@ -478,6 +581,7 @@ interface UserActionPermissions {
   canUpdate: boolean;
   canDeactivate: boolean;
   canAssignRole: boolean;
+  canChangePassword: boolean;
 }
 
 function buildUserColumns(actions: {
@@ -485,6 +589,8 @@ function buildUserColumns(actions: {
   onEdit: (user: UserRecord) => void;
   onDeactivate: (user: UserRecord) => void;
   onAssignRole: (user: UserRecord) => void;
+  onViewDetail: (user: UserRecord) => void;
+  onChangePassword: (user: UserRecord) => void;
 }): ColumnsType<UserRecord> {
   const columns: ColumnsType<UserRecord> = [
     {
@@ -518,10 +624,6 @@ function buildUserColumns(actions: {
     },
   ];
 
-  if (!actions.permissions.canUpdate && !actions.permissions.canDeactivate && !actions.permissions.canAssignRole) {
-    return columns;
-  }
-
   return [
     ...columns,
     {
@@ -529,9 +631,17 @@ function buildUserColumns(actions: {
       dataIndex: 'actions',
       render: (_, user) => (
         <Space>
+          <Button type="link" icon={<EyeOutlined />} aria-label={`详情 ${user.username}`} onClick={() => actions.onViewDetail(user)}>
+            详情
+          </Button>
           {actions.permissions.canUpdate ? (
             <Button type="link" aria-label={`编辑 ${user.username}`} onClick={() => actions.onEdit(user)}>
               编辑
+            </Button>
+          ) : null}
+          {actions.permissions.canChangePassword ? (
+            <Button type="link" icon={<KeyOutlined />} aria-label={`修改密码 ${user.username}`} onClick={() => actions.onChangePassword(user)}>
+              改密
             </Button>
           ) : null}
           {actions.permissions.canAssignRole ? (

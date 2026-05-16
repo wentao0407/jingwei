@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  getUnreadNotificationCount,
   listNotificationPreferences,
   markAllNotificationsRead,
   markNotificationRead,
@@ -31,7 +32,8 @@ describe('notificationService', () => {
       .mockResolvedValueOnce({ data: ok(null) })
       .mockResolvedValueOnce({ data: ok(null) })
       .mockResolvedValueOnce({ data: ok([]) })
-      .mockResolvedValueOnce({ data: ok(null) });
+      .mockResolvedValueOnce({ data: ok(null) })
+      .mockResolvedValueOnce({ data: ok({ unreadCount: 7 }) });
 
     await pageNotifications({ pageNum: 0, pageSize: 0, category: ' ORDER ', isRead: undefined });
     await markNotificationRead('70001');
@@ -43,6 +45,7 @@ describe('notificationService', () => {
       channelWechat: false,
       channelDingtalk: true,
     });
+    await expect(getUnreadNotificationCount()).resolves.toBe(7);
 
     expect(mockedPost).toHaveBeenNthCalledWith(1, '/notification/page', {
       pageNum: 1,
@@ -58,6 +61,7 @@ describe('notificationService', () => {
       channelWechat: false,
       channelDingtalk: true,
     });
+    expect(mockedPost).toHaveBeenNthCalledWith(6, '/notification/unread-count');
   });
 });
 

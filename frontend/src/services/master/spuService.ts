@@ -1,4 +1,5 @@
 import { apiClient, unwrapApiResponse } from '@/services/http/apiClient';
+import { normalizeOptionalFields } from '@/services/shared/normalize';
 
 export interface SpuQueryParams {
   status?: string;
@@ -163,10 +164,3 @@ function normalizeColorPayload(payload: ColorItemPayload): Partial<ColorItemPayl
   return normalizeOptionalFields(payload);
 }
 
-function normalizeOptionalFields<T extends object>(payload: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(payload)
-      .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
-      .filter(([, value]) => value !== undefined && value !== null && value !== ''),
-  ) as Partial<T>;
-}

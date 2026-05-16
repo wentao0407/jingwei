@@ -1,5 +1,6 @@
 import { apiClient, unwrapApiResponse } from '@/services/http/apiClient';
 import type { PageResult } from '@/services/master/customerService';
+import { normalizeOptionalFields } from '@/services/shared/normalize';
 
 export interface NotificationRecord {
   id: string;
@@ -39,11 +40,21 @@ export interface UpdateNotificationPreferencePayload {
   channelDingtalk?: boolean;
 }
 
+export interface UnreadNotificationCountRecord {
+  unreadCount?: number | null;
+}
+
 export async function pageNotifications(
   params: NotificationQueryParams,
 ): Promise<PageResult<NotificationRecord>> {
   const response = await apiClient.post('/notification/page', normalizePageQuery(params));
   return unwrapApiResponse<PageResult<NotificationRecord>>(response.data);
+}
+
+export async function getUnreadNotificationCount(): Promise<number> {
+  const response = await apiClient.post('/notification/unread-count');
+  const data = unwrapApiResponse<UnreadNotificationCountRecord>(response.data);
+  return data.unreadCount ?? 0;
 }
 
 export async function markNotificationRead(notificationId: string): Promise<void> {
@@ -74,12 +85,4 @@ function normalizePageQuery(params: NotificationQueryParams): Partial<Notificati
     pageNum: Math.max(1, params.pageNum),
     pageSize: Math.max(1, params.pageSize),
   });
-}
-
-function normalizeOptionalFields<T extends object>(value: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(value)
-      .map(([key, fieldValue]) => [key, typeof fieldValue === 'string' ? fieldValue.trim() : fieldValue])
-      .filter(([, fieldValue]) => fieldValue !== undefined && fieldValue !== null && fieldValue !== ''),
-  ) as Partial<T>;
 }

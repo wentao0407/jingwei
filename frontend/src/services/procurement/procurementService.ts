@@ -1,5 +1,6 @@
 import { apiClient, unwrapApiResponse } from '@/services/http/apiClient';
 import type { PageResult } from '@/services/master/customerService';
+import { normalizeOptionalFields } from '@/services/shared/normalize';
 
 export interface ProcurementOrderQueryParams {
   current: number;
@@ -43,6 +44,24 @@ export interface ProcurementOrderRecord {
   createdAt?: string | null;
   updatedAt?: string | null;
   lines?: ProcurementOrderLineRecord[] | null;
+}
+
+export interface SaveProcurementOrderLinePayload {
+  materialId: string;
+  materialType?: string;
+  quantity: number;
+  unit?: string;
+  unitPrice?: number;
+  mrpResultId?: string;
+  remark?: string;
+}
+
+export interface CreateProcurementOrderPayload {
+  supplierId: string;
+  orderDate?: string;
+  expectedDeliveryDate?: string;
+  remark?: string;
+  lines: SaveProcurementOrderLinePayload[];
 }
 
 export interface FireProcurementOrderEventPayload {
@@ -90,6 +109,22 @@ export interface AsnRecord {
   createdAt?: string | null;
   updatedAt?: string | null;
   lines?: AsnLineRecord[] | null;
+}
+
+export interface CreateAsnLinePayload {
+  procurementLineId: string;
+  materialId: string;
+  expectedQuantity: number;
+  batchNo?: string;
+  remark?: string;
+}
+
+export interface CreateAsnPayload {
+  procurementOrderId: string;
+  supplierId: string;
+  expectedArrivalDate?: string;
+  remark?: string;
+  lines: CreateAsnLinePayload[];
 }
 
 export interface ReceiveAsnGoodsPayload {
@@ -142,6 +177,32 @@ export interface BomRecord {
   items?: BomItemRecord[] | null;
 }
 
+export interface BomSizeConsumptionPayload {
+  sizeId: string;
+  code: string;
+  consumption: number;
+}
+
+export interface SaveBomItemPayload {
+  materialId: string;
+  materialType: string;
+  consumptionType: string;
+  baseConsumption: number;
+  baseSizeId?: string;
+  unit: string;
+  wastageRate?: number;
+  sizeConsumptions?: BomSizeConsumptionPayload[];
+  remark?: string;
+}
+
+export interface SaveBomPayload {
+  spuId?: string;
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  remark?: string;
+  items: SaveBomItemPayload[];
+}
+
 export interface MrpCalculatePayload {
   productionOrderIds?: string[];
 }
@@ -183,6 +244,13 @@ export async function pageProcurementOrders(
   return unwrapApiResponse<PageResult<ProcurementOrderRecord>>(response.data);
 }
 
+export async function createProcurementOrder(
+  payload: CreateProcurementOrderPayload,
+): Promise<ProcurementOrderRecord> {
+  const response = await apiClient.post('/procurement/order/create', normalizeProcurementOrderPayload(payload));
+  return unwrapApiResponse<ProcurementOrderRecord>(response.data);
+}
+
 export async function getProcurementOrderDetail(orderId: string): Promise<ProcurementOrderRecord> {
   const response = await apiClient.post('/procurement/order/detail', null, { params: { orderId } });
   return unwrapApiResponse<ProcurementOrderRecord>(response.data);
@@ -203,6 +271,11 @@ export async function pageAsns(params: AsnQueryParams): Promise<PageResult<AsnRe
   return unwrapApiResponse<PageResult<AsnRecord>>(response.data);
 }
 
+export async function createAsn(payload: CreateAsnPayload): Promise<AsnRecord> {
+  const response = await apiClient.post('/procurement/asn/create', normalizeAsnPayload(payload));
+  return unwrapApiResponse<AsnRecord>(response.data);
+}
+
 export async function getAsnDetail(asnId: string): Promise<AsnRecord> {
   const response = await apiClient.post('/procurement/asn/detail', null, { params: { asnId } });
   return unwrapApiResponse<AsnRecord>(response.data);
@@ -221,6 +294,23 @@ export async function submitAsnQc(payload: SubmitAsnQcPayload): Promise<void> {
 export async function pageBoms(params: BomQueryParams): Promise<PageResult<BomRecord>> {
   const response = await apiClient.post('/procurement/bom/page', normalizePageQuery(params));
   return unwrapApiResponse<PageResult<BomRecord>>(response.data);
+}
+
+export async function createBom(payload: SaveBomPayload): Promise<BomRecord> {
+  const response = await apiClient.post('/procurement/bom/create', normalizeBomPayload(payload));
+  return unwrapApiResponse<BomRecord>(response.data);
+}
+
+export async function updateBom(bomId: string, payload: SaveBomPayload): Promise<BomRecord> {
+  const response = await apiClient.post('/procurement/bom/update', normalizeBomPayload(payload), {
+    params: { bomId: bomId.trim() },
+  });
+  return unwrapApiResponse<BomRecord>(response.data);
+}
+
+export async function deleteBom(bomId: string): Promise<void> {
+  const response = await apiClient.post('/procurement/bom/delete', null, { params: { bomId: bomId.trim() } });
+  return unwrapApiResponse<void>(response.data);
 }
 
 export async function getBomDetail(bomId: string): Promise<BomRecord> {
@@ -258,10 +348,28 @@ function normalizeMrpPayload(payload: MrpCalculatePayload): MrpCalculatePayload 
   return productionOrderIds.length > 0 ? { productionOrderIds } : {};
 }
 
-function normalizeOptionalFields<T extends object>(payload: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(payload)
-      .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
-      .filter(([, value]) => value !== undefined && value !== null && value !== ''),
-  ) as Partial<T>;
+function normalizeProcurementOrderPayload(payload: CreateProcurementOrderPayload): Record<string, unknown> {
+  return normalizeOptionalFields({
+    ...payload,
+    lines: payload.lines.map((line) => normalizeOptionalFields(line)),
+  }) as Record<string, unknown>;
+}
+
+function normalizeAsnPayload(payload: CreateAsnPayload): Record<string, unknown> {
+  return normalizeOptionalFields({
+    ...payload,
+    lines: payload.lines.map((line) => normalizeOptionalFields(line)),
+  }) as Record<string, unknown>;
+}
+
+function normalizeBomPayload(payload: SaveBomPayload): Record<string, unknown> {
+  return normalizeOptionalFields({
+    ...payload,
+    items: payload.items.map((item) =>
+      normalizeOptionalFields({
+        ...item,
+        sizeConsumptions: item.sizeConsumptions?.map((size) => normalizeOptionalFields(size)),
+      }),
+    ),
+  }) as Record<string, unknown>;
 }

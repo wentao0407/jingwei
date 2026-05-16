@@ -1,14 +1,23 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { App as AntdApp } from 'antd';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DashboardLayout } from './DashboardLayout';
+import { getUnreadNotificationCount } from '@/services/notification/notificationService';
 import { clearAuthSession, setAuthSession } from '@/shared/storage/authSessionStorage';
+
+vi.mock('@/services/notification/notificationService', () => ({
+  getUnreadNotificationCount: vi.fn(),
+}));
+
+const mockedGetUnreadNotificationCount = vi.mocked(getUnreadNotificationCount);
 
 describe('DashboardLayout', () => {
   beforeEach(() => {
     window.localStorage.clear();
     clearAuthSession();
+    mockedGetUnreadNotificationCount.mockReset();
+    mockedGetUnreadNotificationCount.mockResolvedValue(0);
   });
 
   it('renders backend menu tree and current user name from auth session', async () => {
@@ -315,6 +324,23 @@ describe('DashboardLayout', () => {
 
     expect(await screen.findAllByText('系统配置')).toHaveLength(2);
     expect(screen.getByText('系统配置页面')).toBeInTheDocument();
+  });
+
+  it('shows unread notification count in the top action bar', async () => {
+    mockedGetUnreadNotificationCount.mockResolvedValueOnce(7);
+    setAuthSession({
+      userId: '1',
+      username: 'admin',
+      realName: '系统管理员',
+      roleIds: ['1'],
+      permissions: [],
+      menuTree: [],
+    });
+
+    renderLayout('/');
+
+    expect(await screen.findByText('7')).toBeInTheDocument();
+    expect(mockedGetUnreadNotificationCount).toHaveBeenCalledTimes(1);
   });
 
   it('normalizes backend customer and supplier menu paths to frontend routes', async () => {

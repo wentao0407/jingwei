@@ -1,0 +1,38 @@
+[Unit]
+Description=JingWei - 服装生产管理系统
+Documentation=https://github.com/your-org/jingwei
+After=network.target postgresql.service redis.service
+
+[Service]
+Type=simple
+User=jingwei
+Group=jingwei
+WorkingDirectory=/opt/jingwei
+
+# 环境变量（通过 EnvironmentFile 管理敏感配置）
+EnvironmentFile=/opt/jingwei/.env
+
+# 启动命令
+ExecStart=/usr/bin/java \
+    -Xms256m -Xmx512m \
+    -Djava.io.tmpdir=/opt/jingwei/tmp \
+    -Dspring.profiles.active=prod \
+    -jar /opt/jingwei/jingwei-1.0.0-SNAPSHOT.jar
+
+# 进程管理
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+
+# 安全加固
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/jingwei/logs /opt/jingwei/tmp
+
+# 日志
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jingwei
+
+[Install]
+WantedBy=multi-user.target

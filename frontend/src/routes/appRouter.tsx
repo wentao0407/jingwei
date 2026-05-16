@@ -1,44 +1,52 @@
+import { lazy, Suspense, type ReactElement } from 'react';
 import { Navigate, createBrowserRouter } from 'react-router-dom';
+import { LoadingState } from '@/components/state';
 import { AuthGuard } from '@/routes/AuthGuard';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
-import { ApprovalCenterPage } from '@/pages/approval/ApprovalCenterPage';
-import { CostAccountingPage } from '@/pages/cost/CostAccountingPage';
-import { DashboardPage } from '@/pages/dashboard/DashboardPage';
-import { InventoryAlertPage } from '@/pages/inventory/alerts/InventoryAlertPage';
-import { InboundOrderPage } from '@/pages/inventory/inbound/InboundOrderPage';
-import { OutboundOrderPage } from '@/pages/inventory/outbound/OutboundOrderPage';
-import { InventoryStockPlaceholderPage } from '@/pages/inventory/stock/InventoryStockPlaceholderPage';
-import { StocktakingPage } from '@/pages/inventory/stocktaking/StocktakingPage';
-import { LoginPage } from '@/pages/login/LoginPage';
-import { CategoryManagementPage } from '@/pages/master/categories/CategoryManagementPage';
-import { CodingRuleManagementPage } from '@/pages/master/coding-rules/CodingRuleManagementPage';
-import { CustomerManagementPage } from '@/pages/master/customers/CustomerManagementPage';
-import { MaterialManagementPage } from '@/pages/master/materials/MaterialManagementPage';
-import { SeasonManagementPage } from '@/pages/master/seasons/SeasonManagementPage';
-import { SizeGroupManagementPage } from '@/pages/master/size-groups/SizeGroupManagementPage';
-import { SpuManagementPage } from '@/pages/master/spus/SpuManagementPage';
-import { SupplierManagementPage } from '@/pages/master/suppliers/SupplierManagementPage';
-import { WarehouseManagementPage } from '@/pages/master/warehouses/WarehouseManagementPage';
-import { ProductionOrderListPage } from '@/pages/order/production/ProductionOrderListPage';
-import { SalesOrderListPage } from '@/pages/order/sales/SalesOrderListPage';
-import { AsnManagementPage } from '@/pages/procurement/asns/AsnManagementPage';
-import { BomMrpPage } from '@/pages/procurement/bom-mrp/BomMrpPage';
-import { ProcurementOrderListPage } from '@/pages/procurement/orders/ProcurementOrderListPage';
-import { PutawayManagementPage } from '@/pages/procurement/putaway/PutawayManagementPage';
-import { ReceivingManagementPage } from '@/pages/procurement/receiving/ReceivingManagementPage';
-import { ReportCenterPage } from '@/pages/report/ReportCenterPage';
-import { SystemConfigPage } from '@/pages/system/configs/SystemConfigPage';
-import { MenuManagementPage } from '@/pages/system/menus/MenuManagementPage';
-import { RoleManagementPage } from '@/pages/system/roles/RoleManagementPage';
-import { UserManagementPage } from '@/pages/system/users/UserManagementPage';
-import { ShipmentPage } from '@/pages/warehouse/shipments/ShipmentPage';
-import { WavePickingPage } from '@/pages/warehouse/waves/WavePickingPage';
+
+const LoginPage = lazy(() => import('@/pages/login/LoginPage').then((module) => ({ default: module.LoginPage })));
+const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage').then((module) => ({ default: module.DashboardPage })));
+const UserManagementPage = lazy(() => import('@/pages/system/users/UserManagementPage').then((module) => ({ default: module.UserManagementPage })));
+const RoleManagementPage = lazy(() => import('@/pages/system/roles/RoleManagementPage').then((module) => ({ default: module.RoleManagementPage })));
+const MenuManagementPage = lazy(() => import('@/pages/system/menus/MenuManagementPage').then((module) => ({ default: module.MenuManagementPage })));
+const SystemConfigPage = lazy(() => import('@/pages/system/configs/SystemConfigPage').then((module) => ({ default: module.SystemConfigPage })));
+const AuditLogPage = lazy(() => import('@/pages/system/audit-logs/AuditLogPage').then((module) => ({ default: module.AuditLogPage })));
+const DataScopePage = lazy(() => import('@/pages/system/data-scopes/DataScopePage').then((module) => ({ default: module.DataScopePage })));
+const MaterialManagementPage = lazy(() => import('@/pages/master/materials/MaterialManagementPage').then((module) => ({ default: module.MaterialManagementPage })));
+const CategoryManagementPage = lazy(() => import('@/pages/master/categories/CategoryManagementPage').then((module) => ({ default: module.CategoryManagementPage })));
+const SpuManagementPage = lazy(() => import('@/pages/master/spus/SpuManagementPage').then((module) => ({ default: module.SpuManagementPage })));
+const SizeGroupManagementPage = lazy(() => import('@/pages/master/size-groups/SizeGroupManagementPage').then((module) => ({ default: module.SizeGroupManagementPage })));
+const SeasonManagementPage = lazy(() => import('@/pages/master/seasons/SeasonManagementPage').then((module) => ({ default: module.SeasonManagementPage })));
+const WarehouseManagementPage = lazy(() => import('@/pages/master/warehouses/WarehouseManagementPage').then((module) => ({ default: module.WarehouseManagementPage })));
+const CodingRuleManagementPage = lazy(() => import('@/pages/master/coding-rules/CodingRuleManagementPage').then((module) => ({ default: module.CodingRuleManagementPage })));
+const CustomerManagementPage = lazy(() => import('@/pages/master/customers/CustomerManagementPage').then((module) => ({ default: module.CustomerManagementPage })));
+const SupplierManagementPage = lazy(() => import('@/pages/master/suppliers/SupplierManagementPage').then((module) => ({ default: module.SupplierManagementPage })));
+const SalesOrderListPage = lazy(() => import('@/pages/order/sales/SalesOrderListPage').then((module) => ({ default: module.SalesOrderListPage })));
+const ProductionOrderListPage = lazy(() => import('@/pages/order/production/ProductionOrderListPage').then((module) => ({ default: module.ProductionOrderListPage })));
+const ReturnOrderListPage = lazy(() => import('@/pages/order/returns/ReturnOrderListPage').then((module) => ({ default: module.ReturnOrderListPage })));
+const ProcurementOrderListPage = lazy(() => import('@/pages/procurement/orders/ProcurementOrderListPage').then((module) => ({ default: module.ProcurementOrderListPage })));
+const AsnManagementPage = lazy(() => import('@/pages/procurement/asns/AsnManagementPage').then((module) => ({ default: module.AsnManagementPage })));
+const BomMrpPage = lazy(() => import('@/pages/procurement/bom-mrp/BomMrpPage').then((module) => ({ default: module.BomMrpPage })));
+const ReceivingManagementPage = lazy(() => import('@/pages/procurement/receiving/ReceivingManagementPage').then((module) => ({ default: module.ReceivingManagementPage })));
+const PutawayManagementPage = lazy(() => import('@/pages/procurement/putaway/PutawayManagementPage').then((module) => ({ default: module.PutawayManagementPage })));
+const InventoryStockPlaceholderPage = lazy(() => import('@/pages/inventory/stock/InventoryStockPlaceholderPage').then((module) => ({ default: module.InventoryStockPlaceholderPage })));
+const InboundOrderPage = lazy(() => import('@/pages/inventory/inbound/InboundOrderPage').then((module) => ({ default: module.InboundOrderPage })));
+const OutboundOrderPage = lazy(() => import('@/pages/inventory/outbound/OutboundOrderPage').then((module) => ({ default: module.OutboundOrderPage })));
+const StocktakingPage = lazy(() => import('@/pages/inventory/stocktaking/StocktakingPage').then((module) => ({ default: module.StocktakingPage })));
+const InventoryAlertPage = lazy(() => import('@/pages/inventory/alerts/InventoryAlertPage').then((module) => ({ default: module.InventoryAlertPage })));
+const WavePickingPage = lazy(() => import('@/pages/warehouse/waves/WavePickingPage').then((module) => ({ default: module.WavePickingPage })));
+const ShipmentPage = lazy(() => import('@/pages/warehouse/shipments/ShipmentPage').then((module) => ({ default: module.ShipmentPage })));
+const ApprovalCenterPage = lazy(() => import('@/pages/approval/ApprovalCenterPage').then((module) => ({ default: module.ApprovalCenterPage })));
+const ApprovalConfigPage = lazy(() => import('@/pages/approval/configs/ApprovalConfigPage').then((module) => ({ default: module.ApprovalConfigPage })));
+const NotificationCenterPage = lazy(() => import('@/pages/notification/NotificationCenterPage').then((module) => ({ default: module.NotificationCenterPage })));
+const ReportCenterPage = lazy(() => import('@/pages/report/ReportCenterPage').then((module) => ({ default: module.ReportCenterPage })));
+const CostAccountingPage = lazy(() => import('@/pages/cost/CostAccountingPage').then((module) => ({ default: module.CostAccountingPage })));
 
 export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRouter(
   [
     {
       path: '/login',
-      element: <LoginPage />,
+      element: withLazyRoute(<LoginPage />),
     },
     {
       path: '/',
@@ -48,158 +56,51 @@ export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRo
         </AuthGuard>
       ),
       children: [
-        {
-          index: true,
-          element: <DashboardPage />,
-        },
-        {
-          path: 'system/users',
-          element: <UserManagementPage />,
-        },
-        {
-          path: 'system/roles',
-          element: <RoleManagementPage />,
-        },
-        {
-          path: 'system/menus',
-          element: <MenuManagementPage />,
-        },
-        {
-          path: 'system/configs',
-          element: <SystemConfigPage />,
-        },
-        {
-          path: 'master/materials',
-          element: <MaterialManagementPage />,
-        },
-        {
-          path: 'master/categories',
-          element: <CategoryManagementPage />,
-        },
-        {
-          path: 'master/spus',
-          element: <SpuManagementPage />,
-        },
-        {
-          path: 'master/size-groups',
-          element: <SizeGroupManagementPage />,
-        },
-        {
-          path: 'master/seasons',
-          element: <SeasonManagementPage />,
-        },
-        {
-          path: 'master/warehouses',
-          element: <WarehouseManagementPage />,
-        },
-        {
-          path: 'master/coding-rules',
-          element: <CodingRuleManagementPage />,
-        },
-        {
-          path: 'master/customers',
-          element: <CustomerManagementPage />,
-        },
-        {
-          path: 'master/suppliers',
-          element: <SupplierManagementPage />,
-        },
-        {
-          path: 'order/sales',
-          element: <SalesOrderListPage />,
-        },
-        {
-          path: 'order/production',
-          element: <ProductionOrderListPage />,
-        },
-        {
-          path: 'procurement/orders',
-          element: <ProcurementOrderListPage />,
-        },
-        {
-          path: 'procurement/asns',
-          element: <AsnManagementPage />,
-        },
-        {
-          path: 'procurement/bom-mrp',
-          element: <BomMrpPage />,
-        },
-        {
-          path: 'procurement/receiving',
-          element: <ReceivingManagementPage />,
-        },
-        {
-          path: 'procurement/putaway',
-          element: <PutawayManagementPage />,
-        },
-        {
-          path: 'inventory/skus',
-          element: <InventoryStockPlaceholderPage inventoryType="SKU" />,
-        },
+        { index: true, element: withLazyRoute(<DashboardPage />) },
+        { path: 'system/users', element: withLazyRoute(<UserManagementPage />) },
+        { path: 'system/roles', element: withLazyRoute(<RoleManagementPage />) },
+        { path: 'system/menus', element: withLazyRoute(<MenuManagementPage />) },
+        { path: 'system/configs', element: withLazyRoute(<SystemConfigPage />) },
+        { path: 'system/audit-logs', element: withLazyRoute(<AuditLogPage />) },
+        { path: 'system/data-scopes', element: withLazyRoute(<DataScopePage />) },
+        { path: 'master/materials', element: withLazyRoute(<MaterialManagementPage />) },
+        { path: 'master/categories', element: withLazyRoute(<CategoryManagementPage />) },
+        { path: 'master/spus', element: withLazyRoute(<SpuManagementPage />) },
+        { path: 'master/size-groups', element: withLazyRoute(<SizeGroupManagementPage />) },
+        { path: 'master/seasons', element: withLazyRoute(<SeasonManagementPage />) },
+        { path: 'master/warehouses', element: withLazyRoute(<WarehouseManagementPage />) },
+        { path: 'master/coding-rules', element: withLazyRoute(<CodingRuleManagementPage />) },
+        { path: 'master/customers', element: withLazyRoute(<CustomerManagementPage />) },
+        { path: 'master/suppliers', element: withLazyRoute(<SupplierManagementPage />) },
+        { path: 'order/sales', element: withLazyRoute(<SalesOrderListPage />) },
+        { path: 'order/production', element: withLazyRoute(<ProductionOrderListPage />) },
+        { path: 'order/returns', element: withLazyRoute(<ReturnOrderListPage />) },
+        { path: 'procurement/orders', element: withLazyRoute(<ProcurementOrderListPage />) },
+        { path: 'procurement/asns', element: withLazyRoute(<AsnManagementPage />) },
+        { path: 'procurement/bom-mrp', element: withLazyRoute(<BomMrpPage />) },
+        { path: 'procurement/receiving', element: withLazyRoute(<ReceivingManagementPage />) },
+        { path: 'procurement/putaway', element: withLazyRoute(<PutawayManagementPage />) },
+        { path: 'inventory/skus', element: withLazyRoute(<InventoryStockPlaceholderPage inventoryType="SKU" />) },
         {
           path: 'inventory/materials',
-          element: <InventoryStockPlaceholderPage inventoryType="MATERIAL" />,
+          element: withLazyRoute(<InventoryStockPlaceholderPage inventoryType="MATERIAL" />),
         },
-        {
-          path: 'inventory/inbounds',
-          element: <InboundOrderPage />,
-        },
-        {
-          path: 'inventory/outbounds',
-          element: <OutboundOrderPage />,
-        },
-        {
-          path: 'inventory/stocktaking',
-          element: <StocktakingPage />,
-        },
-        {
-          path: 'inventory/alerts',
-          element: <InventoryAlertPage />,
-        },
-        {
-          path: 'warehouse/waves',
-          element: <WavePickingPage />,
-        },
-        {
-          path: 'warehouse/shipments',
-          element: <ShipmentPage />,
-        },
-        {
-          path: 'approval/tasks',
-          element: <ApprovalCenterPage />,
-        },
-        {
-          path: 'notification/list',
-          element: <NotificationCenterPage />,
-        },
-        {
-          path: 'notification/preference',
-          element: <NotificationCenterPage />,
-        },
-        {
-          path: 'report/ledger',
-          element: <ReportCenterPage />,
-        },
-        {
-          path: 'report/flow',
-          element: <ReportCenterPage />,
-        },
-        {
-          path: 'report/age',
-          element: <ReportCenterPage />,
-        },
-        {
-          path: 'report/turnover',
-          element: <ReportCenterPage />,
-        },
-        {
-          path: 'cost/query',
-          element: <CostAccountingPage />,
-        },
-        {
-          path: 'cost/report',
-          element: <CostAccountingPage />,
-        },
+        { path: 'inventory/inbounds', element: withLazyRoute(<InboundOrderPage />) },
+        { path: 'inventory/outbounds', element: withLazyRoute(<OutboundOrderPage />) },
+        { path: 'inventory/stocktaking', element: withLazyRoute(<StocktakingPage />) },
+        { path: 'inventory/alerts', element: withLazyRoute(<InventoryAlertPage />) },
+        { path: 'warehouse/waves', element: withLazyRoute(<WavePickingPage />) },
+        { path: 'warehouse/shipments', element: withLazyRoute(<ShipmentPage />) },
+        { path: 'approval/tasks', element: withLazyRoute(<ApprovalCenterPage />) },
+        { path: 'approval/configs', element: withLazyRoute(<ApprovalConfigPage />) },
+        { path: 'notification/list', element: withLazyRoute(<NotificationCenterPage />) },
+        { path: 'notification/preference', element: withLazyRoute(<NotificationCenterPage />) },
+        { path: 'report/ledger', element: withLazyRoute(<ReportCenterPage />) },
+        { path: 'report/flow', element: withLazyRoute(<ReportCenterPage />) },
+        { path: 'report/age', element: withLazyRoute(<ReportCenterPage />) },
+        { path: 'report/turnover', element: withLazyRoute(<ReportCenterPage />) },
+        { path: 'cost/query', element: withLazyRoute(<CostAccountingPage />) },
+        { path: 'cost/report', element: withLazyRoute(<CostAccountingPage />) },
       ],
     },
     {
@@ -213,4 +114,7 @@ export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRo
     },
   },
 );
-import { NotificationCenterPage } from '@/pages/notification/NotificationCenterPage';
+
+function withLazyRoute(element: ReactElement) {
+  return <Suspense fallback={<LoadingState message="页面加载中" />}>{element}</Suspense>;
+}

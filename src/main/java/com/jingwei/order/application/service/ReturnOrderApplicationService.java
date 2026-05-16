@@ -158,6 +158,17 @@ public class ReturnOrderApplicationService {
         return toVO(returnOrder);
     }
 
+    public Page<ReturnOrderVO> pageQuery(ReturnOrderQueryDTO dto) {
+        ReturnStatus status = dto.getStatus() == null || dto.getStatus().isBlank()
+                ? null
+                : ReturnStatus.valueOf(dto.getStatus());
+        Page<ReturnOrder> page = new Page<>(dto.getPageNum(), dto.getPageSize());
+        Page<ReturnOrder> result = returnOrderDomainService.pageQuery(page, dto.getCustomerId(), status);
+        Page<ReturnOrderVO> voPage = new Page<>(result.getCurrent(), result.getSize(), result.getTotal());
+        voPage.setRecords(result.getRecords().stream().map(this::toVO).toList());
+        return voPage;
+    }
+
     // ==================== 私有方法 ====================
 
     /**

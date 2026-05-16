@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   approveBom,
   calculateMrp,
+  createAsn,
+  createBom,
+  createProcurementOrder,
+  deleteBom,
   fireProcurementOrderEvent,
   getAsnDetail,
   getBomDetail,
@@ -13,6 +17,7 @@ import {
   pageProcurementOrders,
   receiveAsnGoods,
   submitAsnQc,
+  updateBom,
 } from './procurementService';
 import { apiClient } from '@/services/http/apiClient';
 
@@ -133,6 +138,130 @@ describe('procurementService', () => {
       current: 1,
       size: 1,
       batchNo: 'MRP-001',
+    });
+  });
+
+  it('creates procurement orders and ASN records', async () => {
+    mockedPost
+      .mockResolvedValueOnce({ data: ok({ id: '70002' }) })
+      .mockResolvedValueOnce({ data: ok({ id: '81002' }) });
+
+    await createProcurementOrder({
+      supplierId: ' 90001 ',
+      orderDate: ' 2026-05-18 ',
+      expectedDeliveryDate: '',
+      remark: ' 首批采购 ',
+      lines: [
+        {
+          materialId: '30001',
+          materialType: ' FABRIC ',
+          quantity: 20,
+          unit: ' 米 ',
+          unitPrice: 12.5,
+          mrpResultId: '',
+          remark: '',
+        },
+      ],
+    });
+    await createAsn({
+      procurementOrderId: ' 70002 ',
+      supplierId: '90001',
+      expectedArrivalDate: ' 2026-05-25 ',
+      remark: '',
+      lines: [
+        {
+          procurementLineId: '71001',
+          materialId: '30001',
+          expectedQuantity: 20,
+          batchNo: ' BATCH-01 ',
+          remark: '',
+        },
+      ],
+    });
+
+    expect(mockedPost).toHaveBeenNthCalledWith(1, '/procurement/order/create', {
+      supplierId: '90001',
+      orderDate: '2026-05-18',
+      remark: '首批采购',
+      lines: [
+        {
+          materialId: '30001',
+          materialType: 'FABRIC',
+          quantity: 20,
+          unit: '米',
+          unitPrice: 12.5,
+        },
+      ],
+    });
+    expect(mockedPost).toHaveBeenNthCalledWith(2, '/procurement/asn/create', {
+      procurementOrderId: '70002',
+      supplierId: '90001',
+      expectedArrivalDate: '2026-05-25',
+      lines: [
+        {
+          procurementLineId: '71001',
+          materialId: '30001',
+          expectedQuantity: 20,
+          batchNo: 'BATCH-01',
+        },
+      ],
+    });
+  });
+
+  it('creates updates and deletes BOM records', async () => {
+    mockedPost
+      .mockResolvedValueOnce({ data: ok({ id: '91002' }) })
+      .mockResolvedValueOnce({ data: ok({ id: '91002' }) })
+      .mockResolvedValueOnce({ data: ok(null) });
+
+    const payload = {
+      spuId: ' 80001 ',
+      effectiveFrom: ' 2026-05-01 ',
+      effectiveTo: '',
+      remark: ' 基础 BOM ',
+      items: [
+        {
+          materialId: '30001',
+          materialType: ' FABRIC ',
+          consumptionType: ' FIXED_PER_PIECE ',
+          baseConsumption: 1.2,
+          baseSizeId: '',
+          unit: ' 米 ',
+          wastageRate: 0.08,
+          remark: '',
+          sizeConsumptions: [
+            { sizeId: '50001', code: ' S ', consumption: 1.1 },
+          ],
+        },
+      ],
+    };
+
+    await createBom(payload);
+    await updateBom(' 91002 ', payload);
+    await deleteBom(' 91002 ');
+
+    const normalizedPayload = {
+      spuId: '80001',
+      effectiveFrom: '2026-05-01',
+      remark: '基础 BOM',
+      items: [
+        {
+          materialId: '30001',
+          materialType: 'FABRIC',
+          consumptionType: 'FIXED_PER_PIECE',
+          baseConsumption: 1.2,
+          unit: '米',
+          wastageRate: 0.08,
+          sizeConsumptions: [{ sizeId: '50001', code: 'S', consumption: 1.1 }],
+        },
+      ],
+    };
+    expect(mockedPost).toHaveBeenNthCalledWith(1, '/procurement/bom/create', normalizedPayload);
+    expect(mockedPost).toHaveBeenNthCalledWith(2, '/procurement/bom/update', normalizedPayload, {
+      params: { bomId: '91002' },
+    });
+    expect(mockedPost).toHaveBeenNthCalledWith(3, '/procurement/bom/delete', null, {
+      params: { bomId: '91002' },
     });
   });
 });

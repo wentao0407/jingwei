@@ -462,7 +462,7 @@ public class ReportApplicationService {
         if ("MATERIAL".equalsIgnoreCase(inventoryType)) {
             result = reportMapper.selectMaterialAgePage(page, dto.getWarehouseId(), dto.getKeyword());
         } else {
-            result = reportMapper.selectSkuAgePage(page, dto.getWarehouseId(),
+            result = reportMapper.selectSkuAgePage(page, dto.getWarehouseId(), null,
                     dto.getCategoryId(), dto.getSeasonId(), dto.getKeyword());
         }
 
@@ -482,7 +482,7 @@ public class ReportApplicationService {
                     dto.getWarehouseId(), dto.getKeyword());
         } else {
             fullSummary = reportMapper.selectSkuAgeSummary(
-                    dto.getWarehouseId(), dto.getCategoryId(), dto.getSeasonId(), dto.getKeyword());
+                    dto.getWarehouseId(), null, dto.getCategoryId(), dto.getSeasonId(), dto.getKeyword());
         }
 
         // 从全量汇总结果中提取数据
@@ -657,7 +657,7 @@ public class ReportApplicationService {
             result = reportMapper.selectMaterialTurnoverPage(page, dto.getWarehouseId(),
                     startDate, endDate, dto.getKeyword());
         } else {
-            result = reportMapper.selectSkuTurnoverPage(page, dto.getWarehouseId(),
+            result = reportMapper.selectSkuTurnoverPage(page, dto.getWarehouseId(), null,
                     dto.getCategoryId(), dto.getSeasonId(),
                     startDate, endDate, dto.getKeyword());
         }
@@ -730,8 +730,10 @@ public class ReportApplicationService {
 
         // 平均库存 = (期初 + 期末) / 2
         // 期初库存 ≈ 当前库存 + 净出库（简化估算）
-        BigDecimal beginQty = currentQty.add(netOutbound != null ? netOutbound : BigDecimal.ZERO);
-        BigDecimal avgInventory = beginQty.add(currentQty)
+        BigDecimal safeCurrent = currentQty != null ? currentQty : BigDecimal.ZERO;
+        BigDecimal safeNetOut = netOutbound != null ? netOutbound : BigDecimal.ZERO;
+        BigDecimal beginQty = safeCurrent.add(safeNetOut);
+        BigDecimal avgInventory = beginQty.add(safeCurrent)
                 .divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
         vo.setAvgInventory(avgInventory);
 

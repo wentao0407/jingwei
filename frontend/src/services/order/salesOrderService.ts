@@ -1,5 +1,6 @@
 import { apiClient, unwrapApiResponse } from '@/services/http/apiClient';
 import type { PageResult } from '@/services/master/customerService';
+import { normalizeOptionalFields } from '@/services/shared/normalize';
 
 export interface SalesOrderQueryParams {
   current: number;
@@ -166,6 +167,17 @@ export interface QuantityChangeRecord {
   createdAt?: string | null;
 }
 
+export interface SalesOrderTimelineRecord {
+  id: string;
+  changeType?: string | null;
+  fieldName?: string | null;
+  oldValue?: string | null;
+  newValue?: string | null;
+  changeReason?: string | null;
+  operatedBy?: string | null;
+  operatedAt?: string | null;
+}
+
 export async function pageSalesOrders(params: SalesOrderQueryParams): Promise<PageResult<SalesOrderRecord>> {
   const response = await apiClient.post('/order/sales/page', normalizeQuery(params));
   return unwrapApiResponse<PageResult<SalesOrderRecord>>(response.data);
@@ -193,8 +205,18 @@ export async function createQuantityChange(payload: QuantityChangePayload): Prom
   return unwrapApiResponse<QuantityChangeRecord>(response.data);
 }
 
+export async function getSalesOrderTimeline(orderId: string): Promise<SalesOrderTimelineRecord[]> {
+  const response = await apiClient.post('/order/sales/timeline', null, { params: { orderId: orderId.trim() } });
+  return unwrapApiResponse<SalesOrderTimelineRecord[]>(response.data);
+}
+
+export async function listQuantityChanges(orderId: string): Promise<QuantityChangeRecord[]> {
+  const response = await apiClient.post('/order/sales/quantity-change/list', null, { params: { orderId: orderId.trim() } });
+  return unwrapApiResponse<QuantityChangeRecord[]>(response.data);
+}
+
 export async function getSalesOrderDetail(orderId: string): Promise<SalesOrderRecord> {
-  const response = await apiClient.post('/order/sales/detail', null, { params: { orderId } });
+  const response = await apiClient.post('/order/sales/detail', null, { params: { orderId: orderId.trim() } });
   return unwrapApiResponse<SalesOrderRecord>(response.data);
 }
 
@@ -250,12 +272,4 @@ function normalizeQuantityChangePayload(payload: QuantityChangePayload): Record<
     ...payload,
     sizes: payload.sizes.map((size) => normalizeOptionalFields(size)),
   }) as Record<string, unknown>;
-}
-
-function normalizeOptionalFields<T extends object>(payload: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(payload)
-      .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
-      .filter(([, value]) => value !== undefined && value !== null && value !== ''),
-  ) as Partial<T>;
 }

@@ -1,4 +1,5 @@
 import { apiClient, unwrapApiResponse } from '@/services/http/apiClient';
+import { normalizeOptionalFields } from '@/services/shared/normalize';
 
 export interface MenuRecord {
   id: string;
@@ -83,10 +84,3 @@ export async function assignMenuPermissions(payload: AssignMenuPermissionsPayloa
   return unwrapApiResponse<void>(response.data);
 }
 
-function normalizeOptionalFields<T extends object>(payload: T): T {
-  return Object.fromEntries(
-    Object.entries(payload)
-      .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
-      .filter(([, value]) => value !== undefined && value !== null && value !== ''),
-  ) as T;
-}

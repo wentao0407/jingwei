@@ -1,5 +1,6 @@
 import { apiClient, unwrapApiResponse } from '@/services/http/apiClient';
 import type { PageResult } from '@/services/master/customerService';
+import { normalizeOptionalFields } from '@/services/shared/normalize';
 
 export interface InventoryOrderLineRecord {
   id?: string;
@@ -90,6 +91,31 @@ export interface StocktakingOrderRecord {
   lines?: StocktakingLineRecord[] | null;
 }
 
+export interface InventoryStockRecord {
+  id: string;
+  warehouseId?: string | null;
+  warehouseName?: string | null;
+  locationId?: string | null;
+  locationCode?: string | null;
+  batchNo?: string | null;
+  availableQty?: number | null;
+  lockedQty?: number | null;
+  qcQty?: number | null;
+  totalQty?: number | null;
+  inTransitQty?: number | null;
+}
+
+export interface InventorySkuRecord extends InventoryStockRecord {
+  skuId?: string | null;
+  skuCode?: string | null;
+}
+
+export interface InventoryMaterialRecord extends InventoryStockRecord {
+  materialId?: string | null;
+  materialCode?: string | null;
+  materialName?: string | null;
+}
+
 interface PageQuery {
   current: number;
   size: number;
@@ -102,6 +128,11 @@ interface PageQuery {
 export type InboundQueryParams = PageQuery;
 export type OutboundQueryParams = PageQuery;
 export type StocktakingQueryParams = Omit<PageQuery, 'inboundNo' | 'outboundNo'>;
+export type InventorySkuQueryParams = Omit<PageQuery, 'status' | 'inboundNo' | 'outboundNo'> & { skuId?: string; batchNo?: string };
+export type InventoryMaterialQueryParams = Omit<PageQuery, 'status' | 'inboundNo' | 'outboundNo'> & {
+  materialId?: string;
+  batchNo?: string;
+};
 
 export interface CreateInboundPayload {
   inboundType: string;
@@ -174,6 +205,18 @@ export async function pageStocktakingOrders(
   return unwrapApiResponse<PageResult<StocktakingOrderRecord>>(response.data);
 }
 
+export async function pageInventorySkus(params: InventorySkuQueryParams): Promise<PageResult<InventorySkuRecord>> {
+  const response = await apiClient.post('/inventory/sku/page', normalizePageQuery(params));
+  return unwrapApiResponse<PageResult<InventorySkuRecord>>(response.data);
+}
+
+export async function pageInventoryMaterials(
+  params: InventoryMaterialQueryParams,
+): Promise<PageResult<InventoryMaterialRecord>> {
+  const response = await apiClient.post('/inventory/material/page', normalizePageQuery(params));
+  return unwrapApiResponse<PageResult<InventoryMaterialRecord>>(response.data);
+}
+
 export async function getStocktakingDetail(stocktakingId: string): Promise<StocktakingOrderRecord> {
   const response = await apiClient.post('/inventory/stocktaking/detail', null, { params: { stocktakingId } });
   return unwrapApiResponse<StocktakingOrderRecord>(response.data);
@@ -206,12 +249,4 @@ export async function reviewStocktaking(stocktakingId: string): Promise<void> {
 
 function normalizePageQuery<T extends { current: number; size: number }>(params: T): Partial<T> {
   return normalizeOptionalFields({ ...params, current: Math.max(1, params.current), size: Math.max(1, params.size) });
-}
-
-function normalizeOptionalFields<T extends object>(value: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(value)
-      .map(([key, fieldValue]) => [key, typeof fieldValue === 'string' ? fieldValue.trim() : fieldValue])
-      .filter(([, fieldValue]) => fieldValue !== undefined && fieldValue !== null && fieldValue !== ''),
-  ) as Partial<T>;
 }

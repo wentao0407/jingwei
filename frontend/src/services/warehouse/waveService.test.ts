@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cancelWave, completePickList, confirmPick, createWave } from './waveService';
+import { cancelWave, completePickList, confirmPick, createWave, getWaveDetail, pageWaves } from './waveService';
 import { apiClient } from '@/services/http/apiClient';
 
 vi.mock('@/services/http/apiClient', async () => {
@@ -51,6 +51,23 @@ describe('waveService', () => {
     });
     expect(mockedPost).toHaveBeenNthCalledWith(4, '/warehouse/wave/cancel', null, {
       params: { waveId: '70001' },
+    });
+  });
+
+  it('queries waves and loads detail with normalized filters', async () => {
+    mockedPost.mockResolvedValue({ data: ok({ records: [], total: 0 }) });
+
+    await pageWaves({ current: 0, size: 0, warehouseId: ' 30001 ', status: ' ', waveNo: ' WV-01 ' });
+    await getWaveDetail(' 10001 ');
+
+    expect(mockedPost).toHaveBeenNthCalledWith(1, '/warehouse/wave/page', {
+      current: 1,
+      size: 1,
+      warehouseId: '30001',
+      waveNo: 'WV-01',
+    });
+    expect(mockedPost).toHaveBeenNthCalledWith(2, '/warehouse/wave/detail', null, {
+      params: { waveId: '10001' },
     });
   });
 });

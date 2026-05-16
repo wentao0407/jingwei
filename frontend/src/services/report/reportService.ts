@@ -1,5 +1,6 @@
 import { apiClient, unwrapApiResponse } from '@/services/http/apiClient';
 import type { PageResult } from '@/services/master/customerService';
+import { normalizeOptionalFields } from '@/services/shared/normalize';
 
 export interface ReportPageQuery {
   current: number;
@@ -22,6 +23,19 @@ export interface InventoryLedgerRecord {
   lockedQty?: number | null;
   totalQty?: number | null;
   totalAmount?: number | null;
+}
+
+export interface InventoryLedgerMatrixRecord {
+  spuId?: string | null;
+  spuCode?: string | null;
+  spuName?: string | null;
+  warehouseId?: string | null;
+  warehouseName?: string | null;
+  sizes?: string[] | null;
+  matrix?: Record<string, Record<string, number>> | null;
+  colorTotals?: Record<string, number> | null;
+  sizeTotals?: Record<string, number> | null;
+  grandTotal?: number | null;
 }
 
 export interface OperationFlowRecord {
@@ -83,6 +97,16 @@ export async function pageInventoryLedger(
   return unwrapApiResponse<PageResult<InventoryLedgerRecord>>(response.data);
 }
 
+export async function queryInventoryLedgerMatrix(
+  spuId: string,
+  warehouseId: string,
+): Promise<InventoryLedgerMatrixRecord | null> {
+  const response = await apiClient.post('/report/ledger/matrix', null, {
+    params: { spuId: spuId.trim(), warehouseId: warehouseId.trim() },
+  });
+  return unwrapApiResponse<InventoryLedgerMatrixRecord | null>(response.data);
+}
+
 export async function pageOperationFlows(
   params: OperationFlowQuery,
 ): Promise<PageResult<OperationFlowRecord>> {
@@ -100,18 +124,30 @@ export async function queryTurnoverAnalysis(params: TurnoverQuery): Promise<Page
   return unwrapApiResponse<PageResult<TurnoverRecord>>(response.data);
 }
 
+export async function exportInventoryLedger(params: ReportPageQuery): Promise<Blob> {
+  const response = await apiClient.post('/report/ledger/export', normalizePageQuery(params), { responseType: 'blob' });
+  return response.data;
+}
+
+export async function exportOperationFlows(params: OperationFlowQuery): Promise<Blob> {
+  const response = await apiClient.post('/report/flow/export', normalizePageQuery(params), { responseType: 'blob' });
+  return response.data;
+}
+
+export async function exportInventoryAge(params: ReportPageQuery): Promise<Blob> {
+  const response = await apiClient.post('/report/age/export', normalizePageQuery(params), { responseType: 'blob' });
+  return response.data;
+}
+
+export async function exportTurnoverAnalysis(params: TurnoverQuery): Promise<Blob> {
+  const response = await apiClient.post('/report/turnover/export', normalizePageQuery(params), { responseType: 'blob' });
+  return response.data;
+}
+
 function normalizePageQuery<T extends { current: number; size: number }>(params: T): Partial<T> {
   return normalizeOptionalFields({
     ...params,
     current: Math.max(1, params.current),
     size: Math.max(1, params.size),
   });
-}
-
-function normalizeOptionalFields<T extends object>(value: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(value)
-      .map(([key, fieldValue]) => [key, typeof fieldValue === 'string' ? fieldValue.trim() : fieldValue])
-      .filter(([, fieldValue]) => fieldValue !== undefined && fieldValue !== null && fieldValue !== ''),
-  ) as Partial<T>;
 }

@@ -1,4 +1,6 @@
 import { apiClient, unwrapApiResponse } from '@/services/http/apiClient';
+import type { PageResult } from '@/services/master/customerService';
+import { normalizeOptionalFields } from '@/services/shared/normalize';
 
 export interface CreateWavePayload {
   warehouseId: string;
@@ -10,6 +12,52 @@ export interface CreateWavePayload {
 export interface ConfirmPickPayload {
   pickItemId: string;
   actualQty: number;
+}
+
+export interface WaveQueryParams {
+  current: number;
+  size: number;
+  warehouseId?: string;
+  status?: string;
+  waveNo?: string;
+}
+
+export interface PickItemRecord {
+  id: string;
+  skuId?: string | null;
+  materialId?: string | null;
+  batchNo?: string | null;
+  plannedQty?: number | null;
+  actualQty?: number | null;
+  status?: string | null;
+}
+
+export interface PickListRecord {
+  id: string;
+  pickListNo?: string | null;
+  status?: string | null;
+  items?: PickItemRecord[] | null;
+}
+
+export interface WaveRecord {
+  id: string;
+  waveNo?: string | null;
+  warehouseId?: string | null;
+  strategy?: string | null;
+  status?: string | null;
+  remark?: string | null;
+  createdAt?: string | null;
+  pickLists?: PickListRecord[] | null;
+}
+
+export async function pageWaves(params: WaveQueryParams): Promise<PageResult<WaveRecord>> {
+  const response = await apiClient.post('/warehouse/wave/page', normalizePageQuery(params));
+  return unwrapApiResponse<PageResult<WaveRecord>>(response.data);
+}
+
+export async function getWaveDetail(waveId: string): Promise<WaveRecord> {
+  const response = await apiClient.post('/warehouse/wave/detail', null, { params: { waveId: waveId.trim() } });
+  return unwrapApiResponse<WaveRecord>(response.data);
 }
 
 export async function createWave(payload: CreateWavePayload): Promise<string> {
@@ -39,10 +87,6 @@ function normalizeWavePayload(payload: CreateWavePayload): Partial<CreateWavePay
   });
 }
 
-function normalizeOptionalFields<T extends object>(value: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(value)
-      .map(([key, fieldValue]) => [key, typeof fieldValue === 'string' ? fieldValue.trim() : fieldValue])
-      .filter(([, fieldValue]) => fieldValue !== undefined && fieldValue !== null && fieldValue !== ''),
-  ) as Partial<T>;
+function normalizePageQuery<T extends { current: number; size: number }>(params: T): Partial<T> {
+  return normalizeOptionalFields({ ...params, current: Math.max(1, params.current), size: Math.max(1, params.size) });
 }

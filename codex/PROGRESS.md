@@ -1,11 +1,11 @@
 # 经纬项目进度
 
 > 用途：记录当前实现状态。每次编码任务完成后都要更新本文档。
-> 更新时间：2026-05-14。
+> 更新时间：2026-05-16。
 
 ## 当前状态
 
-后端已基本完成，前端已完成系统管理、主数据、销售订单模块、生产订单模块、采购与仓储模块、库存与物流模块和经营辅助模块。
+后端已基本完成，前端已完成系统管理、主数据、销售订单模块、生产订单模块、采购与仓储模块、库存与物流模块和经营辅助模块；当前已进入全链路联调、路由懒加载和生产构建优化阶段。
 
 目前项目已有 `outputs/` 下的产品/设计文档，以及 `codex/` 下的 AI 协作记忆文档。
 
@@ -30,11 +30,30 @@
 
 ## 进行中
 
-前端阶段计划已完成，进入联调和优化阶段。
+前端阶段计划已完成，已完成首轮全链路联调、路由懒加载、生产构建拆包、代码检视第一批、报表导出、审批历史、代码检视 5-8 项修复，以及剩余主要查询与管理入口修复。
 
 推荐下一个任务：
 
-- 优先做全链路联调、路由懒加载和生产部署优化。
+- 为生产订单、BOM、采购订单和 ASN 的新增/编辑类写操作设计完整业务表单；发运列表需等待后端抽象发运单聚合或 page/detail 契约。
+
+## 2026-05-16 任务：前端代码检视剩余主要查询与管理入口修复
+
+已完成：
+- 后端新增并编译通过库存 SKU/物料分页、退货分页、波次分页与明细端点。
+- 前端补齐库存 SKU/物料分页 service 和真实列表页，移除占位告警。
+- 前端补齐退货分页 service 和独立退货列表页。
+- 前端补齐波次 page/detail service，并在波次拣货页展示波次列表和明细。
+- 前端新增审批配置、操作日志、数据范围页面，并接入路由、fallback 菜单和页面标题。
+- 前端补齐库存台账矩阵 service，并在报表中心库存台账 Tab 接入矩阵视图。
+- 用户管理页新增用户详情和修改密码入口，接入 `POST /system/user/detail` 与 `POST /system/user/changePassword`。
+- 销售订单详情新增时间线与数量变更记录展示，接入 `POST /order/sales/timeline` 与 `POST /order/sales/quantity-change/list`。
+- 生产订单 CRUD、BOM CRUD、采购订单创建、ASN 创建已完成 service 层契约与测试；页面层仍需按业务规则设计完整表单后接入。
+
+验证：
+- `mvn -q -DskipTests compile` 通过。
+- `pnpm lint` 通过。
+- `pnpm exec vitest run src/services/report/reportService.test.ts src/pages/report/ReportCenterPage.test.tsx src/pages/system/users/UserManagementPage.test.tsx src/pages/order/sales/SalesOrderListPage.test.tsx` 通过，32 个测试通过；存在既有 React/Ant Design jsdom `act(...)` warning。
+- `pnpm build` 通过，生产构建无 chunk size warning。
 
 ## 未开始
 
@@ -77,16 +96,52 @@
 数据库：
 
 - 已有多批权限恢复 migration 和当前菜单演示数据 migration。
-- 当前运行库的部分新增 migration 仍需由 Flyway 或可直连 PostgreSQL 的环境执行。
+- 当前运行库已补充 `V60__ensure_stage8_runtime_tables.sql`，需由 Flyway 或可直连 PostgreSQL 的环境执行后重启/复测库存预警与通知中心接口。
 
 测试：
 
-- 前端已建立 Vitest/Testing Library 测试，当前全量 217 个测试。
+- 前端已建立 Vitest/Testing Library 测试，当前全量 237 个测试。
 
 部署：
 
 - 前端已建立本地开发脚本。
 - 尚未建立生产部署脚本。
+
+## 2026-05-15 任务：前端代码检视 5-8 项修复
+
+已完成：
+- 补全退货 service 已存在后端端点：详情、审批通过、审批驳回、确认收货和质检。
+- 补全通用审批提交 service：`POST /approval/submit`，供后续业务模块按需接入。
+- 补全未读通知数 service：`POST /notification/unread-count`。
+- 主布局顶部通知按钮增加未读数量 badge，点击跳转通知列表。
+- 复核波次/发运列表：当前后端未提供 `page/detail` 查询端点，前端未伪接不存在接口。
+
+验证：
+- `pnpm exec vitest run src/services/order/returnOrderService.test.ts src/services/approval/approvalService.test.ts src/services/notification/notificationService.test.ts src/layouts/DashboardLayout.test.tsx src/pages/notification/NotificationCenterPage.test.tsx src/pages/order/sales/SalesOrderListPage.test.tsx` 通过，38 个测试通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，70 个测试文件、237 个测试通过；存在既有 React/Ant Design jsdom `act(...)` warning。
+- `pnpm build` 通过，生产构建无 chunk size warning。
+
+后续任务：
+- 继续处理 `codex/FRONTEND_CODE_REVIEW.md` 中的库存直接查询、审批配置管理、用户详情/改密、订单时间线等后续修复。
+
+## 2026-05-15 任务：前端代码检视第一批、报表导出和审批历史
+
+已完成：
+- 提取前端 service 层重复的请求参数清洗 helper 到 `frontend/src/services/shared/normalize.ts`，并更新各 service 复用。
+- 补充 auth、system user、approval、report 和共享 normalize helper 的 service 层测试。
+- 修复后端授权菜单为空时主布局 fallback 菜单不完整的问题，恢复审批、通知、报表、成本、库存物流、基础数据等入口。
+- 报表中心新增导出能力，对接库存台账、出入库流水、库龄分析和畅滞销分析 4 个 export 端点，并按当前筛选条件下载 Blob 文件。
+- 审批中心新增审批历史入口，对接 `POST /approval/task/records`，支持按业务类型、业务 ID 和业务单号查看审批记录。
+
+验证：
+- `pnpm exec vitest run src/services/shared/normalize.test.ts src/services/auth/authService.test.ts src/services/system/userService.test.ts src/services/report/reportService.test.ts src/pages/report/ReportCenterPage.test.tsx src/layouts/DashboardLayout.test.tsx src/layouts/DashboardLayout.menu.test.ts src/services/approval/approvalService.test.ts src/pages/approval/ApprovalCenterPage.test.tsx` 通过，31 个测试通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，70 个测试文件、232 个测试通过；存在既有 React/Ant Design jsdom `act(...)` warning。
+- `pnpm build` 通过，生产构建无 chunk size warning。
+
+后续任务：
+- 继续处理 `codex/FRONTEND_CODE_REVIEW.md` 中的库存直接查询、审批配置管理、用户详情/改密、订单时间线等后续修复。
 
 ## 当前风险
 
@@ -95,6 +150,54 @@
 - 状态机和审批要尽早做，否则后续容易返工。
 - 前端页面看似简单，但如果早于后端契约稳定，容易偏离业务规则。
 - MRP 和波次逻辑算法复杂，需要专门测试。
+
+## 2026-05-15 任务：全链路联调、路由懒加载和生产构建优化
+
+已完成：
+- 前端全应用业务页面路由已改为 `React.lazy` + `Suspense` 懒加载。
+- 生产构建已按 `vendor-antd`、`vendor-pro`、`vendor-http` 和业务页面拆包，构建不再出现 Vite chunk size warning。
+- 全链路联调修复了后端菜单路径归一化后重复导致的 ProLayout duplicate key warning。
+- 全链路联调修复了报表真实数据空 `inventoryId` 导致的 Table row key warning。
+- 新增 `V60__ensure_stage8_runtime_tables.sql`，幂等补齐库存预警和通知中心运行时表。
+
+验证：
+- `mvn -q -Dtest=Stage8RuntimeTableMigrationTest test` 通过。
+- `pnpm lint` 通过。
+- `pnpm test` 通过，67 个测试文件、221 个测试通过；存在既有 Ant Design/jsdom `act(...)` warning。
+- `pnpm build` 通过，生产构建无 chunk size warning。
+- Playwright 已覆盖核心经营链路页面；当前运行的 8080 后端尚未加载 V60，库存预警和通知接口需迁移/重启后复测。
+
+后续任务：
+- 执行 V60 并重启后端后复测 `/inventory/alert/list`、`/notification/page`、`/notification/preference/detail`。
+- 继续生产部署脚本、Nginx/systemd 和环境配置验证。
+
+## 2026-05-15 任务：生产部署资产加固
+
+已完成：
+- `deploy/jingwei.service` 已增加 `-Djava.io.tmpdir=/opt/jingwei/tmp`，并允许 `/opt/jingwei/logs`、`/opt/jingwei/tmp` 写入，避免 `ProtectSystem=strict` 下 Spring Boot/Tomcat 临时目录不可写。
+- `deploy/deploy.sh` 已增加 root 检查、运行用户检查、JAR/dist 产物检查、运行目录创建、目录属主设置和 `.env` 权限收口。
+- `deploy/.env.example` 已补齐 `DB_HOST`、`DB_PORT`、`DB_NAME`、`DB_USERNAME`。
+- `application-prod.yml` 已支持通过环境变量配置数据库 host、port、database 和 username。
+- 新增 `deploy/README.md`，补齐构建产物、服务器准备、数据库初始化、环境变量、部署启动和健康检查步骤。
+- 新增 `DeploymentAssetsTest`，锁定 systemd tmpdir、部署权限和生产环境变量配置。
+
+验证：
+- `bash -n deploy/deploy.sh` 通过。
+- `mvn -q -Dtest=DeploymentAssetsTest test` 通过。
+- `mvn -q -DskipTests package` 通过，重新生成 `target/jingwei-1.0.0-SNAPSHOT.jar`。
+- 已确认 JAR 内 `BOOT-INF/classes/application-prod.yml` 包含新的数据库环境变量配置。
+
+## 2026-05-15 任务：后端健康检查与运维手册复核
+
+已完成：
+- 确认 `spring-boot-starter-actuator` 已存在，`/actuator/health` 和 `/actuator/info` 已在安全白名单中放行。
+- 确认 `application.yml` 已暴露 `health,info`，健康详情配置为 `show-details: always`。
+- 确认 `application-prod.yml` 已配置文件日志 `/opt/jingwei/logs/jingwei.log`，单文件 100MB，保留 30 天，总上限 1GB。
+- 复核并修正 `deploy/RUNBOOK.md`，补齐 prod 手动启动的 `-Djava.io.tmpdir=/opt/jingwei/tmp`，以及 `DB_HOST`、`DB_PORT`、`DB_NAME`、`DB_USERNAME` 等数据库环境变量说明。
+- 扩展 `DeploymentAssetsTest`，覆盖 RUNBOOK 与生产运行配置一致性。
+
+验证：
+- `mvn -q -Dtest=DeploymentAssetsTest test` 通过。
 
 ## 2026-05-14 任务：通知中心、报表中心与成本核算
 

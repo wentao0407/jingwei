@@ -6,6 +6,8 @@ import {
   createQuantityChange,
   deleteSalesOrder,
   getSalesOrderDetail,
+  getSalesOrderTimeline,
+  listQuantityChanges,
   pageSalesOrders,
   resubmitSalesOrder,
   submitSalesOrder,
@@ -187,6 +189,22 @@ describe('salesOrderService', () => {
         { sizeId: '50002', code: 'M', quantity: 95 },
       ],
       reason: '客户追加数量',
+    });
+  });
+
+  it('loads sales order timeline and quantity change records', async () => {
+    mockedPost
+      .mockResolvedValueOnce({ data: { code: 0, message: 'success', success: true, data: [{ id: '81001' }] } })
+      .mockResolvedValueOnce({ data: { code: 0, message: 'success', success: true, data: [{ id: '82001' }] } });
+
+    await getSalesOrderTimeline(' 10003 ');
+    await listQuantityChanges('10003');
+
+    expect(mockedPost).toHaveBeenNthCalledWith(1, '/order/sales/timeline', null, {
+      params: { orderId: '10003' },
+    });
+    expect(mockedPost).toHaveBeenNthCalledWith(2, '/order/sales/quantity-change/list', null, {
+      params: { orderId: '10003' },
     });
   });
 });

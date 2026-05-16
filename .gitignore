@@ -37,3 +37,4 @@ memory/
 
 # Playwright CLI
 .playwright-cli/
+deploy/.env

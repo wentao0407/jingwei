@@ -1,6 +1,9 @@
 package com.jingwei.warehouse.infrastructure.persistence;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jingwei.warehouse.domain.model.Wave;
+import com.jingwei.warehouse.domain.model.WaveStatus;
 import com.jingwei.warehouse.domain.repository.PickListRepository;
 import com.jingwei.warehouse.domain.repository.WaveRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +28,22 @@ public class WarehouseWaveRepositoryImpl implements WaveRepository {
             wave.setPickLists(pickListRepository.selectByWaveId(id));
         }
         return wave;
+    }
+
+    @Override
+    public Page<Wave> selectPage(Page<Wave> page, Long warehouseId, WaveStatus status, String waveNo) {
+        LambdaQueryWrapper<Wave> wrapper = new LambdaQueryWrapper<>();
+        if (warehouseId != null) {
+            wrapper.eq(Wave::getWarehouseId, warehouseId);
+        }
+        if (status != null) {
+            wrapper.eq(Wave::getStatus, status);
+        }
+        if (waveNo != null && !waveNo.isBlank()) {
+            wrapper.like(Wave::getWaveNo, waveNo.trim());
+        }
+        wrapper.orderByDesc(Wave::getCreatedAt);
+        return waveMapper.selectPage(page, wrapper);
     }
 
     @Override

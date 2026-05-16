@@ -118,6 +118,7 @@ public interface ReportMapper {
     @SelectProvider(type = ReportSqlProvider.class, method = "selectSkuAgePage")
     IPage<Map<String, Object>> selectSkuAgePage(Page<?> page,
                                                   @Param("warehouseId") Long warehouseId,
+                                                  @Param("skuId") Long skuId,
                                                   @Param("categoryId") Long categoryId,
                                                   @Param("seasonId") Long seasonId,
                                                   @Param("keyword") String keyword);
@@ -137,6 +138,7 @@ public interface ReportMapper {
      */
     @SelectProvider(type = ReportSqlProvider.class, method = "selectSkuAgeSummary")
     Map<String, Object> selectSkuAgeSummary(@Param("warehouseId") Long warehouseId,
+                                             @Param("skuId") Long skuId,
                                              @Param("categoryId") Long categoryId,
                                              @Param("seasonId") Long seasonId,
                                              @Param("keyword") String keyword);
@@ -156,6 +158,7 @@ public interface ReportMapper {
     @SelectProvider(type = ReportSqlProvider.class, method = "selectSkuTurnoverPage")
     IPage<Map<String, Object>> selectSkuTurnoverPage(Page<?> page,
                                                        @Param("warehouseId") Long warehouseId,
+                                                       @Param("skuId") Long skuId,
                                                        @Param("categoryId") Long categoryId,
                                                        @Param("seasonId") Long seasonId,
                                                        @Param("startDate") java.time.LocalDate startDate,

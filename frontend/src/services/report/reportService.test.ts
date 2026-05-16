@@ -1,5 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { pageInventoryLedger, pageOperationFlows, queryInventoryAge, queryTurnoverAnalysis } from './reportService';
+import {
+  exportInventoryAge,
+  exportInventoryLedger,
+  exportOperationFlows,
+  exportTurnoverAnalysis,
+  pageInventoryLedger,
+  pageOperationFlows,
+  queryInventoryLedgerMatrix,
+  queryInventoryAge,
+  queryTurnoverAnalysis,
+} from './reportService';
 import { apiClient } from '@/services/http/apiClient';
 
 vi.mock('@/services/http/apiClient', async () => {
@@ -51,6 +61,57 @@ describe('reportService', () => {
       current: 1,
       size: 1,
       startDate: '2026-05-01',
+    });
+  });
+
+  it('exports reports as blobs with normalized filters', async () => {
+    const blob = new Blob(['report'], { type: 'application/vnd.ms-excel' });
+    mockedPost
+      .mockResolvedValueOnce({ data: blob })
+      .mockResolvedValueOnce({ data: blob })
+      .mockResolvedValueOnce({ data: blob })
+      .mockResolvedValueOnce({ data: blob });
+
+    await expect(exportInventoryLedger({ current: 0, size: 0, inventoryType: ' SKU ', keyword: '' })).resolves.toBe(blob);
+    await expect(exportOperationFlows({ current: 0, size: 0, operationType: ' OUTBOUND ' })).resolves.toBe(blob);
+    await expect(exportInventoryAge({ current: 0, size: 0, warehouseId: ' 1001 ' })).resolves.toBe(blob);
+    await expect(exportTurnoverAnalysis({ current: 0, size: 0, startDate: '2026-05-01', endDate: '' })).resolves.toBe(blob);
+
+    expect(mockedPost).toHaveBeenNthCalledWith(
+      1,
+      '/report/ledger/export',
+      { current: 1, size: 1, inventoryType: 'SKU' },
+      { responseType: 'blob' },
+    );
+    expect(mockedPost).toHaveBeenNthCalledWith(
+      2,
+      '/report/flow/export',
+      { current: 1, size: 1, operationType: 'OUTBOUND' },
+      { responseType: 'blob' },
+    );
+    expect(mockedPost).toHaveBeenNthCalledWith(
+      3,
+      '/report/age/export',
+      { current: 1, size: 1, warehouseId: '1001' },
+      { responseType: 'blob' },
+    );
+    expect(mockedPost).toHaveBeenNthCalledWith(
+      4,
+      '/report/turnover/export',
+      { current: 1, size: 1, startDate: '2026-05-01' },
+      { responseType: 'blob' },
+    );
+  });
+
+  it('queries inventory ledger matrix by spu and warehouse id', async () => {
+    mockedPost.mockResolvedValueOnce({
+      data: ok({ spuId: '1', warehouseId: '2', sizes: ['S'], matrix: { Red: { S: 8 } } }),
+    });
+
+    await queryInventoryLedgerMatrix(' 1 ', ' 2 ');
+
+    expect(mockedPost).toHaveBeenCalledWith('/report/ledger/matrix', null, {
+      params: { spuId: '1', warehouseId: '2' },
     });
   });
 });

@@ -10,6 +10,8 @@ import {
   createQuantityChange,
   deleteSalesOrder,
   getSalesOrderDetail,
+  getSalesOrderTimeline,
+  listQuantityChanges,
   pageSalesOrders,
   resubmitSalesOrder,
   submitSalesOrder,
@@ -33,6 +35,8 @@ vi.mock('@/services/order/salesOrderService', () => ({
   createQuantityChange: vi.fn(),
   deleteSalesOrder: vi.fn(),
   getSalesOrderDetail: vi.fn(),
+  getSalesOrderTimeline: vi.fn(),
+  listQuantityChanges: vi.fn(),
   pageSalesOrders: vi.fn(),
   resubmitSalesOrder: vi.fn(),
   submitSalesOrder: vi.fn(),
@@ -67,6 +71,8 @@ const mockedCreateReturnOrder = vi.mocked(createReturnOrder);
 const mockedDeleteSalesOrder = vi.mocked(deleteSalesOrder);
 const mockedGetCurrentUserPermissions = vi.mocked(getCurrentUserPermissions);
 const mockedGetSalesOrderDetail = vi.mocked(getSalesOrderDetail);
+const mockedGetSalesOrderTimeline = vi.mocked(getSalesOrderTimeline);
+const mockedListQuantityChanges = vi.mocked(listQuantityChanges);
 const mockedListCustomers = vi.mocked(listCustomers);
 const mockedListSeasons = vi.mocked(listSeasons);
 const mockedListSizeGroups = vi.mocked(listSizeGroups);
@@ -319,6 +325,14 @@ describe('SalesOrderListPage', () => {
       }
       return Promise.resolve(detail);
     });
+    mockedGetSalesOrderTimeline.mockReset();
+    mockedGetSalesOrderTimeline.mockResolvedValue([
+      { id: 'tl-1', changeType: 'STATUS', fieldName: 'status', changeReason: '提交订单', operatedBy: 'admin' },
+    ]);
+    mockedListQuantityChanges.mockReset();
+    mockedListQuantityChanges.mockResolvedValue([
+      { id: 'qc-1', reason: '客户加单', status: 'PENDING', createdBy: 'admin' },
+    ]);
     mockedPageSalesOrders.mockReset();
     mockedPageSalesOrders.mockResolvedValue({ current: 1, size: 10, total: 2, pages: 1, records: salesOrders });
     mockedListCustomers.mockReset();

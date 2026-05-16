@@ -1,31 +1,100 @@
-import { Alert, Card, Descriptions, Space, Typography } from 'antd';
+import { Alert, Card, Table, type TablePaginationConfig } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  pageInventoryMaterials,
+  pageInventorySkus,
+  type InventoryMaterialRecord,
+  type InventorySkuRecord,
+} from '@/services/inventory/inventoryService';
 
 interface InventoryStockPlaceholderPageProps {
   inventoryType: 'SKU' | 'MATERIAL';
 }
 
+type StockRecord = InventorySkuRecord | InventoryMaterialRecord;
+
+const DEFAULT_PAGE_SIZE = 20;
+
 export function InventoryStockPlaceholderPage({ inventoryType }: InventoryStockPlaceholderPageProps) {
   const isSku = inventoryType === 'SKU';
   const title = isSku ? '库存 SKU' : '库存物料';
-  const target = isSku ? '库存 SKU ' : '库存物料';
+  const [records, setRecords] = useState<StockRecord[]>([]);
+  const [total, setTotal] = useState(0);
+  const [current, setCurrent] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const loadStock = useCallback(async (page: number) => {
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const result = isSku
+        ? await pageInventorySkus({ current: page, size: DEFAULT_PAGE_SIZE })
+        : await pageInventoryMaterials({ current: page, size: DEFAULT_PAGE_SIZE });
+      setRecords(result.records ?? []);
+      setTotal(result.total ?? 0);
+      setCurrent(result.current ?? page);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : '库存查询失败');
+    } finally {
+      setLoading(false);
+    }
+  }, [isSku]);
+
+  useEffect(() => {
+    void loadStock(1);
+  }, [loadStock]);
+
+  const handleTableChange = (pagination: TablePaginationConfig) => {
+    void loadStock(pagination.current ?? 1);
+  };
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <Card title={title}>
-        <Alert
-          type="warning"
-          showIcon
-          message={`当前后端尚未暴露${target}查询 REST 接口`}
-          description="库存核心服务已有领域模型和仓储实现，但目前只通过入库、出库、盘点、预警等业务接口间接暴露库存数据。前端先保留入口，避免误接不存在的接口。"
-        />
-        <Descriptions size="small" column={1} style={{ marginTop: 16 }}>
-          <Descriptions.Item label="后续接口建议">
-            <Typography.Text code>
-              {isSku ? 'POST /inventory/sku/page' : 'POST /inventory/material/page'}
-            </Typography.Text>
-          </Descriptions.Item>
-        </Descriptions>
-      </Card>
-    </Space>
+    <Card title={title}>
+      {errorMessage ? <Alert type="error" showIcon message={errorMessage} style={{ marginBottom: 16 }} /> : null}
+      <Table<StockRecord>
+        rowKey="id"
+        loading={loading}
+        columns={buildColumns(isSku)}
+        dataSource={records}
+        pagination={{ current, pageSize: DEFAULT_PAGE_SIZE, total, showSizeChanger: false }}
+        onChange={handleTableChange}
+      />
+    </Card>
   );
+}
+
+function buildColumns(isSku: boolean): ColumnsType<StockRecord> {
+  return [
+    {
+      title: isSku ? 'SKU' : '物料',
+      key: 'item',
+      render: (_, record) => {
+        if (isSku) {
+          const skuRecord = record as InventorySkuRecord;
+          return skuRecord.skuCode || skuRecord.skuId || '-';
+        }
+
+        const materialRecord = record as InventoryMaterialRecord;
+        return materialRecord.materialName || materialRecord.materialCode || materialRecord.materialId || '-';
+      },
+    },
+    { title: '仓库 ID', dataIndex: 'warehouseId', key: 'warehouseId', render: renderText },
+    { title: '库位 ID', dataIndex: 'locationId', key: 'locationId', render: renderText },
+    { title: '批次', dataIndex: 'batchNo', key: 'batchNo', render: renderText },
+    { title: '可用', dataIndex: 'availableQty', key: 'availableQty', render: renderNumber },
+    { title: '锁定', dataIndex: 'lockedQty', key: 'lockedQty', render: renderNumber },
+    { title: '质检', dataIndex: 'qcQty', key: 'qcQty', render: renderNumber },
+    { title: '在途', dataIndex: 'inTransitQty', key: 'inTransitQty', render: renderNumber },
+    { title: '总量', dataIndex: 'totalQty', key: 'totalQty', render: renderNumber },
+  ];
+}
+
+function renderText(value?: string | null) {
+  return value || '-';
+}
+
+function renderNumber(value?: number | null) {
+  return value ?? 0;
 }

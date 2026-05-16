@@ -1,8 +1,8 @@
 # 生产环境配置
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/jingwei
-    username: jingwei
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:jingwei}
+    username: ${DB_USERNAME:jingwei}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
@@ -34,8 +34,15 @@ jwt:
   secret: ${JWT_SECRET}
   expiration: 28800000  # 8小时（毫秒）
 
-# 日志配置
+# 日志配置（同时输出到文件和 journal）
 logging:
+  file:
+    name: /opt/jingwei/logs/jingwei.log
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 30
+      total-size-cap: 1GB
   level:
     com.jingwei: info
     org.springframework.web: warn

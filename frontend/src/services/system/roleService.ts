@@ -1,5 +1,6 @@
 import { apiClient, unwrapApiResponse } from '@/services/http/apiClient';
 import type { PageResult } from './userService';
+import { normalizeOptionalFields } from '@/services/shared/normalize';
 
 export interface RoleQueryParams {
   current: number;
@@ -58,10 +59,3 @@ function normalizeRoleQuery(params: RoleQueryParams): RoleQueryParams {
   };
 }
 
-function normalizeOptionalFields<T extends object>(payload: T): T {
-  return Object.fromEntries(
-    Object.entries(payload)
-      .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
-      .filter(([, value]) => value !== undefined && value !== null && value !== ''),
-  ) as T;
-}

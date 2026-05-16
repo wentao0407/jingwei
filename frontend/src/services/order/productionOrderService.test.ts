@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   calculateProductionOrderMaterialRequirements,
+  createProductionOrder,
+  deleteProductionOrder,
   fireProductionLineEvent,
   fireProductionOrderEvent,
   getProductionOrderCostDetail,
@@ -10,6 +12,7 @@ import {
   getProductionOrderDetail,
   pageProductionOrderMaterialRequirements,
   pageProductionOrders,
+  updateProductionOrder,
 } from './productionOrderService';
 import { apiClient } from '@/services/http/apiClient';
 
@@ -121,6 +124,59 @@ describe('productionOrderService', () => {
     });
     expect(mockedPost).toHaveBeenNthCalledWith(2, '/cost/issues', null, {
       params: { productionOrderId: '50001' },
+    });
+  });
+
+  it('creates updates and deletes production orders', async () => {
+    mockedPost
+      .mockResolvedValueOnce({ data: { code: 0, message: 'success', success: true, data: { id: '50002' } } })
+      .mockResolvedValueOnce({ data: { code: 0, message: 'success', success: true, data: { id: '50002' } } })
+      .mockResolvedValueOnce({ data: { code: 0, message: 'success', success: true, data: null } });
+
+    const payload = {
+      sourceType: ' MANUAL ',
+      planDate: ' 2026-05-20 ',
+      deadlineDate: '',
+      workshopId: ' 30001 ',
+      remark: ' 手工生产单 ',
+      lines: [
+        {
+          spuId: '80001',
+          colorWayId: '70001',
+          sizeGroupId: '60001',
+          bomId: '',
+          skipCutting: false,
+          remark: '',
+          sizes: [{ sizeId: '50001', code: ' S ', quantity: 10 }],
+        },
+      ],
+    };
+
+    await createProductionOrder(payload);
+    await updateProductionOrder(' 50002 ', payload);
+    await deleteProductionOrder(' 50002 ');
+
+    const normalizedPayload = {
+      sourceType: 'MANUAL',
+      planDate: '2026-05-20',
+      workshopId: '30001',
+      remark: '手工生产单',
+      lines: [
+        {
+          spuId: '80001',
+          colorWayId: '70001',
+          sizeGroupId: '60001',
+          skipCutting: false,
+          sizes: [{ sizeId: '50001', code: 'S', quantity: 10 }],
+        },
+      ],
+    };
+    expect(mockedPost).toHaveBeenNthCalledWith(1, '/order/production/create', normalizedPayload);
+    expect(mockedPost).toHaveBeenNthCalledWith(2, '/order/production/update', normalizedPayload, {
+      params: { orderId: '50002' },
+    });
+    expect(mockedPost).toHaveBeenNthCalledWith(3, '/order/production/delete', null, {
+      params: { orderId: '50002' },
     });
   });
 });
