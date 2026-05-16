@@ -6,7 +6,8 @@ import {
   PlusOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
-import { App, Button, DatePicker, Descriptions, Form, Input, Modal, ProCard, Select, Space, Table, Tag } from 'antd';
+import { App, Button, DatePicker, Descriptions, Form, Input, Modal, Select, Space, Table, Tag } from 'antd';
+import { ProCard } from '@ant-design/pro-components';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useState } from 'react';

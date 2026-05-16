@@ -16,4 +16,4 @@ VALUES
     (90050, 1, 950, 1, NOW(), 1, NOW()),
     (90051, 1, 951, 1, NOW(), 1, NOW()),
     (90052, 1, 952, 1, NOW(), 1, NOW())
-ON CONFLICT (role_id, menu_id) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;

@@ -70,4 +70,4 @@ VALUES
     (208003, 1, 20802, 1, NOW(), 1, NOW()),
     (208004, 1, 20803, 1, NOW(), 1, NOW()),
     (208005, 1, 20804, 1, NOW(), 1, NOW())
-ON CONFLICT (role_id, menu_id) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;

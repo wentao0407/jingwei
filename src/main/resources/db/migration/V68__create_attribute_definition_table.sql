@@ -52,4 +52,4 @@ VALUES
     (14003, 1, 1411, 1, NOW(), 1, NOW()),
     (14004, 1, 1412, 1, NOW(), 1, NOW()),
     (14005, 1, 1413, 1, NOW(), 1, NOW())
-ON CONFLICT (role_id, menu_id) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;

@@ -59,7 +59,7 @@ VALUES
     (209202, 1, 20921, 1, NOW(), 1, NOW()),
     (209203, 1, 20922, 1, NOW(), 1, NOW()),
     (209204, 1, 20923, 1, NOW(), 1, NOW())
-ON CONFLICT (role_id, menu_id) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 
 -- 编码规则
 INSERT INTO t_md_coding_rule (id, code, name, business_type, description, status, used)

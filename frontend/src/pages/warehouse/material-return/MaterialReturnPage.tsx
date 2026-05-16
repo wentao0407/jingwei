@@ -1,5 +1,6 @@
 import { CheckCircleOutlined, FileSearchOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
-import { App, Button, Descriptions, Form, Input, InputNumber, Modal, ProCard, Select, Space, Table, Tag } from 'antd';
+import { App, Button, Descriptions, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd';
+import { ProCard } from '@ant-design/pro-components';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { EmptyState, ErrorState, LoadingState } from '@/components/state';
@@ -85,7 +86,7 @@ export function MaterialReturnPage() {
     try {
       const values = await form.validateFields();
       const payload: CreateMaterialReturnPayload = {
-        productionOrderId: values.productionOrderId,
+        productionOrderId: values.productionOrderId!,
         remark: values.remark?.trim() || undefined,
         lines: (values.lines ?? []).map((line) => ({
           materialId: line.materialId ?? '',

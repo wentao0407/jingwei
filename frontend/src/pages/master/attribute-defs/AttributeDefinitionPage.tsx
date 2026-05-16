@@ -1,5 +1,6 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
-import { App, Button, Form, Input, InputNumber, Modal, ProCard, Select, Space, Switch, Table, Tag } from 'antd';
+import { App, Button, Form, Input, InputNumber, Modal, Select, Space, Switch, Table, Tag } from 'antd';
+import { ProCard } from '@ant-design/pro-components';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { EmptyState, ErrorState, LoadingState } from '@/components/state';
@@ -107,11 +108,11 @@ export function AttributeDefinitionPage() {
         ? values.optionsText.split('\n').map((s) => s.trim()).filter(Boolean)
         : undefined;
       const payload: SaveAttributeDefinitionPayload = {
-        code: values.code.trim(),
-        name: values.name.trim(),
-        materialType: values.materialType,
-        inputType: values.inputType,
-        required: values.required,
+        code: values.code!.trim(),
+        name: values.name!.trim(),
+        materialType: values.materialType!,
+        inputType: values.inputType!,
+        required: values.required!,
         sortOrder: values.sortOrder ?? 0,
         options,
         jsonbPath: values.jsonbPath?.trim() || undefined,

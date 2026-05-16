@@ -54,7 +54,7 @@ VALUES
     (209011, 1, 20910, 1, NOW(), 1, NOW()),
     (209012, 1, 20911, 1, NOW(), 1, NOW()),
     (209013, 1, 20912, 1, NOW(), 1, NOW())
-ON CONFLICT (role_id, menu_id) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO t_md_coding_rule (id, code, name, business_type, description, status, used)
 VALUES (210, 'MATERIAL_RETURN_NO', '退料单号', 'WAREHOUSE', '退料单编号', 'ACTIVE', FALSE)
