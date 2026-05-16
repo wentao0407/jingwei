@@ -9,6 +9,7 @@ import com.jingwei.inventory.domain.model.OperationType;
 import com.jingwei.report.application.dto.InventoryAgeQueryDTO;
 import com.jingwei.report.application.dto.InventoryLedgerQueryDTO;
 import com.jingwei.report.application.dto.OperationFlowQueryDTO;
+import com.jingwei.report.application.dto.ShortageQueryDTO;
 import com.jingwei.report.application.dto.TurnoverQueryDTO;
 import com.jingwei.report.infrastructure.persistence.ReportMapper;
 import com.jingwei.report.interfaces.vo.*;
@@ -782,5 +783,68 @@ public class ReportApplicationService {
         if (value instanceof Integer i) return i;
         if (value instanceof Number n) return n.intValue();
         return null;
+    }
+
+    // ==================== 缺货统计 ====================
+
+    /**
+     * 查询缺货统计（分页）
+     * <p>
+     * 展开销售订单行的 size_matrix，关联 SKU 库存，
+     * 筛选需求 > 可用库存的记录。
+     * </p>
+     */
+    public IPage<ShortageVO> queryShortage(ShortageQueryDTO dto) {
+        Page<?> page = new Page<>(dto.getCurrent(), dto.getSize());
+        IPage<Map<String, Object>> result = reportMapper.selectShortagePage(
+                page, dto.getSpuId(), dto.getCustomerId(), dto.getKeyword());
+        return result.convert(this::mapToShortageVO);
+    }
+
+    /**
+     * 导出缺货统计到 Excel
+     */
+    public void exportShortage(ShortageQueryDTO dto, HttpServletResponse response) throws IOException {
+        List<Map<String, Object>> data = reportMapper.selectShortageExport(
+                dto.getSpuId(), dto.getCustomerId(), dto.getKeyword());
+
+        List<String> headers = List.of("订单号", "客户", "款式编码", "款式名称", "颜色", "尺码",
+                "需求数量", "可用库存", "缺货数量", "交货日期", "订单状态");
+        List<List<Object>> rows = new ArrayList<>();
+        for (Map<String, Object> row : data) {
+            rows.add(java.util.Arrays.asList(
+                    MapUtil.getStr(row, "orderNo"),
+                    MapUtil.getStr(row, "customerName"),
+                    MapUtil.getStr(row, "spuCode"),
+                    MapUtil.getStr(row, "spuName"),
+                    MapUtil.getStr(row, "colorName"),
+                    MapUtil.getStr(row, "sizeCode"),
+                    row.get("demandQty"),
+                    row.get("availableQty"),
+                    row.get("shortageQty"),
+                    row.get("deliveryDate"),
+                    MapUtil.getStr(row, "orderStatus")
+            ));
+        }
+        writeExcel(response, "缺货统计", headers, rows);
+    }
+
+    private ShortageVO mapToShortageVO(Map<String, Object> row) {
+        ShortageVO vo = new ShortageVO();
+        vo.setOrderId(toLong(row.get("orderId")));
+        vo.setOrderNo(MapUtil.getStr(row, "orderNo"));
+        vo.setCustomerId(toLong(row.get("customerId")));
+        vo.setCustomerName(MapUtil.getStr(row, "customerName"));
+        vo.setSpuId(toLong(row.get("spuId")));
+        vo.setSpuCode(MapUtil.getStr(row, "spuCode"));
+        vo.setSpuName(MapUtil.getStr(row, "spuName"));
+        vo.setColorName(MapUtil.getStr(row, "colorName"));
+        vo.setSizeCode(MapUtil.getStr(row, "sizeCode"));
+        vo.setDemandQty(toInteger(row.get("demandQty")));
+        vo.setAvailableQty(toInteger(row.get("availableQty")));
+        vo.setShortageQty(toInteger(row.get("shortageQty")));
+        vo.setDeliveryDate(MapUtil.getStr(row, "deliveryDate"));
+        vo.setOrderStatus(MapUtil.getStr(row, "orderStatus"));
+        return vo;
     }
 }

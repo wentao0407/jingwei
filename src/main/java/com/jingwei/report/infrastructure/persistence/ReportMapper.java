@@ -174,4 +174,27 @@ public interface ReportMapper {
                                                             @Param("startDate") java.time.LocalDate startDate,
                                                             @Param("endDate") java.time.LocalDate endDate,
                                                             @Param("keyword") String keyword);
+
+    // ==================== 缺货统计 ====================
+
+    /**
+     * 缺货统计分页查询
+     * <p>
+     * 展开销售订单行的 size_matrix（JSONB），关联 SKU 和库存，
+     * 筛选需求 > 可用库存的记录。
+     * </p>
+     */
+    @SelectProvider(type = ReportSqlProvider.class, method = "selectShortagePage")
+    IPage<Map<String, Object>> selectShortagePage(Page<?> page,
+                                                    @Param("spuId") Long spuId,
+                                                    @Param("customerId") Long customerId,
+                                                    @Param("keyword") String keyword);
+
+    /**
+     * 缺货统计导出（不分页）
+     */
+    @SelectProvider(type = ReportSqlProvider.class, method = "selectShortageExport")
+    List<Map<String, Object>> selectShortageExport(@Param("spuId") Long spuId,
+                                                    @Param("customerId") Long customerId,
+                                                    @Param("keyword") String keyword);
 }

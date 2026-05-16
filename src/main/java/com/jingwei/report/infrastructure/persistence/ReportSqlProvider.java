@@ -470,4 +470,70 @@ public class ReportSqlProvider {
             }
         }
     }
+
+    // ==================== 缺货统计 ====================
+
+    /**
+     * 缺货统计 SQL（展开 size_matrix JSONB，关联 SKU 和库存）
+     */
+    private String buildShortageSql(Map<String, Object> params) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT so.id AS \"orderId\", ");
+        sql.append("  so.order_no AS \"orderNo\", ");
+        sql.append("  so.customer_id AS \"customerId\", ");
+        sql.append("  cust.name AS \"customerName\", ");
+        sql.append("  spu.id AS \"spuId\", ");
+        sql.append("  spu.code AS \"spuCode\", ");
+        sql.append("  spu.name AS \"spuName\", ");
+        sql.append("  cw.name AS \"colorName\", ");
+        sql.append("  sz.code AS \"sizeCode\", ");
+        sql.append("  (entry.value)::INTEGER AS \"demandQty\", ");
+        sql.append("  COALESCE(SUM(inv.available_qty), 0) AS \"availableQty\", ");
+        sql.append("  GREATEST((entry.value)::INTEGER - COALESCE(SUM(inv.available_qty), 0), 0) AS \"shortageQty\", ");
+        sql.append("  so.delivery_date AS \"deliveryDate\", ");
+        sql.append("  so.status AS \"orderStatus\" ");
+        sql.append("FROM t_order_sales so ");
+        sql.append("JOIN t_order_sales_line sl ON sl.order_id = so.id AND sl.deleted = FALSE ");
+        sql.append("JOIN LATERAL jsonb_each_text(sl.size_matrix) AS entry(key, value) ON TRUE ");
+        sql.append("JOIN t_md_spu spu ON spu.id = sl.spu_id AND spu.deleted = FALSE ");
+        sql.append("JOIN t_md_color_way cw ON cw.id = sl.color_way_id AND cw.deleted = FALSE ");
+        sql.append("JOIN t_md_size sz ON sz.id = (entry.key)::BIGINT AND sz.deleted = FALSE ");
+        sql.append("JOIN t_md_customer cust ON cust.id = so.customer_id AND cust.deleted = FALSE ");
+        sql.append("LEFT JOIN t_md_sku sku ON sku.spu_id = sl.spu_id AND sku.color_way_id = sl.color_way_id ");
+        sql.append("  AND sku.size_id = (entry.key)::BIGINT AND sku.deleted = FALSE ");
+        sql.append("LEFT JOIN t_inventory_sku inv ON inv.sku_id = sku.id AND inv.deleted = FALSE ");
+        sql.append("WHERE so.deleted = FALSE ");
+        sql.append("  AND so.status IN ('CONFIRMED', 'PRODUCING') ");
+        sql.append("  AND (entry.value)::INTEGER > 0 ");
+        appendShortageFilters(sql, params);
+        sql.append("GROUP BY so.id, so.order_no, so.customer_id, cust.name, ");
+        sql.append("  spu.id, spu.code, spu.name, cw.name, sz.code, entry.value, so.delivery_date, so.status ");
+        sql.append("HAVING (entry.value)::INTEGER > COALESCE(SUM(inv.available_qty), 0) ");
+        return sql.toString();
+    }
+
+    public String selectShortagePage(Map<String, Object> params) {
+        return buildShortageSql(params) + "ORDER BY \"shortageQty\" DESC";
+    }
+
+    public String selectShortageExport(Map<String, Object> params) {
+        return buildShortageSql(params) + "ORDER BY so.order_no, \"shortageQty\" DESC";
+    }
+
+    private void appendShortageFilters(StringBuilder sql, Map<String, Object> params) {
+        if (params.containsKey("spuId") && params.get("spuId") != null) {
+            sql.append("AND sl.spu_id = #{spuId} ");
+        }
+        if (params.containsKey("customerId") && params.get("customerId") != null) {
+            sql.append("AND so.customer_id = #{customerId} ");
+        }
+        if (params.containsKey("keyword")) {
+            String keyword = (String) params.get("keyword");
+            if (keyword != null && !keyword.isEmpty()) {
+                sql.append("AND (so.order_no ILIKE '%' || #{keyword} || '%' ");
+                sql.append("OR spu.code ILIKE '%' || #{keyword} || '%' ");
+                sql.append("OR spu.name ILIKE '%' || #{keyword} || '%') ");
+            }
+        }
+    }
 }

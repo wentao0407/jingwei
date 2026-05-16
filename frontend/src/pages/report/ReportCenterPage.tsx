@@ -6,9 +6,11 @@ import {
   exportInventoryAge,
   exportInventoryLedger,
   exportOperationFlows,
+  exportShortage,
   exportTurnoverAnalysis,
   pageInventoryLedger,
   pageOperationFlows,
+  pageShortage,
   queryInventoryLedgerMatrix,
   queryInventoryAge,
   queryTurnoverAnalysis,
@@ -17,6 +19,7 @@ import {
   type InventoryLedgerMatrixRecord,
   type InventoryLedgerRecord,
   type OperationFlowRecord,
+  type ShortageRecord,
   type TurnoverRecord,
 } from '@/services/report/reportService';
 import {
@@ -27,7 +30,7 @@ import {
   type ReportRowWithKey,
 } from './reportRowKeys';
 
-type ReportTabKey = 'ledger' | 'flow' | 'age' | 'turnover';
+type ReportTabKey = 'ledger' | 'flow' | 'age' | 'turnover' | 'shortage';
 
 const DEFAULT_QUERY = { current: 1, size: 20, inventoryType: 'SKU', keyword: '' };
 
@@ -45,6 +48,7 @@ export function ReportCenterPage() {
   const [flowRows, setFlowRows] = useState<OperationFlowRecord[]>([]);
   const [ageSummary, setAgeSummary] = useState<InventoryAgeSummary | null>(null);
   const [turnoverRows, setTurnoverRows] = useState<TurnoverRecord[]>([]);
+  const [shortageRows, setShortageRows] = useState<ShortageRecord[]>([]);
 
   const loadReport = useCallback(async () => {
     const values = form.getFieldsValue();
@@ -65,6 +69,10 @@ export function ReportCenterPage() {
       if (activeKey === 'turnover') {
         const result = await queryTurnoverAnalysis({ ...DEFAULT_QUERY, ...values });
         setTurnoverRows(result.records ?? []);
+      }
+      if (activeKey === 'shortage') {
+        const result = await pageShortage({ ...DEFAULT_QUERY, ...values });
+        setShortageRows(result.records ?? []);
       }
     } catch (error) {
       message.error(error instanceof Error ? error.message : '查询报表失败');
@@ -152,12 +160,14 @@ export function ReportCenterPage() {
             { key: 'flow', label: '出入库流水' },
             { key: 'age', label: '库龄分析' },
             { key: 'turnover', label: '畅滞销分析' },
+            { key: 'shortage', label: '缺货统计' },
           ]}
         />
         {activeKey === 'ledger' ? <LedgerTable rows={ledgerRows} loading={loading} /> : null}
         {activeKey === 'flow' ? <FlowTable rows={flowRows} loading={loading} /> : null}
         {activeKey === 'age' ? <AgeReport summary={ageSummary} loading={loading} /> : null}
         {activeKey === 'turnover' ? <TurnoverTable rows={turnoverRows} loading={loading} /> : null}
+        {activeKey === 'shortage' ? <ShortageTable rows={shortageRows} loading={loading} /> : null}
       </Card>
       <Modal
         title="库存台账矩阵"
@@ -189,6 +199,7 @@ const REPORT_FILE_NAMES: Record<ReportTabKey, string> = {
   flow: '出入库流水',
   age: '库龄分析',
   turnover: '畅滞销分析',
+  shortage: '缺货统计',
 };
 
 async function exportActiveReport(key: ReportTabKey, values: typeof DEFAULT_QUERY): Promise<Blob> {
@@ -202,6 +213,10 @@ async function exportActiveReport(key: ReportTabKey, values: typeof DEFAULT_QUER
 
   if (key === 'age') {
     return exportInventoryAge(values);
+  }
+
+  if (key === 'shortage') {
+    return exportShortage(values);
   }
 
   return exportTurnoverAnalysis(values);
@@ -296,4 +311,19 @@ function TurnoverTable({ rows, loading }: { rows: TurnoverRecord[]; loading: boo
     { title: '等级', dataIndex: 'turnoverGradeLabel', render: (value) => value || '-' },
   ];
   return <Table rowKey="clientRowKey" columns={columns} dataSource={dataSource} loading={loading} pagination={false} />;
+}
+
+function ShortageTable({ rows, loading }: { rows: ShortageRecord[]; loading: boolean }) {
+  const columns: ColumnsType<ShortageRecord> = [
+    { title: '订单号', dataIndex: 'orderNo', render: (v) => v || '-' },
+    { title: '客户', dataIndex: 'customerName', render: (v) => v || '-' },
+    { title: '款式', key: 'spu', render: (_, r) => r.spuCode || r.spuName || '-' },
+    { title: '颜色', dataIndex: 'colorName', render: (v) => v || '-' },
+    { title: '尺码', dataIndex: 'sizeCode', render: (v) => v || '-' },
+    { title: '需求', dataIndex: 'demandQty', render: (v) => v ?? '-' },
+    { title: '可用库存', dataIndex: 'availableQty', render: (v) => v ?? '-' },
+    { title: '缺货', dataIndex: 'shortageQty', render: (v) => v != null && v > 0 ? <Tag color="red">{v}</Tag> : v ?? '-' },
+    { title: '交货日期', dataIndex: 'deliveryDate', render: (v) => v || '-' },
+  ];
+  return <Table rowKey={(_, i) => String(i)} columns={columns} dataSource={rows} loading={loading} pagination={false} />;
 }

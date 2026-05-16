@@ -21,6 +21,7 @@ const WarehouseManagementPage = lazy(() => import('@/pages/master/warehouses/War
 const CodingRuleManagementPage = lazy(() => import('@/pages/master/coding-rules/CodingRuleManagementPage').then((module) => ({ default: module.CodingRuleManagementPage })));
 const CustomerManagementPage = lazy(() => import('@/pages/master/customers/CustomerManagementPage').then((module) => ({ default: module.CustomerManagementPage })));
 const SupplierManagementPage = lazy(() => import('@/pages/master/suppliers/SupplierManagementPage').then((module) => ({ default: module.SupplierManagementPage })));
+const AttributeDefinitionPage = lazy(() => import('@/pages/master/attribute-defs/AttributeDefinitionPage').then((module) => ({ default: module.AttributeDefinitionPage })));
 const SalesOrderListPage = lazy(() => import('@/pages/order/sales/SalesOrderListPage').then((module) => ({ default: module.SalesOrderListPage })));
 const ProductionOrderListPage = lazy(() => import('@/pages/order/production/ProductionOrderListPage').then((module) => ({ default: module.ProductionOrderListPage })));
 const ReturnOrderListPage = lazy(() => import('@/pages/order/returns/ReturnOrderListPage').then((module) => ({ default: module.ReturnOrderListPage })));
@@ -29,13 +30,18 @@ const AsnManagementPage = lazy(() => import('@/pages/procurement/asns/AsnManagem
 const BomMrpPage = lazy(() => import('@/pages/procurement/bom-mrp/BomMrpPage').then((module) => ({ default: module.BomMrpPage })));
 const ReceivingManagementPage = lazy(() => import('@/pages/procurement/receiving/ReceivingManagementPage').then((module) => ({ default: module.ReceivingManagementPage })));
 const PutawayManagementPage = lazy(() => import('@/pages/procurement/putaway/PutawayManagementPage').then((module) => ({ default: module.PutawayManagementPage })));
+const SupplierStatementPage = lazy(() => import('@/pages/procurement/statements/SupplierStatementPage').then((module) => ({ default: module.SupplierStatementPage })));
 const InventoryStockPlaceholderPage = lazy(() => import('@/pages/inventory/stock/InventoryStockPlaceholderPage').then((module) => ({ default: module.InventoryStockPlaceholderPage })));
 const InboundOrderPage = lazy(() => import('@/pages/inventory/inbound/InboundOrderPage').then((module) => ({ default: module.InboundOrderPage })));
 const OutboundOrderPage = lazy(() => import('@/pages/inventory/outbound/OutboundOrderPage').then((module) => ({ default: module.OutboundOrderPage })));
 const StocktakingPage = lazy(() => import('@/pages/inventory/stocktaking/StocktakingPage').then((module) => ({ default: module.StocktakingPage })));
 const InventoryAlertPage = lazy(() => import('@/pages/inventory/alerts/InventoryAlertPage').then((module) => ({ default: module.InventoryAlertPage })));
+const TransferOrderPage = lazy(() => import('@/pages/inventory/transfer/TransferOrderPage').then((module) => ({ default: module.TransferOrderPage })));
+const MaterialIssuePage = lazy(() => import('@/pages/warehouse/material-issue/MaterialIssuePage').then((module) => ({ default: module.MaterialIssuePage })));
+const MaterialReturnPage = lazy(() => import('@/pages/warehouse/material-return/MaterialReturnPage').then((module) => ({ default: module.MaterialReturnPage })));
 const WavePickingPage = lazy(() => import('@/pages/warehouse/waves/WavePickingPage').then((module) => ({ default: module.WavePickingPage })));
 const ShipmentPage = lazy(() => import('@/pages/warehouse/shipments/ShipmentPage').then((module) => ({ default: module.ShipmentPage })));
+const PrintPage = lazy(() => import('@/pages/warehouse/print/PrintPage').then((module) => ({ default: module.PrintPage })));
 const ApprovalCenterPage = lazy(() => import('@/pages/approval/ApprovalCenterPage').then((module) => ({ default: module.ApprovalCenterPage })));
 const ApprovalConfigPage = lazy(() => import('@/pages/approval/configs/ApprovalConfigPage').then((module) => ({ default: module.ApprovalConfigPage })));
 const NotificationCenterPage = lazy(() => import('@/pages/notification/NotificationCenterPage').then((module) => ({ default: module.NotificationCenterPage })));
@@ -72,6 +78,7 @@ export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRo
         { path: 'master/coding-rules', element: withLazyRoute(<CodingRuleManagementPage />) },
         { path: 'master/customers', element: withLazyRoute(<CustomerManagementPage />) },
         { path: 'master/suppliers', element: withLazyRoute(<SupplierManagementPage />) },
+        { path: 'master/attribute-defs', element: withLazyRoute(<AttributeDefinitionPage />) },
         { path: 'order/sales', element: withLazyRoute(<SalesOrderListPage />) },
         { path: 'order/production', element: withLazyRoute(<ProductionOrderListPage />) },
         { path: 'order/returns', element: withLazyRoute(<ReturnOrderListPage />) },
@@ -80,6 +87,7 @@ export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRo
         { path: 'procurement/bom-mrp', element: withLazyRoute(<BomMrpPage />) },
         { path: 'procurement/receiving', element: withLazyRoute(<ReceivingManagementPage />) },
         { path: 'procurement/putaway', element: withLazyRoute(<PutawayManagementPage />) },
+        { path: 'procurement/statements', element: withLazyRoute(<SupplierStatementPage />) },
         { path: 'inventory/skus', element: withLazyRoute(<InventoryStockPlaceholderPage inventoryType="SKU" />) },
         {
           path: 'inventory/materials',
@@ -89,8 +97,12 @@ export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRo
         { path: 'inventory/outbounds', element: withLazyRoute(<OutboundOrderPage />) },
         { path: 'inventory/stocktaking', element: withLazyRoute(<StocktakingPage />) },
         { path: 'inventory/alerts', element: withLazyRoute(<InventoryAlertPage />) },
+        { path: 'inventory/transfer', element: withLazyRoute(<TransferOrderPage />) },
+        { path: 'warehouse/material-issue', element: withLazyRoute(<MaterialIssuePage />) },
+        { path: 'warehouse/material-return', element: withLazyRoute(<MaterialReturnPage />) },
         { path: 'warehouse/waves', element: withLazyRoute(<WavePickingPage />) },
         { path: 'warehouse/shipments', element: withLazyRoute(<ShipmentPage />) },
+        { path: 'warehouse/print', element: withLazyRoute(<PrintPage />) },
         { path: 'approval/tasks', element: withLazyRoute(<ApprovalCenterPage />) },
         { path: 'approval/configs', element: withLazyRoute(<ApprovalConfigPage />) },
         { path: 'notification/list', element: withLazyRoute(<NotificationCenterPage />) },

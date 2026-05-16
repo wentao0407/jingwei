@@ -64,6 +64,14 @@ export interface CreateProcurementOrderPayload {
   lines: SaveProcurementOrderLinePayload[];
 }
 
+export interface UpdateProcurementOrderPayload {
+  supplierId: string;
+  orderDate?: string;
+  expectedDeliveryDate?: string;
+  remark?: string;
+  lines: SaveProcurementOrderLinePayload[];
+}
+
 export interface FireProcurementOrderEventPayload {
   orderId: string;
   event: string;
@@ -144,6 +152,53 @@ export interface BomQueryParams {
   current: number;
   size: number;
   spuId?: string;
+  status?: string;
+}
+
+// ======== 供应商对账 ========
+
+export interface StatementLineRecord {
+  id: string;
+  statementId?: string | null;
+  asnId?: string | null;
+  asnNo?: string | null;
+  procurementOrderId?: string | null;
+  procurementOrderNo?: string | null;
+  materialId?: string | null;
+  materialCode?: string | null;
+  materialName?: string | null;
+  acceptedQuantity?: number | null;
+  unitPrice?: number | null;
+  lineAmount?: number | null;
+}
+
+export interface StatementRecord {
+  id: string;
+  statementNo?: string | null;
+  supplierId?: string | null;
+  supplierName?: string | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  totalAmount?: number | null;
+  status?: string | null;
+  statusLabel?: string | null;
+  remark?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  lines?: StatementLineRecord[] | null;
+}
+
+export interface GenerateStatementPayload {
+  supplierId: string;
+  periodStart: string;
+  periodEnd: string;
+  remark?: string;
+}
+
+export interface StatementQueryParams {
+  current: number;
+  size: number;
+  supplierId?: string;
   status?: string;
 }
 
@@ -251,6 +306,16 @@ export async function createProcurementOrder(
   return unwrapApiResponse<ProcurementOrderRecord>(response.data);
 }
 
+export async function updateProcurementOrder(
+  orderId: string,
+  payload: UpdateProcurementOrderPayload,
+): Promise<ProcurementOrderRecord> {
+  const response = await apiClient.post('/procurement/order/update', normalizeProcurementOrderPayload(payload), {
+    params: { orderId: orderId.trim() },
+  });
+  return unwrapApiResponse<ProcurementOrderRecord>(response.data);
+}
+
 export async function getProcurementOrderDetail(orderId: string): Promise<ProcurementOrderRecord> {
   const response = await apiClient.post('/procurement/order/detail', null, { params: { orderId } });
   return unwrapApiResponse<ProcurementOrderRecord>(response.data);
@@ -326,6 +391,33 @@ export async function approveBom(bomId: string): Promise<void> {
 export async function calculateMrp(payload: MrpCalculatePayload): Promise<MrpCalculateResultRecord> {
   const response = await apiClient.post('/procurement/mrp/calculate', normalizeMrpPayload(payload));
   return unwrapApiResponse<MrpCalculateResultRecord>(response.data);
+}
+
+// ======== 供应商对账 API ========
+
+export async function generateStatement(payload: GenerateStatementPayload): Promise<StatementRecord> {
+  const response = await apiClient.post('/procurement/statement/generate', normalizeOptionalFields(payload));
+  return unwrapApiResponse<StatementRecord>(response.data);
+}
+
+export async function confirmStatement(statementId: string): Promise<void> {
+  const response = await apiClient.post('/procurement/statement/confirm', null, { params: { statementId } });
+  return unwrapApiResponse<void>(response.data);
+}
+
+export async function disputeStatement(statementId: string): Promise<void> {
+  const response = await apiClient.post('/procurement/statement/dispute', null, { params: { statementId } });
+  return unwrapApiResponse<void>(response.data);
+}
+
+export async function getStatementDetail(statementId: string): Promise<StatementRecord> {
+  const response = await apiClient.post('/procurement/statement/detail', null, { params: { statementId } });
+  return unwrapApiResponse<StatementRecord>(response.data);
+}
+
+export async function pageStatements(params: StatementQueryParams): Promise<PageResult<StatementRecord>> {
+  const response = await apiClient.post('/procurement/statement/page', normalizePageQuery(params));
+  return unwrapApiResponse<PageResult<StatementRecord>>(response.data);
 }
 
 export async function pageMrpResults(params: MrpResultQueryParams): Promise<PageResult<MrpResultRecord>> {

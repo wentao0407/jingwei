@@ -6,6 +6,7 @@ import com.jingwei.common.domain.model.R;
 import com.jingwei.procurement.application.dto.CreateProcurementOrderDTO;
 import com.jingwei.procurement.application.dto.FireProcurementOrderEventDTO;
 import com.jingwei.procurement.application.dto.ProcurementOrderQueryDTO;
+import com.jingwei.procurement.application.dto.UpdateProcurementOrderDTO;
 import com.jingwei.procurement.application.service.ProcurementOrderApplicationService;
 import com.jingwei.procurement.interfaces.vo.ProcurementOrderVO;
 import jakarta.validation.Valid;
@@ -37,6 +38,16 @@ public class ProcurementOrderController {
     @PostMapping("/procurement/order/create")
     public R<ProcurementOrderVO> createOrder(@Valid @RequestBody CreateProcurementOrderDTO dto) {
         return R.ok(procurementOrderApplicationService.createOrder(dto));
+    }
+
+    /**
+     * 更新采购订单（仅 DRAFT 状态可编辑）
+     */
+    @RequirePermission("procurement:order:update")
+    @PostMapping("/procurement/order/update")
+    public R<ProcurementOrderVO> updateOrder(@RequestParam Long orderId,
+                                              @Valid @RequestBody UpdateProcurementOrderDTO dto) {
+        return R.ok(procurementOrderApplicationService.updateOrder(orderId, dto));
     }
 
     /**

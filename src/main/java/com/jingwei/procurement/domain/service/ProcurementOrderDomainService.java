@@ -84,6 +84,58 @@ public class ProcurementOrderDomainService {
     }
 
     /**
+     * 更新采购订单（仅 DRAFT 状态可编辑）
+     * <p>
+     * 更新头信息 + 重建行项目（删除旧行 + 插入新行）+ 重新计算总金额。
+     * </p>
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public ProcurementOrder updateOrder(Long orderId, ProcurementOrder order, List<ProcurementOrderLine> lines) {
+        ProcurementOrder existing = procurementOrderRepository.selectById(orderId);
+        if (existing == null) {
+            throw new BizException(ErrorCode.DATA_NOT_FOUND);
+        }
+        if (existing.getStatus() != ProcurementOrderStatus.DRAFT) {
+            throw new BizException(ErrorCode.ORDER_STATE_TRANSITION_INVALID, "仅草稿状态的采购订单可编辑");
+        }
+
+        // 更新头信息
+        existing.setSupplierId(order.getSupplierId());
+        existing.setOrderDate(order.getOrderDate());
+        existing.setExpectedDeliveryDate(order.getExpectedDeliveryDate());
+        existing.setRemark(order.getRemark());
+
+        // 删除旧行，重建新行
+        procurementOrderLineRepository.deleteByOrderId(orderId);
+
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        for (int i = 0; i < lines.size(); i++) {
+            ProcurementOrderLine line = lines.get(i);
+            line.setOrderId(orderId);
+            line.setLineNo(i + 1);
+            line.setDeliveredQuantity(BigDecimal.ZERO);
+            line.setAcceptedQuantity(BigDecimal.ZERO);
+            line.setRejectedQuantity(BigDecimal.ZERO);
+
+            if (line.getQuantity() != null && line.getUnitPrice() != null) {
+                BigDecimal lineAmount = line.getQuantity().multiply(line.getUnitPrice())
+                        .setScale(2, RoundingMode.HALF_UP);
+                line.setLineAmount(lineAmount);
+                totalAmount = totalAmount.add(lineAmount);
+            }
+
+            procurementOrderLineRepository.insert(line);
+        }
+
+        existing.setTotalAmount(totalAmount);
+        procurementOrderRepository.updateById(existing);
+        existing.setLines(lines);
+
+        log.info("更新采购订单: id={}, supplierId={}", orderId, order.getSupplierId());
+        return existing;
+    }
+
+    /**
      * 触发状态转移
      */
     @Transactional(rollbackFor = Exception.class)

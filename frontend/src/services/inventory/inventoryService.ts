@@ -152,6 +152,52 @@ export interface CreateStocktakingPayload {
   warehouseId: string;
 }
 
+export interface TransferOrderLineRecord {
+  id?: string;
+  inventoryType?: string | null;
+  skuId?: string | null;
+  skuCode?: string | null;
+  materialId?: string | null;
+  materialCode?: string | null;
+  materialName?: string | null;
+  quantity?: number | null;
+  batchNo?: string | null;
+  remark?: string | null;
+}
+
+export interface TransferOrderRecord {
+  id: string;
+  transferNo?: string | null;
+  sourceWarehouseId?: string | null;
+  sourceWarehouseName?: string | null;
+  targetWarehouseId?: string | null;
+  targetWarehouseName?: string | null;
+  status?: string | null;
+  statusLabel?: string | null;
+  remark?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  lines?: TransferOrderLineRecord[] | null;
+}
+
+export interface CreateTransferLinePayload {
+  inventoryType: string;
+  skuId?: string;
+  materialId?: string;
+  quantity: number;
+  batchNo?: string;
+  remark?: string;
+}
+
+export interface CreateTransferPayload {
+  sourceWarehouseId: string;
+  targetWarehouseId: string;
+  remark?: string;
+  lines: CreateTransferLinePayload[];
+}
+
+export type TransferQueryParams = Omit<PageQuery, 'inboundNo' | 'outboundNo' | 'warehouseId'>;
+
 export interface RecordStocktakingCountPayload {
   stocktakingId: string;
   lineId: string;
@@ -249,4 +295,37 @@ export async function reviewStocktaking(stocktakingId: string): Promise<void> {
 
 function normalizePageQuery<T extends { current: number; size: number }>(params: T): Partial<T> {
   return normalizeOptionalFields({ ...params, current: Math.max(1, params.current), size: Math.max(1, params.size) });
+}
+
+export async function pageTransferOrders(params: TransferQueryParams): Promise<PageResult<TransferOrderRecord>> {
+  const response = await apiClient.post('/inventory/transfer/page', normalizePageQuery(params));
+  return unwrapApiResponse<PageResult<TransferOrderRecord>>(response.data);
+}
+
+export async function getTransferDetail(transferId: string): Promise<TransferOrderRecord> {
+  const response = await apiClient.post('/inventory/transfer/detail', null, { params: { transferId } });
+  return unwrapApiResponse<TransferOrderRecord>(response.data);
+}
+
+export async function createTransferOrder(payload: CreateTransferPayload): Promise<TransferOrderRecord> {
+  const response = await apiClient.post('/inventory/transfer/create', normalizeOptionalFields({
+    ...payload,
+    lines: payload.lines.map((line) => normalizeOptionalFields(line)),
+  }));
+  return unwrapApiResponse<TransferOrderRecord>(response.data);
+}
+
+export async function confirmTransfer(transferId: string): Promise<void> {
+  const response = await apiClient.post('/inventory/transfer/confirm', null, { params: { transferId } });
+  return unwrapApiResponse<void>(response.data);
+}
+
+export async function completeTransfer(transferId: string): Promise<void> {
+  const response = await apiClient.post('/inventory/transfer/complete', null, { params: { transferId } });
+  return unwrapApiResponse<void>(response.data);
+}
+
+export async function cancelTransfer(transferId: string): Promise<void> {
+  const response = await apiClient.post('/inventory/transfer/cancel', null, { params: { transferId } });
+  return unwrapApiResponse<void>(response.data);
 }

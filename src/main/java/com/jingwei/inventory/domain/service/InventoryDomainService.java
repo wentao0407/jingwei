@@ -217,6 +217,7 @@ public class InventoryDomainService {
             case ALLOCATE:
             case OUTBOUND_MATERIAL:
             case ADJUST_LOSS:
+            case TRANSFER_OUT:
                 if (record.getAvailableQty() < qty) {
                     throw new BizException(ErrorCode.INSUFFICIENT_INVENTORY,
                             "可用库存不足，当前" + record.getAvailableQty() + "，需要" + qty);
@@ -253,6 +254,7 @@ public class InventoryDomainService {
             case ALLOCATE:
             case OUTBOUND_MATERIAL:
             case ADJUST_LOSS:
+            case TRANSFER_OUT:
                 if (record.getAvailableQty().compareTo(qty) < 0) {
                     throw new BizException(ErrorCode.INSUFFICIENT_INVENTORY,
                             "可用库存不足，当前" + record.getAvailableQty() + "，需要" + qty);
@@ -321,6 +323,12 @@ public class InventoryDomainService {
             case ADJUST_LOSS:
                 record.setAvailableQty(record.getAvailableQty() - qty);
                 break;
+            case TRANSFER_OUT:
+                record.setAvailableQty(record.getAvailableQty() - qty);
+                break;
+            case TRANSFER_IN:
+                record.setAvailableQty(record.getAvailableQty() + qty);
+                break;
         }
     }
 
@@ -362,6 +370,12 @@ public class InventoryDomainService {
                 break;
             case ADJUST_LOSS:
                 record.setAvailableQty(record.getAvailableQty().subtract(qty));
+                break;
+            case TRANSFER_OUT:
+                record.setAvailableQty(record.getAvailableQty().subtract(qty));
+                break;
+            case TRANSFER_IN:
+                record.setAvailableQty(record.getAvailableQty().add(qty));
                 break;
         }
     }

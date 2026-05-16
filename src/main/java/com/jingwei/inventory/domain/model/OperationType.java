@@ -63,7 +63,13 @@ public enum OperationType {
     ADJUST_GAIN("ADJUST_GAIN", "盘盈调增"),
 
     /** 盘点亏损/手工调减 */
-    ADJUST_LOSS("ADJUST_LOSS", "盘亏调减");
+    ADJUST_LOSS("ADJUST_LOSS", "盘亏调减"),
+
+    /** 调拨出库（源仓扣减可用） */
+    TRANSFER_OUT("TRANSFER_OUT", "调拨出库"),
+
+    /** 调拨入库（目标仓增加可用） */
+    TRANSFER_IN("TRANSFER_IN", "调拨入库");
 
     private final String code;
     private final String label;

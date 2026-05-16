@@ -1,4 +1,4 @@
-import { EyeOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { EditOutlined, EyeOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { ProCard } from '@ant-design/pro-components';
 import { App, Button, Descriptions, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
@@ -13,9 +13,11 @@ import {
   getProcurementOrderAvailableActions,
   getProcurementOrderDetail,
   pageProcurementOrders,
+  updateProcurementOrder,
   type CreateProcurementOrderPayload,
   type ProcurementOrderLineRecord,
   type ProcurementOrderRecord,
+  type UpdateProcurementOrderPayload,
 } from '@/services/procurement/procurementService';
 import { getAuthSession, setAuthSession } from '@/shared/storage/authSessionStorage';
 
@@ -72,7 +74,9 @@ export function ProcurementOrderListPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const canCreate = permissions.includes('procurement:order:create');
+  const canUpdate = permissions.includes('procurement:order:update');
   const canFireEvent = permissions.includes('procurement:order:fire-event');
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -178,6 +182,55 @@ export function ProcurementOrderListPage() {
     }
   }
 
+  async function openEditForm(record: ProcurementOrderRecord) {
+    try {
+      setDetailLoading(true);
+      const detail = await getProcurementOrderDetail(record.id);
+      setEditingId(record.id);
+      form.setFieldsValue({
+        supplierId: detail.supplierId ?? undefined,
+        orderDate: detail.orderDate ?? undefined,
+        expectedDeliveryDate: detail.expectedDeliveryDate ?? undefined,
+        remark: detail.remark ?? undefined,
+        lines: (detail.lines ?? []).map((line) => ({
+          materialId: line.materialId ?? undefined,
+          materialType: line.materialType ?? undefined,
+          quantity: line.quantity ?? undefined,
+          unit: line.unit ?? undefined,
+          unitPrice: line.unitPrice ?? undefined,
+          mrpResultId: line.mrpResultId ?? undefined,
+          remark: line.remark ?? undefined,
+        })),
+      });
+      setFormOpen(true);
+    } catch (error) {
+      message.error(getApiErrorMessage(error));
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  async function handleUpdateOrder() {
+    if (!editingId) return;
+    try {
+      const values = await form.validateFields();
+      const payload = toUpdateProcurementOrderPayload(values);
+      setSaving(true);
+      await updateProcurementOrder(editingId, payload);
+      message.success('更新采购订单成功');
+      setFormOpen(false);
+      setEditingId(null);
+      await loadOrders();
+    } catch (error) {
+      if (isFormValidationError(error)) {
+        return;
+      }
+      message.error(getApiErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (loading && !pageResult) {
     return <LoadingState message="正在加载采购订单" />;
   }
@@ -210,7 +263,7 @@ export function ProcurementOrderListPage() {
         ) : (
           <Table<ProcurementOrderRecord>
             rowKey="id"
-            columns={buildColumns(openDetail)}
+            columns={buildColumns(openDetail, canUpdate ? openEditForm : undefined)}
             dataSource={pageResult?.records ?? []}
             loading={loading}
             pagination={{
@@ -238,10 +291,11 @@ export function ProcurementOrderListPage() {
       />
       <ProcurementOrderFormModal
         form={form}
+        isEdit={!!editingId}
         open={formOpen}
         saving={saving}
-        onCancel={() => setFormOpen(false)}
-        onSave={handleCreateOrder}
+        onCancel={() => { setFormOpen(false); setEditingId(null); }}
+        onSave={editingId ? handleUpdateOrder : handleCreateOrder}
       />
     </div>
   );
@@ -249,12 +303,14 @@ export function ProcurementOrderListPage() {
 
 function ProcurementOrderFormModal({
   form,
+  isEdit,
   open,
   saving,
   onCancel,
   onSave,
 }: {
   form: ReturnType<typeof Form.useForm<ProcurementOrderFormValues>>[0];
+  isEdit: boolean;
   open: boolean;
   saving: boolean;
   onCancel: () => void;
@@ -265,11 +321,11 @@ function ProcurementOrderFormModal({
       cancelText="取消"
       confirmLoading={saving}
       getContainer={false}
-      okText="保存采购订单"
+      okText={isEdit ? '更新采购订单' : '保存采购订单'}
       onCancel={onCancel}
       onOk={onSave}
       open={open}
-      title="新增采购订单"
+      title={isEdit ? '编辑采购订单' : '新增采购订单'}
       width={980}
     >
       <Form<ProcurementOrderFormValues> form={form} layout="vertical">
@@ -329,7 +385,10 @@ function ProcurementOrderFormModal({
   );
 }
 
-function buildColumns(onDetail: (record: ProcurementOrderRecord) => void): ColumnsType<ProcurementOrderRecord> {
+function buildColumns(
+  onDetail: (record: ProcurementOrderRecord) => void,
+  onEdit?: (record: ProcurementOrderRecord) => void,
+): ColumnsType<ProcurementOrderRecord> {
   return [
     { title: '采购单号', dataIndex: 'orderNo', key: 'orderNo', width: 170 },
     { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', render: (value) => value || '-' },
@@ -345,11 +404,18 @@ function buildColumns(onDetail: (record: ProcurementOrderRecord) => void): Colum
     {
       title: '操作',
       key: 'actions',
-      width: 120,
+      width: 160,
       render: (_, record) => (
-        <Button icon={<EyeOutlined />} size="small" aria-label={`详情 ${record.orderNo}`} onClick={() => onDetail(record)}>
-          详情
-        </Button>
+        <Space>
+          <Button icon={<EyeOutlined />} size="small" aria-label={`详情 ${record.orderNo}`} onClick={() => onDetail(record)}>
+            详情
+          </Button>
+          {onEdit && record.status === 'DRAFT' ? (
+            <Button icon={<EditOutlined />} size="small" aria-label={`编辑 ${record.orderNo}`} onClick={() => onEdit(record)}>
+              编辑
+            </Button>
+          ) : null}
+        </Space>
       ),
     },
   ];
@@ -454,6 +520,24 @@ function createEmptyOrderLineForm(): ProcurementOrderLineFormValues {
 }
 
 function toProcurementOrderPayload(values: ProcurementOrderFormValues): CreateProcurementOrderPayload {
+  return {
+    supplierId: trimOptional(values.supplierId) ?? '',
+    orderDate: trimOptional(values.orderDate),
+    expectedDeliveryDate: trimOptional(values.expectedDeliveryDate),
+    remark: trimOptional(values.remark),
+    lines: (values.lines ?? []).map((line) => ({
+      materialId: trimOptional(line.materialId) ?? '',
+      materialType: trimOptional(line.materialType),
+      quantity: Number(line.quantity ?? 0),
+      unit: trimOptional(line.unit),
+      unitPrice: typeof line.unitPrice === 'number' ? line.unitPrice : undefined,
+      mrpResultId: trimOptional(line.mrpResultId),
+      remark: trimOptional(line.remark),
+    })),
+  };
+}
+
+function toUpdateProcurementOrderPayload(values: ProcurementOrderFormValues): UpdateProcurementOrderPayload {
   return {
     supplierId: trimOptional(values.supplierId) ?? '',
     orderDate: trimOptional(values.orderDate),

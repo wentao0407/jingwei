@@ -10,6 +10,7 @@ import com.jingwei.master.domain.repository.SupplierRepository;
 import com.jingwei.procurement.application.dto.CreateProcurementOrderDTO;
 import com.jingwei.procurement.application.dto.FireProcurementOrderEventDTO;
 import com.jingwei.procurement.application.dto.ProcurementOrderQueryDTO;
+import com.jingwei.procurement.application.dto.UpdateProcurementOrderDTO;
 import com.jingwei.procurement.domain.model.ProcurementOrder;
 import com.jingwei.procurement.domain.model.ProcurementOrderEvent;
 import com.jingwei.procurement.domain.model.ProcurementOrderLine;
@@ -63,6 +64,24 @@ public class ProcurementOrderApplicationService {
     }
 
     /**
+     * 更新采购订单（仅 DRAFT 状态可编辑）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public ProcurementOrderVO updateOrder(Long orderId, UpdateProcurementOrderDTO dto) {
+        ProcurementOrder order = new ProcurementOrder();
+        order.setSupplierId(dto.getSupplierId());
+        order.setOrderDate(dto.getOrderDate() != null ? LocalDate.parse(dto.getOrderDate()) : null);
+        order.setExpectedDeliveryDate(dto.getExpectedDeliveryDate() != null
+                ? LocalDate.parse(dto.getExpectedDeliveryDate()) : null);
+        order.setRemark(dto.getRemark());
+
+        List<ProcurementOrderLine> lines = buildUpdateOrderLines(dto.getLines());
+
+        ProcurementOrder updated = procurementOrderDomainService.updateOrder(orderId, order, lines);
+        return toProcurementOrderVO(updated);
+    }
+
+    /**
      * 触发状态转移
      */
     @Transactional(rollbackFor = Exception.class)
@@ -106,6 +125,23 @@ public class ProcurementOrderApplicationService {
             List<CreateProcurementOrderDTO.ProcurementOrderLineCreateDTO> lineDTOs) {
         List<ProcurementOrderLine> lines = new ArrayList<>();
         for (CreateProcurementOrderDTO.ProcurementOrderLineCreateDTO dto : lineDTOs) {
+            ProcurementOrderLine line = new ProcurementOrderLine();
+            line.setMaterialId(dto.getMaterialId());
+            line.setMaterialType(dto.getMaterialType());
+            line.setQuantity(dto.getQuantity());
+            line.setUnit(dto.getUnit());
+            line.setUnitPrice(dto.getUnitPrice());
+            line.setMrpResultId(dto.getMrpResultId());
+            line.setRemark(dto.getRemark());
+            lines.add(line);
+        }
+        return lines;
+    }
+
+    private List<ProcurementOrderLine> buildUpdateOrderLines(
+            List<UpdateProcurementOrderDTO.ProcurementOrderLineUpdateDTO> lineDTOs) {
+        List<ProcurementOrderLine> lines = new ArrayList<>();
+        for (UpdateProcurementOrderDTO.ProcurementOrderLineUpdateDTO dto : lineDTOs) {
             ProcurementOrderLine line = new ProcurementOrderLine();
             line.setMaterialId(dto.getMaterialId());
             line.setMaterialType(dto.getMaterialType());

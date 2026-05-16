@@ -90,6 +90,30 @@ export interface TurnoverQuery extends ReportPageQuery {
   endDate?: string;
 }
 
+// ======== 缺货统计 ========
+
+export interface ShortageRecord {
+  orderId?: string | null;
+  orderNo?: string | null;
+  customerId?: string | null;
+  customerName?: string | null;
+  spuId?: string | null;
+  spuCode?: string | null;
+  spuName?: string | null;
+  colorName?: string | null;
+  sizeCode?: string | null;
+  demandQty?: number | null;
+  availableQty?: number | null;
+  shortageQty?: number | null;
+  deliveryDate?: string | null;
+  orderStatus?: string | null;
+}
+
+export interface ShortageQuery extends ReportPageQuery {
+  spuId?: string;
+  customerId?: string;
+}
+
 export async function pageInventoryLedger(
   params: ReportPageQuery,
 ): Promise<PageResult<InventoryLedgerRecord>> {
@@ -141,6 +165,16 @@ export async function exportInventoryAge(params: ReportPageQuery): Promise<Blob>
 
 export async function exportTurnoverAnalysis(params: TurnoverQuery): Promise<Blob> {
   const response = await apiClient.post('/report/turnover/export', normalizePageQuery(params), { responseType: 'blob' });
+  return response.data;
+}
+
+export async function pageShortage(params: ShortageQuery): Promise<PageResult<ShortageRecord>> {
+  const response = await apiClient.post('/report/shortage/page', normalizePageQuery(params));
+  return unwrapApiResponse<PageResult<ShortageRecord>>(response.data);
+}
+
+export async function exportShortage(params: ShortageQuery): Promise<Blob> {
+  const response = await apiClient.post('/report/shortage/export', normalizePageQuery(params), { responseType: 'blob' });
   return response.data;
 }
 

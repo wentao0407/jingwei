@@ -6,6 +6,7 @@ import com.jingwei.common.domain.model.R;
 import com.jingwei.report.application.dto.InventoryAgeQueryDTO;
 import com.jingwei.report.application.dto.InventoryLedgerQueryDTO;
 import com.jingwei.report.application.dto.OperationFlowQueryDTO;
+import com.jingwei.report.application.dto.ShortageQueryDTO;
 import com.jingwei.report.application.dto.TurnoverQueryDTO;
 import com.jingwei.report.application.service.ReportApplicationService;
 import com.jingwei.report.interfaces.vo.*;
@@ -148,5 +149,30 @@ public class ReportController {
     public void exportTurnoverAnalysis(@Valid @RequestBody TurnoverQueryDTO dto,
                                         HttpServletResponse response) throws IOException {
         reportApplicationService.exportTurnoverAnalysis(dto, response);
+    }
+
+    // ==================== 缺货统计 ====================
+
+    /**
+     * 分页查询缺货统计
+     * <p>
+     * 展开销售订单行的尺码矩阵，关联 SKU 库存，
+     * 筛选需求 > 可用库存的记录，按缺货数量降序排列。
+     * </p>
+     */
+    @RequirePermission("report:shortage:view")
+    @PostMapping("/report/shortage/page")
+    public R<IPage<ShortageVO>> queryShortage(@Valid @RequestBody ShortageQueryDTO dto) {
+        return R.ok(reportApplicationService.queryShortage(dto));
+    }
+
+    /**
+     * 导出缺货统计到 Excel
+     */
+    @RequirePermission("report:shortage:export")
+    @PostMapping("/report/shortage/export")
+    public void exportShortage(@Valid @RequestBody ShortageQueryDTO dto,
+                                HttpServletResponse response) throws IOException {
+        reportApplicationService.exportShortage(dto, response);
     }
 }
