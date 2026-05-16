@@ -23,6 +23,14 @@ public interface InventoryInTransitRepository {
      */
     List<InventoryInTransit> selectByMaterialId(Long materialId);
 
+    /**
+     * 查询指定采购订单行的在途库存记录。
+     *
+     * @param procurementLineId 采购订单行 ID
+     * @return 在途库存记录列表
+     */
+    List<InventoryInTransit> selectByProcurementLineId(Long procurementLineId);
+
     int insert(InventoryInTransit record);
 
     int updateById(InventoryInTransit record);

@@ -1,6 +1,6 @@
-import { DollarOutlined, EyeOutlined, FileSearchOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { DeleteOutlined, DollarOutlined, EditOutlined, EyeOutlined, FileSearchOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { ProCard } from '@ant-design/pro-components';
-import { App, Button, Descriptions, Input, Modal, Progress, Select, Space, Table, Tag } from 'antd';
+import { App, Button, Descriptions, Form, Input, InputNumber, Modal, Progress, Select, Space, Switch, Table, Tag } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { EmptyState, ErrorState, LoadingState } from '@/components/state';
@@ -9,6 +9,8 @@ import { getApiErrorMessage } from '@/services/http/apiClient';
 import type { PageResult } from '@/services/master/customerService';
 import {
   calculateProductionOrderMaterialRequirements,
+  createProductionOrder,
+  deleteProductionOrder,
   fireProductionLineEvent,
   fireProductionOrderEvent,
   getProductionOrderCostDetail,
@@ -24,6 +26,8 @@ import {
   type ProductionActionRecord,
   type ProductionOrderLineRecord,
   type ProductionOrderRecord,
+  type SaveProductionOrderPayload,
+  updateProductionOrder,
 } from '@/services/order/productionOrderService';
 import { getAuthSession, setAuthSession } from '@/shared/storage/authSessionStorage';
 
@@ -57,13 +61,52 @@ const statusColorMap: Record<string, string> = {
 
 interface ProductionOrderActions {
   canCalculateMaterialRequirements: boolean;
+  canCreate: boolean;
+  canDelete: boolean;
   canFireLineEvent: boolean;
   canFireOrderEvent: boolean;
+  canUpdate: boolean;
   canViewCostDetail: boolean;
 }
 
+type ProductionOrderFormMode = 'create' | 'edit';
+
+interface ProductionOrderFormValues {
+  planDate?: string;
+  deadlineDate?: string;
+  workshopId?: string;
+  remark?: string;
+  lines: ProductionOrderLineFormValues[];
+}
+
+interface ProductionOrderLineFormValues {
+  spuId?: string;
+  colorWayId?: string;
+  sizeGroupId?: string;
+  bomId?: string;
+  skipCutting?: boolean;
+  remark?: string;
+  sizes: ProductionOrderSizeFormValues[];
+}
+
+interface ProductionOrderSizeFormValues {
+  sizeId?: string;
+  code?: string;
+  quantity?: number;
+}
+
+const defaultProductionOrderFormValues: ProductionOrderFormValues = {
+  lines: [
+    {
+      skipCutting: false,
+      sizes: [{ quantity: 1 }],
+    },
+  ],
+};
+
 export function ProductionOrderListPage() {
   const { message } = App.useApp();
+  const [form] = Form.useForm<ProductionOrderFormValues>();
   const [orderNoInput, setOrderNoInput] = useState('');
   const [orderNo, setOrderNo] = useState('');
   const [status, setStatus] = useState('');
@@ -91,6 +134,11 @@ export function ProductionOrderListPage() {
   const [costDetail, setCostDetail] = useState<ProductionOrderCostRecord | null>(null);
   const [costIssues, setCostIssues] = useState<ProductionOrderCostIssueRecord[]>([]);
   const [selectedCostLine, setSelectedCostLine] = useState<ProductionOrderLineRecord | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<ProductionOrderFormMode>('create');
+  const [editingOrderId, setEditingOrderId] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<ProductionOrderRecord | null>(null);
+  const [saving, setSaving] = useState(false);
   const [permissions, setPermissions] = useState<string[]>(() => getAuthSession()?.permissions ?? []);
   const actions = getProductionOrderActions(permissions);
 
@@ -255,6 +303,71 @@ export function ProductionOrderListPage() {
     }
   }
 
+  function openCreateForm() {
+    setFormMode('create');
+    setEditingOrderId('');
+    form.setFieldsValue(defaultProductionOrderFormValues);
+    setFormOpen(true);
+  }
+
+  async function openEditForm(order: ProductionOrderRecord) {
+    setFormMode('edit');
+    setEditingOrderId(order.id);
+    setFormOpen(true);
+    try {
+      const orderDetail = await getProductionOrderDetail(order.id);
+      form.setFieldsValue(toProductionOrderFormValues(orderDetail));
+    } catch (error) {
+      message.error(getApiErrorMessage(error));
+      setFormOpen(false);
+    }
+  }
+
+  async function handleSaveProductionOrder() {
+    const values = await form.validateFields().catch(() => null);
+    if (!values) {
+      return;
+    }
+
+    const payload = toSaveProductionOrderPayload(values, formMode);
+    if (!hasPositiveProductionQuantity(payload)) {
+      message.error('至少填写一个大于 0 的生产数量');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (formMode === 'edit') {
+        await updateProductionOrder(editingOrderId, payload);
+        message.success('生产订单已更新');
+      } else {
+        await createProductionOrder(payload);
+        message.success('生产订单已创建');
+      }
+      setFormOpen(false);
+      await loadOrders();
+    } catch (error) {
+      message.error(getApiErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteProductionOrder() {
+    if (!deleteTarget) {
+      return;
+    }
+
+    try {
+      await deleteProductionOrder(deleteTarget.id);
+      message.success('生产订单已删除');
+      setDeleteTarget(null);
+      await loadOrders();
+    } catch (error) {
+      message.error(getApiErrorMessage(error));
+    }
+  }
+
   async function reloadDetail(orderId: string) {
     const [orderDetail, availableActions] = await Promise.all([
       getProductionOrderDetail(orderId),
@@ -322,6 +435,11 @@ export function ProductionOrderListPage() {
           <Button icon={<ReloadOutlined />} onClick={loadOrders}>
             刷新
           </Button>
+          {actions.canCreate ? (
+            <Button type="primary" icon={<PlusOutlined />} aria-label="新增生产订单" onClick={openCreateForm}>
+              新增生产订单
+            </Button>
+          ) : null}
         </Space>
         {dateValidationMessage ? <p className="ant-form-item-explain-error">{dateValidationMessage}</p> : null}
 
@@ -330,7 +448,7 @@ export function ProductionOrderListPage() {
         ) : (
           <Table<ProductionOrderRecord>
             rowKey="id"
-            columns={buildColumns(openDetail)}
+            columns={buildColumns(actions, openDetail, openEditForm, setDeleteTarget)}
             dataSource={pageResult?.records ?? []}
             loading={loading}
             pagination={{
@@ -372,11 +490,35 @@ export function ProductionOrderListPage() {
         open={costOpen}
         onCancel={() => setCostOpen(false)}
       />
+      <ProductionOrderFormModal
+        form={form}
+        mode={formMode}
+        open={formOpen}
+        saving={saving}
+        onCancel={() => setFormOpen(false)}
+        onSave={handleSaveProductionOrder}
+      />
+      <Modal
+        getContainer={false}
+        okButtonProps={{ danger: true }}
+        okText="确认删除"
+        onCancel={() => setDeleteTarget(null)}
+        onOk={handleDeleteProductionOrder}
+        open={Boolean(deleteTarget)}
+        title="删除生产订单"
+      >
+        确认删除生产订单 {deleteTarget?.orderNo}？
+      </Modal>
     </div>
   );
 }
 
-function buildColumns(onDetail: (order: ProductionOrderRecord) => void): ColumnsType<ProductionOrderRecord> {
+function buildColumns(
+  actions: ProductionOrderActions,
+  onDetail: (order: ProductionOrderRecord) => void,
+  onEdit: (order: ProductionOrderRecord) => void,
+  onDelete: (order: ProductionOrderRecord) => void,
+): ColumnsType<ProductionOrderRecord> {
   return [
     { title: '生产单号', dataIndex: 'orderNo', key: 'orderNo', width: 180 },
     { title: '来源', dataIndex: 'sourceType', key: 'sourceType', width: 120, render: formatSourceType },
@@ -397,12 +539,128 @@ function buildColumns(onDetail: (order: ProductionOrderRecord) => void): Columns
       key: 'actions',
       width: 120,
       render: (_, record) => (
-        <Button icon={<EyeOutlined />} size="small" aria-label={`详情 ${record.orderNo}`} onClick={() => onDetail(record)}>
-          详情
-        </Button>
+        <Space wrap>
+          <Button icon={<EyeOutlined />} size="small" aria-label={`详情 ${record.orderNo}`} onClick={() => onDetail(record)}>
+            详情
+          </Button>
+          {actions.canUpdate && record.status === 'DRAFT' ? (
+            <Button icon={<EditOutlined />} size="small" aria-label={`编辑 ${record.orderNo}`} onClick={() => onEdit(record)}>
+              编辑
+            </Button>
+          ) : null}
+          {actions.canDelete && record.status === 'DRAFT' ? (
+            <Button danger icon={<DeleteOutlined />} size="small" aria-label={`删除 ${record.orderNo}`} onClick={() => onDelete(record)}>
+              删除
+            </Button>
+          ) : null}
+        </Space>
       ),
     },
   ];
+}
+
+function ProductionOrderFormModal({
+  form,
+  mode,
+  open,
+  saving,
+  onCancel,
+  onSave,
+}: {
+  form: ReturnType<typeof Form.useForm<ProductionOrderFormValues>>[0];
+  mode: ProductionOrderFormMode;
+  open: boolean;
+  saving: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <Modal
+      confirmLoading={saving}
+      getContainer={false}
+      okText="保存生产订单"
+      onCancel={onCancel}
+      onOk={onSave}
+      open={open}
+      title={mode === 'edit' ? '编辑生产订单' : '新增生产订单'}
+      width={980}
+    >
+      <Form form={form} layout="vertical" initialValues={defaultProductionOrderFormValues}>
+        <Space size={16} style={{ width: '100%' }} align="start" wrap>
+          <Form.Item label="计划生产日期" name="planDate">
+            <Input placeholder="YYYY-MM-DD" />
+          </Form.Item>
+          <Form.Item label="要求完工日期" name="deadlineDate">
+            <Input placeholder="YYYY-MM-DD" />
+          </Form.Item>
+          <Form.Item label="车间 ID" name="workshopId">
+            <Input placeholder="车间 ID" />
+          </Form.Item>
+        </Space>
+        <Form.Item label="备注" name="remark">
+          <Input.TextArea rows={2} maxLength={500} />
+        </Form.Item>
+        <Form.List name="lines">
+          {(fields, { add, remove }) => (
+            <Space direction="vertical" style={{ width: '100%' }} size={12}>
+              {fields.map((field, index) => (
+                <ProCard
+                  key={field.key}
+                  bordered
+                  size="small"
+                  title={`生产行 ${index + 1}`}
+                  extra={fields.length > 1 ? <Button size="small" onClick={() => remove(field.name)}>删除行</Button> : null}
+                >
+                  <Space size={16} style={{ width: '100%' }} align="start" wrap>
+                    <Form.Item label="款式 ID" name={[field.name, 'spuId']} rules={[{ required: true, whitespace: true, message: '请输入款式 ID' }]}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label="颜色款 ID" name={[field.name, 'colorWayId']} rules={[{ required: true, whitespace: true, message: '请输入颜色款 ID' }]}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label="尺码组 ID" name={[field.name, 'sizeGroupId']} rules={[{ required: true, whitespace: true, message: '请输入尺码组 ID' }]}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label="BOM ID" name={[field.name, 'bomId']}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label="跳过裁剪" name={[field.name, 'skipCutting']} valuePropName="checked">
+                      <Switch />
+                    </Form.Item>
+                  </Space>
+                  <Form.List name={[field.name, 'sizes']}>
+                    {(sizeFields, sizeOperations) => (
+                      <Space direction="vertical" style={{ width: '100%' }}>
+                        {sizeFields.map((sizeField) => (
+                          <Space key={sizeField.key} align="start" wrap>
+                            <Form.Item label="尺码 ID" name={[sizeField.name, 'sizeId']} rules={[{ required: true, whitespace: true, message: '请输入尺码 ID' }]}>
+                              <Input />
+                            </Form.Item>
+                            <Form.Item label="尺码编码" name={[sizeField.name, 'code']} rules={[{ required: true, whitespace: true, message: '请输入尺码编码' }]}>
+                              <Input />
+                            </Form.Item>
+                            <Form.Item label="生产数量" name={[sizeField.name, 'quantity']} rules={[{ required: true, message: '请输入生产数量' }]}>
+                              <InputNumber min={0} precision={0} />
+                            </Form.Item>
+                            {sizeFields.length > 1 ? <Button onClick={() => sizeOperations.remove(sizeField.name)}>删除尺码</Button> : null}
+                          </Space>
+                        ))}
+                        <Button onClick={() => sizeOperations.add({ quantity: 1 })}>新增尺码</Button>
+                      </Space>
+                    )}
+                  </Form.List>
+                  <Form.Item label="行备注" name={[field.name, 'remark']}>
+                    <Input />
+                  </Form.Item>
+                </ProCard>
+              ))}
+              <Button onClick={() => add({ skipCutting: false, sizes: [{ quantity: 1 }] })}>新增生产行</Button>
+            </Space>
+          )}
+        </Form.List>
+      </Form>
+    </Modal>
+  );
 }
 
 function ProductionDetailModal({
@@ -688,10 +946,86 @@ function renderSizeMatrix(value?: Record<string, unknown> | null) {
 function getProductionOrderActions(permissions: string[]): ProductionOrderActions {
   return {
     canCalculateMaterialRequirements: permissions.includes('procurement:mrp:calculate'),
+    canCreate: permissions.includes('order:production:create'),
+    canDelete: permissions.includes('order:production:delete'),
     canFireLineEvent: permissions.includes('order:production:fire-line-event'),
     canFireOrderEvent: permissions.includes('order:production:fire-event'),
+    canUpdate: permissions.includes('order:production:update'),
     canViewCostDetail: permissions.includes('cost:query:detail'),
   };
+}
+
+function toSaveProductionOrderPayload(
+  values: ProductionOrderFormValues,
+  mode: ProductionOrderFormMode,
+): SaveProductionOrderPayload {
+  return {
+    ...(mode === 'create' ? { sourceType: 'MANUAL' } : {}),
+    planDate: trimOptional(values.planDate),
+    deadlineDate: trimOptional(values.deadlineDate),
+    workshopId: trimOptional(values.workshopId),
+    remark: trimOptional(values.remark),
+    lines: values.lines.map((line) => ({
+      spuId: String(line.spuId ?? '').trim(),
+      colorWayId: String(line.colorWayId ?? '').trim(),
+      sizeGroupId: String(line.sizeGroupId ?? '').trim(),
+      bomId: trimOptional(line.bomId),
+      skipCutting: Boolean(line.skipCutting),
+      remark: trimOptional(line.remark),
+      sizes: line.sizes.map((size) => ({
+        sizeId: String(size.sizeId ?? '').trim(),
+        code: String(size.code ?? '').trim(),
+        quantity: Number(size.quantity ?? 0),
+      })),
+    })),
+  };
+}
+
+function toProductionOrderFormValues(order: ProductionOrderRecord): ProductionOrderFormValues {
+  return {
+    planDate: order.planDate ?? undefined,
+    deadlineDate: order.deadlineDate ?? undefined,
+    workshopId: order.workshopId ?? undefined,
+    remark: order.remark ?? undefined,
+    lines: (order.lines ?? []).map((line) => ({
+      spuId: line.spuId ?? undefined,
+      colorWayId: line.colorWayId ?? undefined,
+      sizeGroupId: extractSizeGroupId(line),
+      bomId: line.bomId ?? undefined,
+      skipCutting: Boolean(line.skipCutting),
+      remark: line.remark ?? undefined,
+      sizes: extractSizeEntries(line),
+    })),
+  };
+}
+
+function extractSizeGroupId(line: ProductionOrderLineRecord): string | undefined {
+  const value = line.sizeMatrix?.sizeGroupId;
+  return typeof value === 'string' ? value : undefined;
+}
+
+function extractSizeEntries(line: ProductionOrderLineRecord): ProductionOrderSizeFormValues[] {
+  const sizes = Array.isArray(line.sizeMatrix?.sizes) ? line.sizeMatrix.sizes : [];
+  if (sizes.length === 0) {
+    return [{ quantity: 1 }];
+  }
+  return sizes.map((item) => {
+    const size = item as { sizeId?: string; code?: string; quantity?: number };
+    return {
+      sizeId: size.sizeId,
+      code: size.code,
+      quantity: size.quantity ?? 0,
+    };
+  });
+}
+
+function hasPositiveProductionQuantity(payload: SaveProductionOrderPayload): boolean {
+  return payload.lines.some((line) => line.sizes.some((size) => Number(size.quantity ?? 0) > 0));
+}
+
+function trimOptional(value?: string): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed || undefined;
 }
 
 function getStatusLabel(order: ProductionOrderRecord): string {

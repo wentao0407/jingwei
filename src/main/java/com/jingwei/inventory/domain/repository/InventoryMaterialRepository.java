@@ -1,5 +1,6 @@
 package com.jingwei.inventory.domain.repository;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jingwei.inventory.domain.model.InventoryMaterial;
 
 import java.util.List;
@@ -23,6 +24,11 @@ public interface InventoryMaterialRepository {
      * 查询所有原料库存记录（对账扫描用）
      */
     List<InventoryMaterial> selectAll();
+
+    /**
+     * 分页查询原料库存
+     */
+    Page<InventoryMaterial> pageQuery(Long current, Long size, Long materialId, Long warehouseId, String batchNo);
 
     int insert(InventoryMaterial record);
 

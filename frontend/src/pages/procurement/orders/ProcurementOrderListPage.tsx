@@ -1,6 +1,6 @@
-import { EyeOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { EyeOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { ProCard } from '@ant-design/pro-components';
-import { App, Button, Descriptions, Input, Modal, Select, Space, Table, Tag } from 'antd';
+import { App, Button, Descriptions, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { EmptyState, ErrorState, LoadingState } from '@/components/state';
@@ -8,10 +8,12 @@ import { getCurrentUserPermissions } from '@/services/auth/authService';
 import { getApiErrorMessage } from '@/services/http/apiClient';
 import type { PageResult } from '@/services/master/customerService';
 import {
+  createProcurementOrder,
   fireProcurementOrderEvent,
   getProcurementOrderAvailableActions,
   getProcurementOrderDetail,
   pageProcurementOrders,
+  type CreateProcurementOrderPayload,
   type ProcurementOrderLineRecord,
   type ProcurementOrderRecord,
 } from '@/services/procurement/procurementService';
@@ -53,6 +55,7 @@ const statusColorMap: Record<string, string> = {
 
 export function ProcurementOrderListPage() {
   const { message } = App.useApp();
+  const [form] = Form.useForm<ProcurementOrderFormValues>();
   const [supplierInput, setSupplierInput] = useState('');
   const [supplierId, setSupplierId] = useState('');
   const [status, setStatus] = useState('');
@@ -66,6 +69,9 @@ export function ProcurementOrderListPage() {
   const [detail, setDetail] = useState<ProcurementOrderRecord | null>(null);
   const [availableActions, setAvailableActions] = useState<string[]>([]);
   const [permissions, setPermissions] = useState<string[]>(() => getAuthSession()?.permissions ?? []);
+  const [formOpen, setFormOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const canCreate = permissions.includes('procurement:order:create');
   const canFireEvent = permissions.includes('procurement:order:fire-event');
 
   const loadOrders = useCallback(async () => {
@@ -148,6 +154,30 @@ export function ProcurementOrderListPage() {
     }
   }
 
+  function openCreateForm() {
+    form.setFieldsValue({ lines: [createEmptyOrderLineForm()] });
+    setFormOpen(true);
+  }
+
+  async function handleCreateOrder() {
+    try {
+      const values = await form.validateFields();
+      const payload = toProcurementOrderPayload(values);
+      setSaving(true);
+      await createProcurementOrder(payload);
+      message.success('新增采购订单成功');
+      setFormOpen(false);
+      await loadOrders();
+    } catch (error) {
+      if (isFormValidationError(error)) {
+        return;
+      }
+      message.error(getApiErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (loading && !pageResult) {
     return <LoadingState message="正在加载采购订单" />;
   }
@@ -171,6 +201,9 @@ export function ProcurementOrderListPage() {
           <Select aria-label="采购订单状态筛选" options={statusOptions} value={status} onChange={(value) => { setStatus(value); setCurrentPage(INITIAL_PAGE); }} />
           <Button icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button>
           <Button icon={<ReloadOutlined />} onClick={loadOrders}>刷新</Button>
+          {canCreate ? (
+            <Button aria-label="新增采购订单" icon={<PlusOutlined />} type="primary" onClick={openCreateForm}>新增采购订单</Button>
+          ) : null}
         </Space>
         {pageResult?.records.length === 0 ? (
           <EmptyState message="暂无采购订单" />
@@ -203,7 +236,96 @@ export function ProcurementOrderListPage() {
         onCancel={() => setDetailOpen(false)}
         onFireEvent={handleFireEvent}
       />
+      <ProcurementOrderFormModal
+        form={form}
+        open={formOpen}
+        saving={saving}
+        onCancel={() => setFormOpen(false)}
+        onSave={handleCreateOrder}
+      />
     </div>
+  );
+}
+
+function ProcurementOrderFormModal({
+  form,
+  open,
+  saving,
+  onCancel,
+  onSave,
+}: {
+  form: ReturnType<typeof Form.useForm<ProcurementOrderFormValues>>[0];
+  open: boolean;
+  saving: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <Modal
+      cancelText="取消"
+      confirmLoading={saving}
+      getContainer={false}
+      okText="保存采购订单"
+      onCancel={onCancel}
+      onOk={onSave}
+      open={open}
+      title="新增采购订单"
+      width={980}
+    >
+      <Form<ProcurementOrderFormValues> form={form} layout="vertical">
+        <Space align="start" style={{ width: '100%' }} wrap>
+          <Form.Item label="供应商ID" name="supplierId" rules={[{ required: true, message: '请输入供应商ID' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item label="订单日期" name="orderDate">
+            <Input placeholder="YYYY-MM-DD" />
+          </Form.Item>
+          <Form.Item label="要求交货日期" name="expectedDeliveryDate">
+            <Input placeholder="YYYY-MM-DD" />
+          </Form.Item>
+        </Space>
+        <Form.Item label="订单备注" name="remark">
+          <Input.TextArea autoSize={{ minRows: 2, maxRows: 4 }} />
+        </Form.Item>
+        <Form.List name="lines" rules={[{ validator: validateOrderLines }]}>
+          {(fields, { add, remove }) => (
+            <Space direction="vertical" style={{ width: '100%' }}>
+              {fields.map((field) => (
+                <ProCard key={field.key} bordered size="small">
+                  <Space align="start" wrap>
+                    <Form.Item label="物料ID" name={[field.name, 'materialId']} rules={[{ required: true, message: '请输入物料ID' }]}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label="物料类型" name={[field.name, 'materialType']}>
+                      <Input placeholder="FABRIC/TRIM/PACKAGING" />
+                    </Form.Item>
+                    <Form.Item label="采购数量" name={[field.name, 'quantity']} rules={[{ required: true, message: '请输入采购数量' }]}>
+                      <InputNumber min={0} />
+                    </Form.Item>
+                    <Form.Item label="单位" name={[field.name, 'unit']}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label="单价" name={[field.name, 'unitPrice']}>
+                      <InputNumber min={0} />
+                    </Form.Item>
+                    <Form.Item label="MRP结果ID" name={[field.name, 'mrpResultId']}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label="行备注" name={[field.name, 'remark']}>
+                      <Input />
+                    </Form.Item>
+                    {fields.length > 1 ? (
+                      <Button danger onClick={() => remove(field.name)}>删除行</Button>
+                    ) : null}
+                  </Space>
+                </ProCard>
+              ))}
+              <Button onClick={() => add(createEmptyOrderLineForm())}>新增采购行</Button>
+            </Space>
+          )}
+        </Form.List>
+      </Form>
+    </Modal>
   );
 }
 
@@ -304,6 +426,64 @@ const lineColumns: ColumnsType<ProcurementOrderLineRecord> = [
 
 function getActionLabel(event: string): string {
   return actionLabelMap[event] ?? event;
+}
+
+interface ProcurementOrderLineFormValues {
+  materialId?: string;
+  materialType?: string;
+  mrpResultId?: string;
+  quantity?: number | null;
+  remark?: string;
+  unit?: string;
+  unitPrice?: number | null;
+}
+
+interface ProcurementOrderFormValues {
+  expectedDeliveryDate?: string;
+  lines?: ProcurementOrderLineFormValues[];
+  orderDate?: string;
+  remark?: string;
+  supplierId?: string;
+}
+
+function createEmptyOrderLineForm(): ProcurementOrderLineFormValues {
+  return {
+    materialType: 'FABRIC',
+    unit: '米',
+  };
+}
+
+function toProcurementOrderPayload(values: ProcurementOrderFormValues): CreateProcurementOrderPayload {
+  return {
+    supplierId: trimOptional(values.supplierId) ?? '',
+    orderDate: trimOptional(values.orderDate),
+    expectedDeliveryDate: trimOptional(values.expectedDeliveryDate),
+    remark: trimOptional(values.remark),
+    lines: (values.lines ?? []).map((line) => ({
+      materialId: trimOptional(line.materialId) ?? '',
+      materialType: trimOptional(line.materialType),
+      quantity: Number(line.quantity ?? 0),
+      unit: trimOptional(line.unit),
+      unitPrice: typeof line.unitPrice === 'number' ? line.unitPrice : undefined,
+      mrpResultId: trimOptional(line.mrpResultId),
+      remark: trimOptional(line.remark),
+    })),
+  };
+}
+
+async function validateOrderLines(_: unknown, value?: ProcurementOrderLineFormValues[]) {
+  if (!value || value.length === 0) {
+    throw new Error('至少需要一行采购明细');
+  }
+}
+
+function trimOptional(value?: string | null): string | undefined {
+  const nextValue = value?.trim();
+  return nextValue ? nextValue : undefined;
+}
+
+function isFormValidationError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'errorFields' in error;
 }
 
 function formatAmount(value?: number | null): string {

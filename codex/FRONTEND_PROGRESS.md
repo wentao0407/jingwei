@@ -38,8 +38,8 @@ pnpm build
 ## Current Frontend Status
 
 **Current Stage:** 联调与生产优化
-**Current Task:** 前端代码检视剩余主要查询与管理入口修复已完成
-**Next Task:** 为生产订单、BOM、采购订单和 ASN 的新增/编辑类写操作设计完整业务表单；发运列表需等待后端抽象发运单聚合或 page/detail 契约。
+**Current Task:** 已完成数据范围结构化改造、SPU/SKU 批量改价入口、编码规则正式生成入口，以及发运单后端聚合契约 + 前端列表详情。
+**Next Task:** 继续全链路真实后端冒烟，重点覆盖发运列表/详情、数据范围保存、SPU/SKU 批量改价和编码规则正式生成；采购订单编辑、发运历史/物流轨迹等待后端契约。
 
 已完成：
 
@@ -57,6 +57,18 @@ pnpm build
 - 主布局已优先使用登录返回的后端菜单树渲染侧边栏，并显示当前用户真实姓名。
 - 已补充 `POST /system/menu/permissions` 前端服务方法，后续可用于刷新权限。
 - 已补齐库存 SKU/物料直接查询、退货列表、波次列表/明细、审批配置、操作日志、数据范围、库存台账矩阵、用户详情/改密、销售订单时间线和数量变更记录入口。
+- 2026-05-16 代码实审确认：上述条目代表入口和主要查询已完成，不代表所有业务写操作和生命周期页面全部完成；剩余缺口见下方“Current Implementation Gaps”。
+- 已完成采购库存联动精确性修复，ASN 收货/质检库存变更按采购行、仓库和批次定位，不再按 materialId 取第一条库存记录。
+- 已完成生产订单新增、编辑、删除页面表单，接入 `createProductionOrder`、`updateProductionOrder`、`deleteProductionOrder`。
+- 已完成 BOM 新增、编辑、删除页面表单，接入 `createBom`、`updateBom`、`deleteBom`。
+- 已完成采购订单创建页面，接入 `createProcurementOrder`。
+- 已完成 ASN 创建页面，接入 `createAsn`。
+- 已完成退货生命周期页面，接入退货详情、提交审批、审批通过、审批驳回、确认收货和退货质检。
+- 已增强库存 SKU/物料查询页筛选条件，支持 skuId/materialId、warehouseId、batchNo。
+- 已完成数据范围结构化改造，支持角色选择、范围类型选择和仓库多选。
+- 已完成 SPU/SKU 批量改价入口，支持按款式和颜色范围批量更新成本价、销售价、批发价。
+- 已完成编码规则正式生成入口，对接原子递增生成接口并展示生成结果。
+- 已完成发运单后端聚合契约和前端列表详情，接入发运分页、详情和确认发运。
 - 已进入 Stage 2，新增用户管理列表页基础版：
   - 读取 `POST /system/user/page`
   - 支持 keyword 查询
@@ -451,6 +463,29 @@ pnpm build
 
 ---
 
+## Current Implementation Gaps
+
+> 2026-05-16 根据进度文档和实际代码共同审查。该清单优先级高于各阶段的笼统 `Done` 标记，用于指导下一批开发。
+
+P1：
+
+- 暂无当前代码实审确认的 P1 页面级功能缺口。
+
+P2：
+
+- 采购订单编辑：后端当前未提供编辑契约，前端暂不伪接不存在接口。
+- 发运历史/物流轨迹：发运列表、详情和确认已完成；历史时间线和物流轨迹仍需后端事件/轨迹模型后再接入。
+
+推荐修复顺序：
+
+```text
+真实后端全链路冒烟
+→ 采购订单编辑契约确认
+→ 发运历史/物流轨迹契约确认
+```
+
+---
+
 ## Stage Plan
 
 状态说明：
@@ -617,6 +652,7 @@ pnpm build
 - 已新增 `V49__restore_admin_category_material_permissions.sql`，回填 ADMIN 物料分类/物料主数据菜单和按钮权限。
 - 已实现 SPU/SKU 管理，路由为 `/master/spus`。
 - 已封装 `listSpus()`、`getSpuDetail()`、`createSpu()`、`updateSpu()`、`deleteSpu()`、`addSpuColors()`、`updateSkuPrice()`、`batchUpdateSkuPrice()`、`deactivateSku()`。
+- SPU 详情已暴露批量改价入口，支持按款式和颜色范围批量更新成本价、销售价、批发价。
 - 已实现尺码组/尺码管理，路由为 `/master/size-groups`。
 - 已封装 `listSizeGroups()`、`getSizeGroupDetail()`、`createSizeGroup()`、`updateSizeGroup()`、`deleteSizeGroup()`、`createSize()`、`updateSize()`、`deleteSize()`。
 - 主布局 fallback 菜单已包含“基础数据 / 款式管理 / 尺码组管理”。
@@ -632,7 +668,7 @@ pnpm build
 - 已实现编码规则管理，路由为 `/master/coding-rules`。
 - 已封装 `listCodingRules()`、`getCodingRuleDetail()`、`createCodingRule()`、`updateCodingRule()`、`deleteCodingRule()`、`previewCode()`、`generateCode()`。
 - 编码规则列表支持 keyword、状态筛选、刷新、loading / error / empty 状态。
-- 编码规则支持新建、编辑、删除、预览操作，新建时校验规则段必须包含流水号段。
+- 编码规则支持新建、编辑、删除、预览和正式生成操作，新建时校验规则段必须包含流水号段。
 - 编码规则操作按 `master:codingRule:create/update/delete/generate` 权限控制显示。
 - 主布局 fallback 菜单已包含“基础数据 / 编码规则”。
 - 已兼容后端菜单路径 `/master/codingRule`、`/master/coding-rule`。
@@ -695,6 +731,8 @@ pnpm build
 
 **Status:** Done
 
+**Code Review Note:** 列表、详情、状态流转、物料需求、成本入口，以及新增、编辑、删除页面表单已完成。
+
 目标：承接销售订单转生产后的排产和生产状态管理。
 
 页面：
@@ -724,6 +762,8 @@ pnpm build
 
 - 已实现生产订单列表，路由为 `/order/production`。
 - 已封装 `pageProductionOrders()`、`getProductionOrderDetail()`、`getProductionOrderAvailableActions()`、`getProductionLineAvailableActions()`、`fireProductionOrderEvent()`、`fireProductionLineEvent()`。
+- 已封装 `createProductionOrder()`、`updateProductionOrder()`、`deleteProductionOrder()`，并已接入新增、编辑、删除表单和操作入口。
+- 生产订单写操作按钮按 `order:production:create/update/delete` 权限及草稿状态控制显示。
 - 已封装 `calculateProductionOrderMaterialRequirements()`、`pageProductionOrderMaterialRequirements()`、`getProductionOrderCostDetail()`、`getProductionOrderCostIssues()`。
 - 生产订单列表支持生产单号、状态、计划日期筛选、分页、刷新、loading / error / empty 状态。
 - 计划日期筛选提交前校验 `YYYY-MM-DD`，非法格式会在页面内提示并阻止请求。
@@ -742,6 +782,8 @@ pnpm build
 ### Stage 6: 采购与仓储模块
 
 **Status:** Done
+
+**Code Review Note:** 采购订单、ASN、BOM/MRP、收货和上架的查询、详情、流转入口已完成；BOM 新增/编辑/删除、采购订单创建和 ASN 创建页面已完成；采购订单编辑后端契约未提供。
 
 目标：完成采购、到货、收货、上架等库存前置链路。
 
@@ -772,7 +814,11 @@ pnpm build
 
 - 已实现采购订单列表、详情和状态流转入口。
 - 已实现 ASN 到货通知列表、详情、收货和质检入口。
+- 已实现 ASN 创建表单，支持采购订单、供应商、预计到货日期和 ASN 明细行维护。
 - 已实现 BOM 列表、详情、审批入口和 MRP 计算、结果查询入口。
+- 已封装采购订单创建、ASN 创建、BOM 新增/编辑/删除 service，并已补充 service 测试。
+- 已接入 BOM 新增、编辑、删除表单，按钮按 `procurement:bom:create/update/delete` 权限及草稿状态控制显示。
+- 已接入采购订单创建表单，按钮按 `procurement:order:create` 权限控制显示。
 - 已实现收货管理作业台，支持从 ASN 创建收货单、查询收货单详情和逐行确认收货。
 - 已实现上架管理作业台，支持查询收货单详情、推荐库位和逐行确认上架。
 - 已补齐 `/procurement/orders`、`/procurement/asns`、`/procurement/bom-mrp`、`/procurement/receiving`、`/procurement/putaway` 路由。
@@ -782,6 +828,8 @@ pnpm build
 ### Stage 7: 库存与物流模块
 
 **Status:** Done
+
+**Code Review Note:** 库存、出入库、盘点、预警、波次和发运主入口已完成；库存 SKU/物料筛选已补齐，发运 page/detail 聚合契约已补齐。
 
 目标：完成库存查询、出入库、盘点、预警、波次和发运链路。
 
@@ -813,14 +861,14 @@ pnpm build
 
 当前实现：
 
-- 已实现库存 SKU 入口，路由为 `/inventory/skus`；当前后端尚未暴露库存 SKU 查询 REST 接口，前端保留入口并展示明确契约 fallback。
-- 已实现库存物料入口，路由为 `/inventory/materials`；当前后端尚未暴露库存物料查询 REST 接口，前端保留入口并展示明确契约 fallback。
+- 已实现库存 SKU 入口，路由为 `/inventory/skus`，已接入库存 SKU 分页查询，并支持 skuId、warehouseId、batchNo 筛选。
+- 已实现库存物料入口，路由为 `/inventory/materials`，已接入库存物料分页查询，并支持 materialId、warehouseId、batchNo 筛选。
 - 已实现入库单入口，路由为 `/inventory/inbounds`，对接 `POST /inventory/inbound/page`、`POST /inventory/inbound/detail`、`POST /inventory/inbound/confirm`。
 - 已实现出库单入口，路由为 `/inventory/outbounds`，对接 `POST /inventory/outbound/page`、`POST /inventory/outbound/detail`、`POST /inventory/outbound/confirm`。
 - 已实现盘点单入口，路由为 `/inventory/stocktaking`，对接 `POST /inventory/stocktaking/page`、`POST /inventory/stocktaking/detail`、`POST /inventory/stocktaking/start`、`POST /inventory/stocktaking/record-count`。
 - 已实现库存预警入口，路由为 `/inventory/alerts`，对接 `POST /inventory/alert/list`、`POST /inventory/alert/scan`、`POST /inventory/alert/acknowledge`。
 - 已实现波次拣货入口，路由为 `/warehouse/waves`，对接 `POST /warehouse/wave/create`、`POST /warehouse/wave/confirm-pick`、`POST /warehouse/wave/complete-pick-list`、`POST /warehouse/wave/cancel`。
-- 已实现发运单入口，路由为 `/warehouse/shipments`，对接 `POST /warehouse/shipment/confirm`。
+- 已实现发运单列表、详情和确认发运入口，路由为 `/warehouse/shipments`，对接 `POST /warehouse/shipment/page`、`POST /warehouse/shipment/detail`、`POST /warehouse/shipment/confirm`；当前发运聚合以出库单作为根模型，历史时间线和物流轨迹需等待后端事件/轨迹契约。
 - 主布局 fallback 菜单已包含“库存物流 / 库存 SKU / 库存物料 / 入库单 / 出库单 / 盘点单 / 库存预警 / 波次拣货 / 发运单”。
 - 已兼容后端菜单路径 `/inventory/sku`、`/inventory/material`、`/inventory/inbound`、`/inventory/outbound`、`/inventory/stocktaking-order`、`/inventory/alert`、`/warehouse/wave`、`/warehouse/pick`、`/warehouse/ship`、`/warehouse/shipment`。
 - 已新增 `V57__restore_admin_inventory_stage7_permissions.sql`，回填 ADMIN 库存与物流 Stage 7 首批菜单和按钮权限。
@@ -883,7 +931,7 @@ pnpm build
   - 审批 service 已封装通用 `POST /approval/submit`。
   - 通知 service 已封装 `POST /notification/unread-count`。
   - 主布局顶部通知按钮已展示未读数量 badge，并点击跳转通知列表。
-  - 已确认波次/发运列表相关 `page/detail` 端点当前后端未提供，前端暂不伪接不存在接口。
+  - 当时已确认波次/发运列表相关 `page/detail` 端点后端未提供，前端未伪接不存在接口；发运 page/detail 已在 2026-05-16 后续批次补齐。
 
 ---
 
@@ -905,6 +953,109 @@ pnpm build
 ---
 
 ## Update Log
+
+### 2026-05-16 数据范围结构化 + SPU/SKU 批量改价 + 编码正式生成 + 发运聚合
+
+已完成：
+
+- `DataScopePage` 从手填角色 ID 和 textarea 规则升级为角色选择、范围类型选择、仓库多选和部门 ID 结构化输入。
+- `SpuManagementPage` 在款式详情中新增批量改价入口，支持按颜色范围批量更新成本价、销售价和批发价。
+- `CodingRuleManagementPage` 新增正式生成入口，对接 `generateCode()`，并独立展示正式生成结果。
+- 后端新增 `POST /warehouse/shipment/page` 与 `POST /warehouse/shipment/detail` 发运聚合契约，当前以出库单聚合作为发运单根模型。
+- `ShipmentPage` 升级为发运列表、筛选、详情和确认发运页面，对接 page/detail/confirm。
+- 新增 `api/warehouse/发运管理接口文档.md`，记录发运聚合接口、字段和当前边界。
+- 更新 `codex/PROGRESS.md` 与本文档，将数据范围结构化、SPU/SKU 批量改价、编码正式生成和发运聚合从剩余缺口中移除。
+
+验证：
+
+- `mvn -q -Dtest=ShipmentApplicationServiceTest test`
+- `mvn -q -DskipTests test-compile`
+- `cd frontend && pnpm exec vitest run src/pages/system/data-scopes/DataScopePage.test.tsx src/pages/master/spus/SpuManagementPage.test.tsx src/pages/master/coding-rules/CodingRuleManagementPage.test.tsx src/services/warehouse/shipmentService.test.ts src/pages/warehouse/shipments/ShipmentPage.test.tsx`
+- `cd frontend && pnpm lint`
+- `cd frontend && pnpm build`
+
+后续任务：
+
+- 继续真实后端全链路冒烟，重点覆盖本批新增/改造入口。
+- 采购订单编辑、发运历史/物流轨迹等待后端契约后再接入。
+
+### 2026-05-16 库存查询 500 修复 + ASN 创建 + 退货生命周期 + 库存筛选增强
+
+已完成：
+
+- 后端库存 SKU/物料分页查询改为 repository 层条件分页，避免库存菜单真实数据下由全量查询/内存过滤触发 500。
+- `AsnManagementPage` 接入新增 ASN 表单，覆盖采购订单、供应商、预计到货日期、备注和 ASN 明细行。
+- `ReturnOrderListPage` 接入退货详情和生命周期操作，支持提交审批、审批通过、审批驳回、确认收货和退货质检。
+- 库存 SKU/物料查询页新增 skuId/materialId、warehouseId、batchNo 筛选条件。
+- 更新 `codex/PROGRESS.md` 与本文档，将 ASN 创建、退货生命周期和库存筛选从剩余缺口中移除。
+
+验证：
+
+- `mvn -q -Dtest=InventoryQueryApplicationServiceTest test`
+- `mvn -q -DskipTests test-compile`
+- `cd frontend && pnpm exec vitest run src/pages/procurement/asns/AsnManagementPage.test.tsx src/pages/order/returns/ReturnOrderListPage.test.tsx src/pages/inventory/stock/InventoryStockPlaceholderPage.test.tsx src/services/inventory/inventoryService.test.ts src/services/order/returnOrderService.test.ts src/services/procurement/procurementService.test.ts`
+- `cd frontend && pnpm lint`
+- `cd frontend && pnpm build`
+
+后续任务：
+
+- 已在后续批次完成发运聚合契约、数据范围结构化、SPU/SKU 批量改价入口和编码规则正式生成入口。
+
+### 2026-05-16 BOM 写表单 + 采购订单创建
+
+已完成：
+
+- `BomMrpPage` 接入 BOM 新增、编辑、删除入口，覆盖 BOM 主表信息和明细行维护。
+- BOM 编辑会读取详情回填；删除使用确认弹窗；新增、编辑、删除后刷新列表。
+- `ProcurementOrderListPage` 接入新增采购订单入口，覆盖供应商、日期、备注和采购明细行。
+- 更新 `codex/PROGRESS.md` 与本文档，将 BOM 写表单和采购订单创建从 P1 缺口中移除。
+
+验证：
+
+- `cd frontend && pnpm exec vitest run src/services/procurement/procurementService.test.ts src/pages/procurement/bom-mrp/BomMrpPage.test.tsx src/pages/procurement/orders/ProcurementOrderListPage.test.tsx`
+- `cd frontend && pnpm lint`
+- `cd frontend && pnpm build`
+
+后续任务：
+
+- ASN 创建和退货生命周期页面已在后续批次完成；当前继续处理发运聚合契约等待项和 P2 改进。
+
+### 2026-05-16 采购库存联动精确性修复 + 生产订单写表单
+
+已完成：
+
+- 修复 ASN 收货/质检库存联动按 `procurementLineId`、仓库和批次定位库存记录，避免同一物料多仓、多批次时误改第一条记录。
+- 生产订单列表页接入新增、编辑、删除表单，覆盖手工生产订单创建、草稿编辑和草稿删除。
+- 更新 `codex/PROGRESS.md` 与本文档，将采购库存联动和生产订单写表单从 P1 缺口中移除。
+
+验证：
+
+- `mvn -q -Dtest=PlaceholderInventoryChangeServiceTest test`
+- `mvn -q -DskipTests test-compile`
+- `cd frontend && pnpm exec vitest run src/services/order/productionOrderService.test.ts src/pages/order/production/ProductionOrderListPage.test.tsx`
+- `cd frontend && pnpm lint`
+- `cd frontend && pnpm build`
+
+后续任务：
+
+- ASN 创建和退货生命周期页面已在后续批次完成；当前继续处理发运聚合契约等待项和 P2 改进。
+
+### 2026-05-16 进度文档与实际代码对照审查
+
+已完成：
+
+- 根据实际代码核对当前“阶段 Done”标记，确认主入口完成不等于所有业务写操作完成。
+- 新增 `Current Implementation Gaps`，明确 P1/P2 剩余功能缺口和推荐修复顺序。
+- 修正 Stage 5、Stage 6、Stage 7 的状态说明，补充生产订单写表单、BOM 写表单、采购订单创建、ASN 创建、退货生命周期、发运聚合契约、库存筛选等剩余事项。
+- 同步更新 `codex/PROGRESS.md`，移除容易误导的历史“后端未开始”清单表述，并改为代码实审后的真实剩余任务。
+
+验证：
+
+- 本次仅更新进度文档，未修改业务代码，未运行 lint/test/build。
+
+后续任务：
+
+- ASN 创建和退货生命周期页面已在后续批次完成；当前继续处理发运聚合契约等待项和 P2 改进。
 
 ### 2026-05-15 代码检视修复 - 5-8 项
 

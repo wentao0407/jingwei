@@ -7,6 +7,7 @@ import { listCategoryTree } from '@/services/master/categoryService';
 import { listSizeGroups } from '@/services/master/sizeGroupService';
 import {
   addSpuColors,
+  batchUpdateSkuPrice,
   createSpu,
   deactivateSku,
   deleteSpu,
@@ -31,6 +32,7 @@ vi.mock('@/services/master/sizeGroupService', () => ({
 
 vi.mock('@/services/master/spuService', () => ({
   addSpuColors: vi.fn(),
+  batchUpdateSkuPrice: vi.fn(),
   createSpu: vi.fn(),
   deactivateSku: vi.fn(),
   deleteSpu: vi.fn(),
@@ -44,6 +46,7 @@ const mockedGetCurrentUserPermissions = vi.mocked(getCurrentUserPermissions);
 const mockedListCategoryTree = vi.mocked(listCategoryTree);
 const mockedListSizeGroups = vi.mocked(listSizeGroups);
 const mockedAddSpuColors = vi.mocked(addSpuColors);
+const mockedBatchUpdateSkuPrice = vi.mocked(batchUpdateSkuPrice);
 const mockedCreateSpu = vi.mocked(createSpu);
 const mockedDeactivateSku = vi.mocked(deactivateSku);
 const mockedDeleteSpu = vi.mocked(deleteSpu);
@@ -83,6 +86,8 @@ describe('SpuManagementPage', () => {
     mockedListSizeGroups.mockReset();
     mockedListSizeGroups.mockResolvedValue(sizeGroups);
     mockedAddSpuColors.mockReset();
+    mockedBatchUpdateSkuPrice.mockReset();
+    mockedBatchUpdateSkuPrice.mockResolvedValue(3);
     mockedCreateSpu.mockReset();
     mockedDeactivateSku.mockReset();
     mockedDeleteSpu.mockReset();
@@ -173,6 +178,29 @@ describe('SpuManagementPage', () => {
     await waitFor(() => expect(mockedDeactivateSku).toHaveBeenCalledWith('21'));
   });
 
+  it('batch updates SKU prices by color way', async () => {
+    mockedListSpus.mockResolvedValue(spus);
+
+    renderPage();
+
+    await screen.findByText('春款衬衫');
+    fireEvent.click(screen.getByRole('button', { name: '详情 春款衬衫' }));
+    expect(await screen.findByText('SP-000001-BK-S')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '批量改价' }));
+    openDialogSelect('颜色范围');
+    await chooseOption('黑色');
+    fireEvent.change(screen.getByLabelText('批量销售价'), { target: { value: '239' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() =>
+      expect(mockedBatchUpdateSkuPrice).toHaveBeenCalledWith({
+        spuId: '1',
+        colorWayId: '11',
+        salePrice: 239,
+      }),
+    );
+  });
+
   it('hides SPU actions without permissions', async () => {
     mockedGetCurrentUserPermissions.mockResolvedValue({ menuTree: [], permissions: [] });
     setAuthSession({ userId: '1', username: 'viewer', realName: '只读用户', roleIds: [], permissions: [], menuTree: [] });
@@ -200,7 +228,7 @@ function openSelect(label: string) {
 }
 
 function openDialogSelect(label: string) {
-  const matches = within(screen.getByRole('dialog')).getAllByLabelText(label);
+  const matches = within(screen.getAllByRole('dialog').at(-1)!).getAllByLabelText(label);
   const select = matches.find((element) => element.classList.contains('ant-select')) ?? matches.at(-1)!;
   fireEvent.mouseDown(select.querySelector('.ant-select-selector') ?? select);
 }

@@ -1,5 +1,6 @@
 package com.jingwei.inventory.domain.repository;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jingwei.inventory.domain.model.InventorySku;
 
 import java.util.List;
@@ -32,6 +33,11 @@ public interface InventorySkuRepository {
      * 查询所有成品库存记录（预警扫描用）
      */
     List<InventorySku> selectAll();
+
+    /**
+     * 分页查询成品库存
+     */
+    Page<InventorySku> pageQuery(Long current, Long size, Long skuId, Long warehouseId, String batchNo);
 
     int insert(InventorySku record);
 

@@ -3,7 +3,7 @@ import { App as AntdApp } from 'antd';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AsnManagementPage } from './AsnManagementPage';
 import { getCurrentUserPermissions } from '@/services/auth/authService';
-import { getAsnDetail, pageAsns, receiveAsnGoods, submitAsnQc } from '@/services/procurement/procurementService';
+import { createAsn, getAsnDetail, pageAsns, receiveAsnGoods, submitAsnQc } from '@/services/procurement/procurementService';
 import { setAuthSession } from '@/shared/storage/authSessionStorage';
 
 vi.mock('@/services/auth/authService', () => ({
@@ -11,19 +11,21 @@ vi.mock('@/services/auth/authService', () => ({
 }));
 
 vi.mock('@/services/procurement/procurementService', () => ({
+  createAsn: vi.fn(),
   getAsnDetail: vi.fn(),
   pageAsns: vi.fn(),
   receiveAsnGoods: vi.fn(),
   submitAsnQc: vi.fn(),
 }));
 
+const mockedCreateAsn = vi.mocked(createAsn);
 const mockedGetAsnDetail = vi.mocked(getAsnDetail);
 const mockedGetCurrentUserPermissions = vi.mocked(getCurrentUserPermissions);
 const mockedPageAsns = vi.mocked(pageAsns);
 const mockedReceiveAsnGoods = vi.mocked(receiveAsnGoods);
 const mockedSubmitAsnQc = vi.mocked(submitAsnQc);
 
-const permissions = ['procurement:asn:receive', 'procurement:asn:qc'];
+const permissions = ['procurement:asn:create', 'procurement:asn:receive', 'procurement:asn:qc'];
 
 const asns = [
   {
@@ -69,12 +71,43 @@ describe('AsnManagementPage', () => {
     mockedGetCurrentUserPermissions.mockResolvedValue({ permissions, menuTree: [] });
     mockedPageAsns.mockReset();
     mockedPageAsns.mockResolvedValue({ current: 1, size: 10, total: 1, pages: 1, records: asns });
+    mockedCreateAsn.mockReset();
+    mockedCreateAsn.mockResolvedValue({ ...asns[0], id: '81002', asnNo: 'ASN-202605-00002' });
     mockedGetAsnDetail.mockReset();
     mockedGetAsnDetail.mockResolvedValue(asnDetail);
     mockedReceiveAsnGoods.mockReset();
     mockedReceiveAsnGoods.mockResolvedValue(undefined);
     mockedSubmitAsnQc.mockReset();
     mockedSubmitAsnQc.mockResolvedValue(undefined);
+  });
+
+  it('creates ASN with manual lines', async () => {
+    renderPage();
+
+    await screen.findByText('ASN-202605-00001');
+    fireEvent.click(screen.getByRole('button', { name: '新增ASN' }));
+    fireEvent.change(screen.getByLabelText('采购订单ID'), { target: { value: ' 70001 ' } });
+    fireEvent.change(screen.getByLabelText('供应商ID'), { target: { value: ' 90001 ' } });
+    fireEvent.change(screen.getByLabelText('预计到货日期'), { target: { value: ' 2026-05-25 ' } });
+    fireEvent.change(screen.getByLabelText('采购订单行ID'), { target: { value: '71001' } });
+    fireEvent.change(screen.getByLabelText('物料ID'), { target: { value: '80001' } });
+    fireEvent.change(screen.getByLabelText('预计到货数量'), { target: { value: '120' } });
+    fireEvent.change(screen.getByLabelText('批次号'), { target: { value: ' B-01 ' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存ASN' }));
+
+    await waitFor(() => expect(mockedCreateAsn).toHaveBeenCalledWith({
+      procurementOrderId: '70001',
+      supplierId: '90001',
+      expectedArrivalDate: '2026-05-25',
+      lines: [
+        {
+          procurementLineId: '71001',
+          materialId: '80001',
+          expectedQuantity: 120,
+          batchNo: 'B-01',
+        },
+      ],
+    }));
   });
 
   it('loads filters and opens ASN detail', async () => {

@@ -6,6 +6,7 @@ import { getCurrentUserPermissions } from '@/services/auth/authService';
 import {
   createCodingRule,
   deleteCodingRule,
+  generateCode,
   listCodingRules,
   previewCode,
   updateCodingRule,
@@ -19,6 +20,7 @@ vi.mock('@/services/auth/authService', () => ({
 vi.mock('@/services/master/codingRuleService', () => ({
   createCodingRule: vi.fn(),
   deleteCodingRule: vi.fn(),
+  generateCode: vi.fn(),
   listCodingRules: vi.fn(),
   previewCode: vi.fn(),
   updateCodingRule: vi.fn(),
@@ -26,6 +28,7 @@ vi.mock('@/services/master/codingRuleService', () => ({
 
 const mockedCreateCodingRule = vi.mocked(createCodingRule);
 const mockedDeleteCodingRule = vi.mocked(deleteCodingRule);
+const mockedGenerateCode = vi.mocked(generateCode);
 const mockedGetCurrentUserPermissions = vi.mocked(getCurrentUserPermissions);
 const mockedListCodingRules = vi.mocked(listCodingRules);
 const mockedPreviewCode = vi.mocked(previewCode);
@@ -78,6 +81,8 @@ describe('CodingRuleManagementPage', () => {
     mockedCreateCodingRule.mockResolvedValue(codingRules[1]);
     mockedDeleteCodingRule.mockReset();
     mockedDeleteCodingRule.mockResolvedValue(undefined);
+    mockedGenerateCode.mockReset();
+    mockedGenerateCode.mockResolvedValue('SO-202605-00002');
     mockedListCodingRules.mockReset();
     mockedListCodingRules.mockResolvedValue(codingRules);
     mockedPreviewCode.mockReset();
@@ -100,6 +105,16 @@ describe('CodingRuleManagementPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '预览 QA_RULE' }));
     expect(await screen.findByText('SO-202605-00001')).toBeInTheDocument();
     expect(mockedPreviewCode).toHaveBeenCalledWith({ ruleCode: 'QA_RULE' });
+  });
+
+  it('generates official code for a coding rule', async () => {
+    renderPage();
+
+    await screen.findByText('销售订单编号');
+    fireEvent.click(screen.getByRole('button', { name: '正式生成 SALES_ORDER' }));
+
+    await waitFor(() => expect(mockedGenerateCode).toHaveBeenCalledWith({ ruleCode: 'SALES_ORDER' }));
+    expect(await screen.findByText('SO-202605-00002')).toBeInTheDocument();
   });
 
   it('creates, updates and deletes coding rules', async () => {

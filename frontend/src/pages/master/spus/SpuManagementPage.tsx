@@ -10,6 +10,7 @@ import { listCategoryTree, type CategoryRecord } from '@/services/master/categor
 import { listSizeGroups, type SizeGroupRecord } from '@/services/master/sizeGroupService';
 import {
   addSpuColors,
+  batchUpdateSkuPrice,
   createSpu,
   deactivateSku,
   deleteSpu,
@@ -62,6 +63,10 @@ interface PriceFormValues {
   wholesalePrice?: number;
 }
 
+interface BatchPriceFormValues extends PriceFormValues {
+  colorWayId?: string;
+}
+
 type FormMode = 'create' | 'edit';
 
 interface CategoryTreeOption {
@@ -75,6 +80,7 @@ export function SpuManagementPage() {
   const [spuForm] = Form.useForm<SpuFormValues>();
   const [colorForm] = Form.useForm<ColorItemPayload>();
   const [priceForm] = Form.useForm<PriceFormValues>();
+  const [batchPriceForm] = Form.useForm<BatchPriceFormValues>();
   const [status, setStatus] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [spus, setSpus] = useState<SpuRecord[]>([]);
@@ -92,6 +98,7 @@ export function SpuManagementPage() {
   const [spuDetail, setSpuDetail] = useState<SpuRecord | null>(null);
   const [colorFormOpen, setColorFormOpen] = useState(false);
   const [priceFormOpen, setPriceFormOpen] = useState(false);
+  const [batchPriceFormOpen, setBatchPriceFormOpen] = useState(false);
   const [pricingSku, setPricingSku] = useState<SkuRecord | null>(null);
   const [permissions, setPermissions] = useState<string[]>(() => getAuthSession()?.permissions ?? []);
   const actions = getSpuActions(permissions);
@@ -232,6 +239,42 @@ export function SpuManagementPage() {
       await updateSkuPrice(toUpdateSkuPricePayload(pricingSku.id, values));
       message.success('SKU 价格已更新');
       setPriceFormOpen(false);
+      await loadSpuDetail(selectedSpu.id);
+    } catch (error) {
+      if (!isFormValidationError(error)) {
+        message.error(getApiErrorMessage(error));
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openBatchPriceForm() {
+    batchPriceForm.resetFields();
+    setBatchPriceFormOpen(true);
+  }
+
+  async function handleBatchUpdatePrice() {
+    if (!selectedSpu) {
+      return;
+    }
+
+    try {
+      const values = await batchPriceForm.validateFields();
+      if (!hasAnyPrice(values)) {
+        batchPriceForm.setFields([{ name: 'salePrice', errors: ['至少填写一个价格'] }]);
+        return;
+      }
+      setSaving(true);
+      const updatedRows = await batchUpdateSkuPrice({
+        spuId: selectedSpu.id,
+        colorWayId: values.colorWayId,
+        costPrice: values.costPrice,
+        salePrice: values.salePrice,
+        wholesalePrice: values.wholesalePrice,
+      });
+      message.success(`已更新 ${updatedRows} 个 SKU`);
+      setBatchPriceFormOpen(false);
       await loadSpuDetail(selectedSpu.id);
     } catch (error) {
       if (!isFormValidationError(error)) {
@@ -424,6 +467,11 @@ export function SpuManagementPage() {
               追加颜色
             </Button>
           ) : null}
+          {actions.canUpdateSkuPrice ? (
+            <Button aria-label="批量改价" onClick={openBatchPriceForm}>
+              批量改价
+            </Button>
+          ) : null}
         </Space>
         <Table
           rowKey="id"
@@ -497,6 +545,38 @@ export function SpuManagementPage() {
             <InputNumber className="system-number-input" min={0} precision={2} />
           </Form.Item>
           <Form.Item label="批发价" name="wholesalePrice">
+            <InputNumber className="system-number-input" min={0} precision={2} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={selectedSpu ? `批量改价 ${selectedSpu.name}` : '批量改价'}
+        open={batchPriceFormOpen}
+        confirmLoading={saving}
+        okText="保存"
+        cancelText="取消"
+        okButtonProps={{ 'aria-label': '保存' }}
+        onCancel={() => setBatchPriceFormOpen(false)}
+        onOk={handleBatchUpdatePrice}
+        destroyOnHidden
+      >
+        <Form<BatchPriceFormValues> form={batchPriceForm} layout="vertical" preserve={false}>
+          <Form.Item label="颜色范围" name="colorWayId">
+            <Select
+              allowClear
+              aria-label="颜色范围"
+              options={(spuDetail?.colorWays ?? []).map((color) => ({ label: color.colorName, value: color.id }))}
+              placeholder="全部颜色"
+            />
+          </Form.Item>
+          <Form.Item label="批量成本价" name="costPrice">
+            <InputNumber className="system-number-input" min={0} precision={2} />
+          </Form.Item>
+          <Form.Item label="批量销售价" name="salePrice">
+            <InputNumber className="system-number-input" min={0} precision={2} />
+          </Form.Item>
+          <Form.Item label="批量批发价" name="wholesalePrice">
             <InputNumber className="system-number-input" min={0} precision={2} />
           </Form.Item>
         </Form>
@@ -676,6 +756,10 @@ function formatPrice(value: unknown) {
 
 function normalizeTextInput(value: unknown) {
   return typeof value === 'string' ? value.trim() : value;
+}
+
+function hasAnyPrice(values: PriceFormValues) {
+  return values.costPrice !== undefined || values.salePrice !== undefined || values.wholesalePrice !== undefined;
 }
 
 function isFormValidationError(error: unknown) {

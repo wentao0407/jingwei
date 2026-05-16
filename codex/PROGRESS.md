@@ -5,7 +5,9 @@
 
 ## 当前状态
 
-后端已基本完成，前端已完成系统管理、主数据、销售订单模块、生产订单模块、采购与仓储模块、库存与物流模块和经营辅助模块；当前已进入全链路联调、路由懒加载和生产构建优化阶段。
+后端已基本完成，前端已完成系统管理、主数据、销售订单模块、生产订单模块、采购与仓储模块、库存与物流模块和经营辅助模块的主要查询、详情和流转入口；当前已进入全链路联调、路由懒加载、生产构建优化和页面层写操作补齐阶段。
+
+2026-05-16 代码实审结论：不要只按“阶段 Done”理解为功能全量完成。当前仍有若干功能停在后端接口或前端 service 层，尚未完成页面级业务表单和操作闭环，详见本文“代码实审后的剩余功能缺口”。
 
 目前项目已有 `outputs/` 下的产品/设计文档，以及 `codex/` 下的 AI 协作记忆文档。
 
@@ -30,11 +32,89 @@
 
 ## 进行中
 
-前端阶段计划已完成，已完成首轮全链路联调、路由懒加载、生产构建拆包、代码检视第一批、报表导出、审批历史、代码检视 5-8 项修复，以及剩余主要查询与管理入口修复。
+前端阶段计划的主入口已完成，已完成首轮全链路联调、路由懒加载、生产构建拆包、代码检视第一批、报表导出、审批历史、代码检视 5-8 项修复、剩余主要查询与管理入口修复、采购库存联动精确性修复、生产订单新增/编辑/删除页面表单、BOM 新增/编辑/删除表单、采购订单创建页面、库存 SKU/物料查询 500 修复、ASN 创建页面、退货生命周期页面、库存 SKU/物料筛选增强、数据范围结构化改造、SPU/SKU 批量改价入口、编码规则正式生成入口，以及发运单后端聚合契约与前端列表详情。
 
 推荐下一个任务：
 
-- 为生产订单、BOM、采购订单和 ASN 的新增/编辑类写操作设计完整业务表单；发运列表需等待后端抽象发运单聚合或 page/detail 契约。
+- 继续全链路真实后端冒烟，重点覆盖新补齐的发运列表/详情、数据范围保存、SPU/SKU 批量改价和编码规则正式生成。
+- 采购订单编辑和发运历史/物流轨迹仍需后端契约后再接入。
+
+## 2026-05-16 任务：数据范围结构化 + SPU/SKU 批量改价 + 编码正式生成 + 发运聚合
+
+已完成：
+- `DataScopePage` 从手填角色 ID 和 textarea 改为角色选择、范围类型选择和仓库多选；仍兼容部门 ID 结构化输入。
+- `SpuManagementPage` 在款式详情中新增 SPU/SKU 批量改价入口，支持按颜色范围批量更新成本价、销售价、批发价。
+- `CodingRuleManagementPage` 新增正式生成入口，对接 `generateCode()`，与预览入口区分原子递增生成行为。
+- 后端新增发运聚合查询契约：`POST /warehouse/shipment/page` 与 `POST /warehouse/shipment/detail`，当前以出库单聚合作为发运单列表/详情根模型。
+- 前端 `ShipmentPage` 升级为发运列表、筛选、详情和确认发运页面，对接 page/detail/confirm。
+- 新增 `api/warehouse/发运管理接口文档.md`，记录发运聚合契约、请求参数和当前模型边界。
+- 更新 `codex/FRONTEND_PROGRESS.md`，将本批 8-11 项从剩余缺口移除。
+
+验证：
+- `mvn -q -Dtest=ShipmentApplicationServiceTest test` 通过。
+- `mvn -q -DskipTests test-compile` 通过。
+- `pnpm exec vitest run src/pages/system/data-scopes/DataScopePage.test.tsx src/pages/master/spus/SpuManagementPage.test.tsx src/pages/master/coding-rules/CodingRuleManagementPage.test.tsx src/services/warehouse/shipmentService.test.ts src/pages/warehouse/shipments/ShipmentPage.test.tsx` 通过，16 个测试通过。
+- `pnpm lint` 通过。
+- `pnpm build` 通过。
+
+## 2026-05-16 任务：库存查询 500 修复 + ASN 创建 + 退货生命周期 + 库存筛选增强
+
+已完成：
+- 后端库存 SKU/物料分页查询从内存 `selectAll()` 过滤改为 repository 层条件分页，支持按 skuId/materialId、warehouseId、batchNo 查询，避免库存菜单真实数据下触发 500。
+- `AsnManagementPage` 接入新增 ASN 表单，覆盖采购订单、供应商、预计到货日期、备注和 ASN 明细行，按钮按 `procurement:asn:create` 权限控制。
+- `ReturnOrderListPage` 接入退货详情和生命周期操作，支持提交审批、审批通过、审批驳回、确认收货和退货质检。
+- 库存 SKU/物料页面新增筛选表单，支持 skuId/materialId、warehouseId、batchNo 查询条件。
+- 更新 `codex/FRONTEND_PROGRESS.md`，将 ASN 创建、退货生命周期和库存筛选从剩余缺口移除。
+
+验证：
+- `mvn -q -Dtest=InventoryQueryApplicationServiceTest test` 通过。
+- `mvn -q -DskipTests test-compile` 通过。
+- `pnpm exec vitest run src/pages/procurement/asns/AsnManagementPage.test.tsx src/pages/order/returns/ReturnOrderListPage.test.tsx src/pages/inventory/stock/InventoryStockPlaceholderPage.test.tsx src/services/inventory/inventoryService.test.ts src/services/order/returnOrderService.test.ts src/services/procurement/procurementService.test.ts` 通过，25 个测试通过。
+- `pnpm lint` 通过。
+- `pnpm build` 通过。
+
+## 2026-05-16 任务：BOM 写表单 + 采购订单创建
+
+已完成：
+- `BomMrpPage` 接入 BOM 新增、编辑、删除入口，按钮按 `procurement:bom:create/update/delete` 权限和 DRAFT 状态控制。
+- BOM 表单支持款式 ID、生效/失效日期、备注、物料 ID、物料类型、消耗类型、基准用量、基准尺码、单位、损耗率和行备注。
+- BOM 编辑会先读取详情再回填表单；删除使用确认弹窗，保存/删除后刷新列表。
+- `ProcurementOrderListPage` 接入新增采购订单入口，按钮按 `procurement:order:create` 权限控制。
+- 采购订单创建表单支持供应商 ID、订单日期、要求交货日期、备注、物料 ID、物料类型、数量、单位、单价、MRP 结果 ID 和行备注。
+
+验证：
+- `pnpm exec vitest run src/services/procurement/procurementService.test.ts src/pages/procurement/bom-mrp/BomMrpPage.test.tsx src/pages/procurement/orders/ProcurementOrderListPage.test.tsx` 通过，12 个测试通过。
+- `pnpm lint` 通过。
+- `pnpm build` 通过。
+
+## 2026-05-16 任务：采购库存联动精确性修复 + 生产订单写表单
+
+已完成：
+- 采购库存变更新增 `InventoryChangeContext`，ASN 收货/质检流转会携带 materialId、procurementLineId、batchNo 和 quantity。
+- `PlaceholderInventoryChangeService` 改为优先按采购订单行定位在途库存，并使用推导出的 warehouseId + batchNo 精确匹配物料库存记录。
+- 收货入质检时不再在库存记录缺失时静默跳过；缺少在途/库存上下文会抛出明确业务异常。
+- 收货入质检会同步更新在途库存的 receivedQty、remainingQty 和状态。
+- 生产订单列表新增创建、编辑、删除入口，按 `order:production:create/update/delete` 权限和草稿状态控制显示。
+- 生产订单新增/编辑表单支持计划日期、完工日期、车间、备注、生产行、尺码矩阵、BOM、跳过裁剪和行备注。
+- 新增/编辑提交前校验至少一个生产数量大于 0，删除使用确认弹窗，操作后刷新列表。
+
+验证：
+- `mvn -q -Dtest=PlaceholderInventoryChangeServiceTest test` 通过。
+- `mvn -q -DskipTests test-compile` 通过。
+- `pnpm lint` 通过。
+- `pnpm exec vitest run src/services/order/productionOrderService.test.ts src/pages/order/production/ProductionOrderListPage.test.tsx` 通过，13 个测试通过。
+- `pnpm build` 通过。
+
+## 2026-05-16 代码实审后的剩余功能缺口
+
+本节基于进度文档和实际代码共同审查，优先级高于旧的笼统完成标记。
+
+P1：
+- 暂无当前代码实审确认的 P1 页面级功能缺口。
+
+P2：
+- 采购订单编辑：后端当前仅提供创建、详情和状态流转契约，编辑契约未提供，前端暂不伪接不存在接口。
+- 发运历史/物流轨迹：发运列表、详情和确认已完成；历史时间线和物流轨迹仍需后端事件/轨迹模型后再接入。
 
 ## 2026-05-16 任务：前端代码检视剩余主要查询与管理入口修复
 
@@ -47,38 +127,18 @@
 - 前端补齐库存台账矩阵 service，并在报表中心库存台账 Tab 接入矩阵视图。
 - 用户管理页新增用户详情和修改密码入口，接入 `POST /system/user/detail` 与 `POST /system/user/changePassword`。
 - 销售订单详情新增时间线与数量变更记录展示，接入 `POST /order/sales/timeline` 与 `POST /order/sales/quantity-change/list`。
-- 生产订单 CRUD、BOM CRUD、采购订单创建、ASN 创建已完成 service 层契约与测试；页面层仍需按业务规则设计完整表单后接入。
+- 生产订单 CRUD、BOM CRUD、采购订单创建和 ASN 创建已接入页面表单；退货生命周期页面已接入详情、提交、审批、收货和质检操作。
 
 验证：
 - `mvn -q -DskipTests compile` 通过。
 - `pnpm lint` 通过。
 - `pnpm exec vitest run src/services/report/reportService.test.ts src/pages/report/ReportCenterPage.test.tsx src/pages/system/users/UserManagementPage.test.tsx src/pages/order/sales/SalesOrderListPage.test.tsx` 通过，32 个测试通过；存在既有 React/Ant Design jsdom `act(...)` warning。
+- `pnpm test` 已尝试全量执行，253/256 个用例通过；3 个失败来自全量并发下既有长用例超时/用户表单查询抖动。随后单独重跑 `UserManagementPage.test.tsx`、`WarehouseManagementPage.test.tsx`、`CustomerManagementPage.test.tsx` 均通过。
 - `pnpm build` 通过，生产构建无 chunk size warning。
 
-## 未开始
+## 历史未开始清单复核
 
-后端：
-
-- Spring Boot 项目骨架。
-- PostgreSQL migration。
-- Redis 配置。
-- 统一响应和异常。
-- 安全登录和 JWT。
-- 用户、角色、权限。
-- 状态机组件。
-- Outbox 组件。
-- 幂等组件。
-- 编码规则组件。
-- 基础数据模块。
-- 库存模块。
-- 订单模块。
-- 采购模块。
-- 仓库模块。
-- 审批模块。
-- 通知模块。
-- 报表与系统模块。
-
-前端：
+以下前端条目为历史阶段清单，当前大多已完成主入口，具体剩余缺口以“代码实审后的剩余功能缺口”和 `codex/FRONTEND_PROGRESS.md` 为准。
 
 - React 项目骨架。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
 - 登录页。已完成，详见 `codex/FRONTEND_PROGRESS.md`。
@@ -100,12 +160,11 @@
 
 测试：
 
-- 前端已建立 Vitest/Testing Library 测试，当前全量 237 个测试。
+- 前端已建立 Vitest/Testing Library 测试，最近全量尝试为 253/256 个用例通过；3 个失败来自全量并发下既有长用例超时/用户表单查询抖动，相关单测单独重跑通过。
 
 部署：
 
-- 前端已建立本地开发脚本。
-- 尚未建立生产部署脚本。
+- 已建立生产部署资产，包含 `deploy/deploy.sh`、`deploy/jingwei.service`、`deploy/nginx-jingwei.conf`、`deploy/.env.example`、`deploy/README.md`、`deploy/RUNBOOK.md`。
 
 ## 2026-05-15 任务：前端代码检视 5-8 项修复
 
@@ -114,7 +173,7 @@
 - 补全通用审批提交 service：`POST /approval/submit`，供后续业务模块按需接入。
 - 补全未读通知数 service：`POST /notification/unread-count`。
 - 主布局顶部通知按钮增加未读数量 badge，点击跳转通知列表。
-- 复核波次/发运列表：当前后端未提供 `page/detail` 查询端点，前端未伪接不存在接口。
+- 复核波次/发运列表：当时后端未提供 `page/detail` 查询端点，前端未伪接不存在接口；发运 page/detail 已在 2026-05-16 后续批次补齐。
 
 验证：
 - `pnpm exec vitest run src/services/order/returnOrderService.test.ts src/services/approval/approvalService.test.ts src/services/notification/notificationService.test.ts src/layouts/DashboardLayout.test.tsx src/pages/notification/NotificationCenterPage.test.tsx src/pages/order/sales/SalesOrderListPage.test.tsx` 通过，38 个测试通过。

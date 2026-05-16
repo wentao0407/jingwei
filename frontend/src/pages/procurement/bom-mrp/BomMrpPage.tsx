@@ -1,6 +1,6 @@
-import { CheckOutlined, EyeOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { CheckOutlined, DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { ProCard } from '@ant-design/pro-components';
-import { App, Button, Descriptions, Input, Modal, Select, Space, Table, Tabs, Tag } from 'antd';
+import { App, Button, Descriptions, Form, Input, InputNumber, Modal, Select, Space, Table, Tabs, Tag } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { EmptyState, ErrorState, LoadingState } from '@/components/state';
@@ -10,12 +10,16 @@ import type { PageResult } from '@/services/master/customerService';
 import {
   approveBom,
   calculateMrp,
+  createBom,
+  deleteBom,
   getBomDetail,
   pageBoms,
   pageMrpResults,
+  updateBom,
   type BomItemRecord,
   type BomRecord,
   type MrpResultRecord,
+  type SaveBomPayload,
 } from '@/services/procurement/procurementService';
 import { getAuthSession, setAuthSession } from '@/shared/storage/authSessionStorage';
 
@@ -43,6 +47,9 @@ export function BomMrpPage() {
   const [permissions, setPermissions] = useState<string[]>(() => getAuthSession()?.permissions ?? []);
   const actions = {
     canApproveBom: permissions.includes('procurement:bom:approve'),
+    canCreateBom: permissions.includes('procurement:bom:create'),
+    canDeleteBom: permissions.includes('procurement:bom:delete'),
+    canUpdateBom: permissions.includes('procurement:bom:update'),
     canCalculateMrp: permissions.includes('procurement:mrp:calculate'),
   };
 
@@ -74,9 +81,10 @@ function BomPanel({
   actions,
   messageApi,
 }: {
-  actions: { canApproveBom: boolean; canCalculateMrp: boolean };
+  actions: { canApproveBom: boolean; canCreateBom: boolean; canDeleteBom: boolean; canUpdateBom: boolean };
   messageApi: ReturnType<typeof App.useApp>['message'];
 }) {
+  const [form] = Form.useForm<BomFormValues>();
   const [spuInput, setSpuInput] = useState('');
   const [spuId, setSpuId] = useState('');
   const [status, setStatus] = useState('');
@@ -87,6 +95,11 @@ function BomPanel({
   const [pageResult, setPageResult] = useState<PageResult<BomRecord> | null>(null);
   const [detail, setDetail] = useState<BomRecord | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+  const [editingBomId, setEditingBomId] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<BomRecord | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const loadBoms = useCallback(async () => {
     setLoading(true);
@@ -128,6 +141,66 @@ function BomPanel({
     }
   }
 
+  function openCreateForm() {
+    setFormMode('create');
+    setEditingBomId('');
+    form.setFieldsValue({ items: [createEmptyBomItemForm()] });
+    setFormOpen(true);
+  }
+
+  async function openEditForm(record: BomRecord) {
+    try {
+      const nextDetail = await getBomDetail(record.id);
+      setFormMode('edit');
+      setEditingBomId(record.id);
+      form.setFieldsValue(toBomFormValues(nextDetail));
+      setFormOpen(true);
+    } catch (error) {
+      messageApi.error(getApiErrorMessage(error));
+    }
+  }
+
+  async function handleSaveBom() {
+    try {
+      const values = await form.validateFields();
+      const payload = toBomPayload(values, formMode);
+      setSaving(true);
+      if (formMode === 'create') {
+        await createBom(payload);
+        messageApi.success('新增BOM成功');
+      } else {
+        await updateBom(editingBomId, payload);
+        messageApi.success('编辑BOM成功');
+      }
+      setFormOpen(false);
+      await loadBoms();
+    } catch (error) {
+      if (isFormValidationError(error)) {
+        return;
+      }
+      messageApi.error(getApiErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteBom() {
+    if (!deleteTarget) {
+      return;
+    }
+    try {
+      setSaving(true);
+      await deleteBom(deleteTarget.id);
+      messageApi.success('删除BOM成功');
+      setDeleteTarget(null);
+      await loadBoms();
+    } catch (error) {
+      messageApi.error(getApiErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (loading && !pageResult) {
     return <LoadingState message="正在加载BOM" />;
   }
@@ -143,13 +216,16 @@ function BomPanel({
         <Select aria-label="BOM状态筛选" options={bomStatusOptions} value={status} onChange={(value) => { setStatus(value); setCurrentPage(INITIAL_PAGE); }} />
         <Button icon={<SearchOutlined />} onClick={() => { setSpuId(spuInput.trim()); setCurrentPage(INITIAL_PAGE); }}>搜索BOM</Button>
         <Button icon={<ReloadOutlined />} onClick={loadBoms}>刷新</Button>
+        {actions.canCreateBom ? (
+          <Button aria-label="新增BOM" icon={<PlusOutlined />} type="primary" onClick={openCreateForm}>新增BOM</Button>
+        ) : null}
       </Space>
       {pageResult?.records.length === 0 ? (
         <EmptyState message="暂无BOM" />
       ) : (
         <Table<BomRecord>
           rowKey="id"
-          columns={buildBomColumns(actions, openDetail, handleApprove)}
+          columns={buildBomColumns(actions, openDetail, handleApprove, openEditForm, setDeleteTarget)}
           dataSource={pageResult?.records ?? []}
           loading={loading}
           pagination={{
@@ -165,6 +241,26 @@ function BomPanel({
         />
       )}
       <BomDetailModal bom={detail} open={detailOpen} onCancel={() => setDetailOpen(false)} />
+      <BomFormModal
+        form={form}
+        mode={formMode}
+        open={formOpen}
+        saving={saving}
+        onCancel={() => setFormOpen(false)}
+        onSave={handleSaveBom}
+      />
+      <Modal
+        cancelText="取消"
+        confirmLoading={saving}
+        getContainer={false}
+        okText="确认删除"
+        onCancel={() => setDeleteTarget(null)}
+        onOk={handleDeleteBom}
+        open={Boolean(deleteTarget)}
+        title="删除BOM"
+      >
+        确认删除 {deleteTarget?.code} 吗？
+      </Modal>
     </Space>
   );
 }
@@ -250,9 +346,11 @@ function MrpPanel({
 }
 
 function buildBomColumns(
-  actions: { canApproveBom: boolean },
+  actions: { canApproveBom: boolean; canDeleteBom: boolean; canUpdateBom: boolean },
   onDetail: (record: BomRecord) => void,
   onApprove: (record: BomRecord) => void,
+  onEdit: (record: BomRecord) => void,
+  onDelete: (record: BomRecord) => void,
 ): ColumnsType<BomRecord> {
   return [
     { title: 'BOM编码', dataIndex: 'code', key: 'code', width: 150 },
@@ -266,13 +364,108 @@ function buildBomColumns(
       render: (_, record) => (
         <Space wrap>
           <Button icon={<EyeOutlined />} size="small" aria-label={`详情 ${record.code}`} onClick={() => onDetail(record)}>详情</Button>
-          {actions.canApproveBom ? (
+          {actions.canUpdateBom && record.status === 'DRAFT' ? (
+            <Button icon={<EditOutlined />} size="small" aria-label={`编辑 ${record.code}`} onClick={() => onEdit(record)}>编辑</Button>
+          ) : null}
+          {actions.canDeleteBom && record.status === 'DRAFT' ? (
+            <Button danger icon={<DeleteOutlined />} size="small" aria-label={`删除 ${record.code}`} onClick={() => onDelete(record)}>删除</Button>
+          ) : null}
+          {actions.canApproveBom && record.status === 'DRAFT' ? (
             <Button icon={<CheckOutlined />} size="small" aria-label={`审批 ${record.code}`} onClick={() => onApprove(record)}>审批</Button>
           ) : null}
         </Space>
       ),
     },
   ];
+}
+
+function BomFormModal({
+  form,
+  mode,
+  open,
+  saving,
+  onCancel,
+  onSave,
+}: {
+  form: ReturnType<typeof Form.useForm<BomFormValues>>[0];
+  mode: 'create' | 'edit';
+  open: boolean;
+  saving: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <Modal
+      cancelText="取消"
+      confirmLoading={saving}
+      getContainer={false}
+      okText="保存BOM"
+      onCancel={onCancel}
+      onOk={onSave}
+      open={open}
+      title={mode === 'create' ? '新增BOM' : '编辑BOM'}
+      width={980}
+    >
+      <Form<BomFormValues> form={form} layout="vertical">
+        {mode === 'create' ? (
+          <Form.Item label="款式ID" name="spuId" rules={[{ required: true, message: '请输入款式ID' }]}>
+            <Input />
+          </Form.Item>
+        ) : null}
+        <Space align="start" style={{ width: '100%' }} wrap>
+          <Form.Item label="生效日期" name="effectiveFrom">
+            <Input placeholder="YYYY-MM-DD" />
+          </Form.Item>
+          <Form.Item label="失效日期" name="effectiveTo">
+            <Input placeholder="YYYY-MM-DD" />
+          </Form.Item>
+        </Space>
+        <Form.Item label="BOM备注" name="remark">
+          <Input.TextArea autoSize={{ minRows: 2, maxRows: 4 }} />
+        </Form.Item>
+        <Form.List name="items" rules={[{ validator: validateBomItems }]}>
+          {(fields, { add, remove }) => (
+            <Space direction="vertical" style={{ width: '100%' }}>
+              {fields.map((field) => (
+                <ProCard key={field.key} bordered size="small">
+                  <Space align="start" wrap>
+                    <Form.Item label="物料ID" name={[field.name, 'materialId']} rules={[{ required: true, message: '请输入物料ID' }]}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label="物料类型" name={[field.name, 'materialType']} rules={[{ required: true, message: '请输入物料类型' }]}>
+                      <Input placeholder="FABRIC/TRIM/PACKAGING" />
+                    </Form.Item>
+                    <Form.Item label="消耗类型" name={[field.name, 'consumptionType']} rules={[{ required: true, message: '请输入消耗类型' }]}>
+                      <Input placeholder="FIXED_PER_PIECE" />
+                    </Form.Item>
+                    <Form.Item label="基准用量" name={[field.name, 'baseConsumption']} rules={[{ required: true, message: '请输入基准用量' }]}>
+                      <InputNumber min={0} />
+                    </Form.Item>
+                    <Form.Item label="基准尺码ID" name={[field.name, 'baseSizeId']}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label="单位" name={[field.name, 'unit']} rules={[{ required: true, message: '请输入单位' }]}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label="损耗率" name={[field.name, 'wastageRate']}>
+                      <InputNumber min={0} max={1} step={0.01} />
+                    </Form.Item>
+                    <Form.Item label="行备注" name={[field.name, 'remark']}>
+                      <Input />
+                    </Form.Item>
+                    {fields.length > 1 ? (
+                      <Button danger onClick={() => remove(field.name)}>删除行</Button>
+                    ) : null}
+                  </Space>
+                </ProCard>
+              ))}
+              <Button onClick={() => add(createEmptyBomItemForm())}>新增BOM行</Button>
+            </Space>
+          )}
+        </Form.List>
+      </Form>
+    </Modal>
+  );
 }
 
 function BomDetailModal({ bom, open, onCancel }: { bom: BomRecord | null; open: boolean; onCancel: () => void }) {
@@ -314,6 +507,85 @@ const mrpColumns: ColumnsType<MrpResultRecord> = [
   { title: '预估成本', dataIndex: 'estimatedCost', key: 'estimatedCost', width: 100, render: formatAmount },
   { title: '状态', dataIndex: 'statusLabel', key: 'statusLabel', width: 90, render: (value) => value || '-' },
 ];
+
+interface BomItemFormValues {
+  baseConsumption?: number | null;
+  baseSizeId?: string;
+  consumptionType?: string;
+  materialId?: string;
+  materialType?: string;
+  remark?: string;
+  unit?: string;
+  wastageRate?: number | null;
+}
+
+interface BomFormValues {
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  items?: BomItemFormValues[];
+  remark?: string;
+  spuId?: string;
+}
+
+function createEmptyBomItemForm(): BomItemFormValues {
+  return {
+    consumptionType: 'FIXED_PER_PIECE',
+    materialType: 'FABRIC',
+    unit: '米',
+  };
+}
+
+function toBomFormValues(bom: BomRecord): BomFormValues {
+  return {
+    effectiveFrom: bom.effectiveFrom ?? '',
+    effectiveTo: bom.effectiveTo ?? '',
+    items: (bom.items?.length ? bom.items : [createEmptyBomItemForm()]).map((item) => ({
+      baseConsumption: item.baseConsumption ?? undefined,
+      consumptionType: item.consumptionType ?? '',
+      materialId: item.materialId ?? '',
+      materialType: item.materialType ?? '',
+      remark: item.remark ?? '',
+      unit: item.unit ?? '',
+      wastageRate: item.wastageRate ?? undefined,
+    })),
+    remark: bom.remark ?? '',
+    spuId: bom.spuId ?? '',
+  };
+}
+
+function toBomPayload(values: BomFormValues, mode: 'create' | 'edit'): SaveBomPayload {
+  return {
+    ...(mode === 'create' ? { spuId: trimOptional(values.spuId) } : {}),
+    effectiveFrom: trimOptional(values.effectiveFrom),
+    effectiveTo: trimOptional(values.effectiveTo),
+    remark: trimOptional(values.remark),
+    items: (values.items ?? []).map((item) => ({
+      materialId: trimOptional(item.materialId) ?? '',
+      materialType: trimOptional(item.materialType) ?? '',
+      consumptionType: trimOptional(item.consumptionType) ?? '',
+      baseConsumption: Number(item.baseConsumption ?? 0),
+      baseSizeId: trimOptional(item.baseSizeId),
+      unit: trimOptional(item.unit) ?? '',
+      wastageRate: typeof item.wastageRate === 'number' ? item.wastageRate : undefined,
+      remark: trimOptional(item.remark),
+    })),
+  };
+}
+
+async function validateBomItems(_: unknown, value?: BomItemFormValues[]) {
+  if (!value || value.length === 0) {
+    throw new Error('至少需要一行BOM明细');
+  }
+}
+
+function trimOptional(value?: string | null): string | undefined {
+  const nextValue = value?.trim();
+  return nextValue ? nextValue : undefined;
+}
+
+function isFormValidationError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'errorFields' in error;
+}
 
 async function refreshPermissions(setPermissions: (permissions: string[]) => void) {
   try {

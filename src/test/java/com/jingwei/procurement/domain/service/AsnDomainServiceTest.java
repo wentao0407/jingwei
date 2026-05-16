@@ -23,7 +23,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 /**
@@ -215,7 +215,10 @@ class AsnDomainServiceTest {
             assertEquals(new BigDecimal("50"), orderLineCaptor.getValue().getDeliveredQuantity());
 
             // 验证库存变更：在途→质检
-            verify(inventoryChangeService).inTransitToQc(eq(1L), eq(new BigDecimal("50")));
+            verify(inventoryChangeService).inTransitToQc(argThat(context ->
+                    context.materialId().equals(1L)
+                            && context.procurementLineId().equals(10L)
+                            && context.quantity().compareTo(new BigDecimal("50")) == 0));
 
             // 验证ASN状态变为RECEIVED
             assertEquals(AsnStatus.RECEIVED, asn.getStatus());
@@ -252,7 +255,10 @@ class AsnDomainServiceTest {
             assertEquals(new BigDecimal("60"), orderLineCaptor.getValue().getDeliveredQuantity());
 
             // 验证库存变更只处理60
-            verify(inventoryChangeService).inTransitToQc(eq(1L), eq(new BigDecimal("60")));
+            verify(inventoryChangeService).inTransitToQc(argThat(context ->
+                    context.materialId().equals(1L)
+                            && context.procurementLineId().equals(10L)
+                            && context.quantity().compareTo(new BigDecimal("60")) == 0));
         }
 
         @Test
@@ -296,8 +302,11 @@ class AsnDomainServiceTest {
             assertEquals(QcStatus.PASSED, asnLineCaptor.getValue().getQcStatus());
 
             // 验证质检转可用
-            verify(inventoryChangeService).qcToAvailable(eq(1L), eq(new BigDecimal("50")));
-            verify(inventoryChangeService, never()).qcOut(any(), any());
+            verify(inventoryChangeService).qcToAvailable(argThat(context ->
+                    context.materialId().equals(1L)
+                            && context.procurementLineId().equals(10L)
+                            && context.quantity().compareTo(new BigDecimal("50")) == 0));
+            verify(inventoryChangeService, never()).qcOut(any(InventoryChangeContext.class));
         }
 
         @Test
@@ -324,8 +333,11 @@ class AsnDomainServiceTest {
             assertEquals(QcStatus.FAILED, asnLineCaptor.getValue().getQcStatus());
 
             // 验证质检出库（退货）
-            verify(inventoryChangeService).qcOut(eq(1L), eq(new BigDecimal("50")));
-            verify(inventoryChangeService, never()).qcToAvailable(any(), any());
+            verify(inventoryChangeService).qcOut(argThat(context ->
+                    context.materialId().equals(1L)
+                            && context.procurementLineId().equals(10L)
+                            && context.quantity().compareTo(new BigDecimal("50")) == 0));
+            verify(inventoryChangeService, never()).qcToAvailable(any(InventoryChangeContext.class));
         }
 
         @Test
@@ -352,8 +364,14 @@ class AsnDomainServiceTest {
             assertEquals(QcStatus.CONCESSION, asnLineCaptor.getValue().getQcStatus());
 
             // 验证：合格部分质检转可用 + 不合格部分质检出库
-            verify(inventoryChangeService).qcToAvailable(eq(1L), eq(new BigDecimal("80")));
-            verify(inventoryChangeService).qcOut(eq(1L), eq(new BigDecimal("20")));
+            verify(inventoryChangeService).qcToAvailable(argThat(context ->
+                    context.materialId().equals(1L)
+                            && context.procurementLineId().equals(10L)
+                            && context.quantity().compareTo(new BigDecimal("80")) == 0));
+            verify(inventoryChangeService).qcOut(argThat(context ->
+                    context.materialId().equals(1L)
+                            && context.procurementLineId().equals(10L)
+                            && context.quantity().compareTo(new BigDecimal("20")) == 0));
         }
 
         @Test

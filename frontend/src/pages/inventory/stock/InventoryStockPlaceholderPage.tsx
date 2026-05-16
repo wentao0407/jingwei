@@ -1,4 +1,4 @@
-import { Alert, Card, Table, type TablePaginationConfig } from 'antd';
+import { Alert, Button, Card, Input, Space, Table, type TablePaginationConfig } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -16,6 +16,12 @@ type StockRecord = InventorySkuRecord | InventoryMaterialRecord;
 
 const DEFAULT_PAGE_SIZE = 20;
 
+interface StockFilters {
+  batchNo?: string;
+  itemId?: string;
+  warehouseId?: string;
+}
+
 export function InventoryStockPlaceholderPage({ inventoryType }: InventoryStockPlaceholderPageProps) {
   const isSku = inventoryType === 'SKU';
   const title = isSku ? '库存 SKU' : '库存物料';
@@ -24,14 +30,30 @@ export function InventoryStockPlaceholderPage({ inventoryType }: InventoryStockP
   const [current, setCurrent] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [itemIdInput, setItemIdInput] = useState('');
+  const [warehouseIdInput, setWarehouseIdInput] = useState('');
+  const [batchNoInput, setBatchNoInput] = useState('');
+  const [filters, setFilters] = useState<StockFilters>({});
 
   const loadStock = useCallback(async (page: number) => {
     setLoading(true);
     setErrorMessage(null);
     try {
       const result = isSku
-        ? await pageInventorySkus({ current: page, size: DEFAULT_PAGE_SIZE })
-        : await pageInventoryMaterials({ current: page, size: DEFAULT_PAGE_SIZE });
+        ? await pageInventorySkus({
+            current: page,
+            size: DEFAULT_PAGE_SIZE,
+            ...(filters.warehouseId ? { warehouseId: filters.warehouseId } : {}),
+            ...(filters.batchNo ? { batchNo: filters.batchNo } : {}),
+            ...(filters.itemId ? { skuId: filters.itemId } : {}),
+          })
+        : await pageInventoryMaterials({
+            current: page,
+            size: DEFAULT_PAGE_SIZE,
+            ...(filters.warehouseId ? { warehouseId: filters.warehouseId } : {}),
+            ...(filters.batchNo ? { batchNo: filters.batchNo } : {}),
+            ...(filters.itemId ? { materialId: filters.itemId } : {}),
+          });
       setRecords(result.records ?? []);
       setTotal(result.total ?? 0);
       setCurrent(result.current ?? page);
@@ -40,7 +62,7 @@ export function InventoryStockPlaceholderPage({ inventoryType }: InventoryStockP
     } finally {
       setLoading(false);
     }
-  }, [isSku]);
+  }, [filters, isSku]);
 
   useEffect(() => {
     void loadStock(1);
@@ -50,8 +72,22 @@ export function InventoryStockPlaceholderPage({ inventoryType }: InventoryStockP
     void loadStock(pagination.current ?? 1);
   };
 
+  const handleSearch = () => {
+    setFilters({
+      itemId: trimOptional(itemIdInput),
+      warehouseId: trimOptional(warehouseIdInput),
+      batchNo: trimOptional(batchNoInput),
+    });
+  };
+
   return (
     <Card title={title}>
+      <Space wrap style={{ marginBottom: 16 }}>
+        <Input aria-label={isSku ? 'SKU ID' : '物料 ID'} placeholder={isSku ? 'SKU ID' : '物料 ID'} value={itemIdInput} onChange={(event) => setItemIdInput(event.target.value)} />
+        <Input aria-label="仓库 ID" placeholder="仓库 ID" value={warehouseIdInput} onChange={(event) => setWarehouseIdInput(event.target.value)} />
+        <Input aria-label="批次号" placeholder="批次号" value={batchNoInput} onChange={(event) => setBatchNoInput(event.target.value)} />
+        <Button onClick={handleSearch}>搜索库存</Button>
+      </Space>
       {errorMessage ? <Alert type="error" showIcon message={errorMessage} style={{ marginBottom: 16 }} /> : null}
       <Table<StockRecord>
         rowKey="id"
@@ -97,4 +133,9 @@ function renderText(value?: string | null) {
 
 function renderNumber(value?: number | null) {
   return value ?? 0;
+}
+
+function trimOptional(value: string): string | undefined {
+  const nextValue = value.trim();
+  return nextValue ? nextValue : undefined;
 }

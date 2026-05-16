@@ -5,6 +5,8 @@ import { ProductionOrderListPage } from './ProductionOrderListPage';
 import { getCurrentUserPermissions } from '@/services/auth/authService';
 import {
   calculateProductionOrderMaterialRequirements,
+  createProductionOrder,
+  deleteProductionOrder,
   fireProductionLineEvent,
   fireProductionOrderEvent,
   getProductionOrderCostDetail,
@@ -14,6 +16,7 @@ import {
   getProductionOrderDetail,
   pageProductionOrderMaterialRequirements,
   pageProductionOrders,
+  updateProductionOrder,
 } from '@/services/order/productionOrderService';
 import { setAuthSession } from '@/shared/storage/authSessionStorage';
 
@@ -22,6 +25,8 @@ vi.mock('@/services/auth/authService', () => ({
 }));
 
 vi.mock('@/services/order/productionOrderService', () => ({
+  createProductionOrder: vi.fn(),
+  deleteProductionOrder: vi.fn(),
   fireProductionLineEvent: vi.fn(),
   fireProductionOrderEvent: vi.fn(),
   calculateProductionOrderMaterialRequirements: vi.fn(),
@@ -32,9 +37,12 @@ vi.mock('@/services/order/productionOrderService', () => ({
   getProductionOrderDetail: vi.fn(),
   pageProductionOrderMaterialRequirements: vi.fn(),
   pageProductionOrders: vi.fn(),
+  updateProductionOrder: vi.fn(),
 }));
 
 const mockedCalculateProductionOrderMaterialRequirements = vi.mocked(calculateProductionOrderMaterialRequirements);
+const mockedCreateProductionOrder = vi.mocked(createProductionOrder);
+const mockedDeleteProductionOrder = vi.mocked(deleteProductionOrder);
 const mockedFireProductionLineEvent = vi.mocked(fireProductionLineEvent);
 const mockedFireProductionOrderEvent = vi.mocked(fireProductionOrderEvent);
 const mockedGetProductionOrderCostDetail = vi.mocked(getProductionOrderCostDetail);
@@ -45,11 +53,15 @@ const mockedGetProductionOrderAvailableActions = vi.mocked(getProductionOrderAva
 const mockedGetProductionOrderDetail = vi.mocked(getProductionOrderDetail);
 const mockedPageProductionOrderMaterialRequirements = vi.mocked(pageProductionOrderMaterialRequirements);
 const mockedPageProductionOrders = vi.mocked(pageProductionOrders);
+const mockedUpdateProductionOrder = vi.mocked(updateProductionOrder);
 
 const permissions = [
   'cost:query:detail',
+  'order:production:create',
+  'order:production:delete',
   'order:production:fire-event',
   'order:production:fire-line-event',
+  'order:production:update',
   'procurement:mrp:calculate',
 ];
 
@@ -89,9 +101,10 @@ const productionDetail = {
       status: 'PLANNED',
       statusLabel: '已排产',
       sizeMatrix: {
+        sizeGroupId: '50001',
         sizes: [
-          { sizeId: '50001', code: 'S', quantity: 50 },
-          { sizeId: '50002', code: 'M', quantity: 90 },
+          { sizeId: '51001', code: 'S', quantity: 50 },
+          { sizeId: '51002', code: 'M', quantity: 90 },
         ],
       },
     },
@@ -175,6 +188,12 @@ describe('ProductionOrderListPage', () => {
         issueDate: '2026-05-10',
       },
     ]);
+    mockedCreateProductionOrder.mockReset();
+    mockedCreateProductionOrder.mockResolvedValue({ ...productionOrders[0], id: '50002', orderNo: 'MO-202605-00002' });
+    mockedUpdateProductionOrder.mockReset();
+    mockedUpdateProductionOrder.mockResolvedValue({ ...productionOrders[0], remark: '已调整' });
+    mockedDeleteProductionOrder.mockReset();
+    mockedDeleteProductionOrder.mockResolvedValue(undefined);
   });
 
   it('loads and filters production orders', async () => {
@@ -256,6 +275,56 @@ describe('ProductionOrderListPage', () => {
     expect(await screen.findByText('成本归集')).toBeInTheDocument();
     expect(screen.getByText('面料成本')).toBeInTheDocument();
     expect(screen.getByText('领料明细')).toBeInTheDocument();
+  });
+
+  it('creates production order with manual lines', async () => {
+    renderPage();
+
+    await screen.findByText('MO-202605-00001');
+    fireEvent.click(screen.getByRole('button', { name: '新增生产订单' }));
+    fireEvent.change(screen.getByLabelText('计划生产日期'), { target: { value: '2026-05-20' } });
+    fireEvent.change(screen.getByLabelText('要求完工日期'), { target: { value: '2026-06-05' } });
+    fireEvent.change(screen.getByLabelText('车间 ID'), { target: { value: '30001' } });
+    fireEvent.change(screen.getByLabelText('款式 ID'), { target: { value: '80001' } });
+    fireEvent.change(screen.getByLabelText('颜色款 ID'), { target: { value: '70001' } });
+    fireEvent.change(screen.getByLabelText('尺码组 ID'), { target: { value: '50001' } });
+    fireEvent.change(screen.getByLabelText('尺码 ID'), { target: { value: '51001' } });
+    fireEvent.change(screen.getByLabelText('尺码编码'), { target: { value: 'M' } });
+    fireEvent.change(screen.getByLabelText('生产数量'), { target: { value: '120' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存生产订单' }));
+
+    await waitFor(() => expect(mockedCreateProductionOrder).toHaveBeenCalledWith(expect.objectContaining({
+      sourceType: 'MANUAL',
+      planDate: '2026-05-20',
+      workshopId: '30001',
+      lines: [
+        expect.objectContaining({
+          spuId: '80001',
+          colorWayId: '70001',
+          sizeGroupId: '50001',
+          sizes: [expect.objectContaining({ sizeId: '51001', code: 'M', quantity: 120 })],
+        }),
+      ],
+    })));
+    await waitFor(() => expect(mockedPageProductionOrders).toHaveBeenCalledTimes(2));
+  });
+
+  it('edits and deletes draft production order', async () => {
+    renderPage();
+
+    await screen.findByText('MO-202605-00001');
+    fireEvent.click(screen.getByRole('button', { name: '编辑 MO-202605-00001' }));
+    fireEvent.change(await screen.findByLabelText('备注'), { target: { value: ' 已调整 ' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存生产订单' }));
+
+    await waitFor(() => expect(mockedGetProductionOrderDetail).toHaveBeenCalledWith('50001'));
+    await waitFor(() => expect(mockedUpdateProductionOrder).toHaveBeenCalledWith('50001', expect.objectContaining({
+      remark: '已调整',
+    })));
+
+    fireEvent.click(screen.getByRole('button', { name: '删除 MO-202605-00001' }));
+    fireEvent.click(await screen.findByRole('button', { name: '确认删除' }));
+    await waitFor(() => expect(mockedDeleteProductionOrder).toHaveBeenCalledWith('50001'));
   });
 });
 

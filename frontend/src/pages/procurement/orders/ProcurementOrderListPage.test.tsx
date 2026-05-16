@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProcurementOrderListPage } from './ProcurementOrderListPage';
 import { getCurrentUserPermissions } from '@/services/auth/authService';
 import {
+  createProcurementOrder,
   fireProcurementOrderEvent,
   getProcurementOrderAvailableActions,
   getProcurementOrderDetail,
@@ -16,19 +17,21 @@ vi.mock('@/services/auth/authService', () => ({
 }));
 
 vi.mock('@/services/procurement/procurementService', () => ({
+  createProcurementOrder: vi.fn(),
   fireProcurementOrderEvent: vi.fn(),
   getProcurementOrderAvailableActions: vi.fn(),
   getProcurementOrderDetail: vi.fn(),
   pageProcurementOrders: vi.fn(),
 }));
 
+const mockedCreateProcurementOrder = vi.mocked(createProcurementOrder);
 const mockedFireProcurementOrderEvent = vi.mocked(fireProcurementOrderEvent);
 const mockedGetCurrentUserPermissions = vi.mocked(getCurrentUserPermissions);
 const mockedGetProcurementOrderAvailableActions = vi.mocked(getProcurementOrderAvailableActions);
 const mockedGetProcurementOrderDetail = vi.mocked(getProcurementOrderDetail);
 const mockedPageProcurementOrders = vi.mocked(pageProcurementOrders);
 
-const permissions = ['procurement:order:fire-event'];
+const permissions = ['procurement:order:create', 'procurement:order:fire-event'];
 
 const procurementOrders = [
   {
@@ -83,6 +86,12 @@ describe('ProcurementOrderListPage', () => {
     mockedGetProcurementOrderAvailableActions.mockResolvedValue(['SUBMIT']);
     mockedFireProcurementOrderEvent.mockReset();
     mockedFireProcurementOrderEvent.mockResolvedValue(undefined);
+    mockedCreateProcurementOrder.mockReset();
+    mockedCreateProcurementOrder.mockResolvedValue({
+      ...procurementOrders[0],
+      id: '70002',
+      orderNo: 'PO-202605-00002',
+    });
   });
 
   it('loads filters and opens procurement order detail', async () => {
@@ -120,6 +129,37 @@ describe('ProcurementOrderListPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '详情 PO-202605-00001' }));
     expect(await screen.findByText('高支棉')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '提交审批' })).not.toBeInTheDocument();
+  });
+
+  it('creates procurement order with manual lines', async () => {
+    renderPage();
+
+    await screen.findByText('PO-202605-00001');
+    fireEvent.click(screen.getByRole('button', { name: '新增采购订单' }));
+    fireEvent.change(screen.getByLabelText('供应商ID'), { target: { value: ' 90002 ' } });
+    fireEvent.change(screen.getByLabelText('订单日期'), { target: { value: ' 2026-05-18 ' } });
+    fireEvent.change(screen.getByLabelText('要求交货日期'), { target: { value: ' 2026-05-28 ' } });
+    fireEvent.change(screen.getByLabelText('物料ID'), { target: { value: '30001' } });
+    fireEvent.change(screen.getByLabelText('物料类型'), { target: { value: ' FABRIC ' } });
+    fireEvent.change(screen.getByLabelText('采购数量'), { target: { value: '120' } });
+    fireEvent.change(screen.getByLabelText('单位'), { target: { value: ' 米 ' } });
+    fireEvent.change(screen.getByLabelText('单价'), { target: { value: '30' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存采购订单' }));
+
+    await waitFor(() => expect(mockedCreateProcurementOrder).toHaveBeenCalledWith({
+      supplierId: '90002',
+      orderDate: '2026-05-18',
+      expectedDeliveryDate: '2026-05-28',
+      lines: [
+        {
+          materialId: '30001',
+          materialType: 'FABRIC',
+          quantity: 120,
+          unit: '米',
+          unitPrice: 30,
+        },
+      ],
+    }));
   });
 });
 

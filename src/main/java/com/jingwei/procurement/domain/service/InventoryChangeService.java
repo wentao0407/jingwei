@@ -31,6 +31,15 @@ public interface InventoryChangeService {
     void inTransitToQc(Long materialId, BigDecimal quantity);
 
     /**
+     * 在途库存减少 + 质检库存增加（收货时调用）。
+     *
+     * @param context 带采购行、仓库和批次的库存变更上下文
+     */
+    default void inTransitToQc(InventoryChangeContext context) {
+        inTransitToQc(context.materialId(), context.quantity());
+    }
+
+    /**
      * 质检库存减少 + 可用库存增加（检验合格时调用）
      *
      * @param materialId 物料ID
@@ -39,10 +48,28 @@ public interface InventoryChangeService {
     void qcToAvailable(Long materialId, BigDecimal quantity);
 
     /**
+     * 质检库存减少 + 可用库存增加（检验合格时调用）。
+     *
+     * @param context 带采购行、仓库和批次的库存变更上下文
+     */
+    default void qcToAvailable(InventoryChangeContext context) {
+        qcToAvailable(context.materialId(), context.quantity());
+    }
+
+    /**
      * 质检库存减少（检验不合格退货时调用）
      *
      * @param materialId 物料ID
      * @param quantity   数量
      */
     void qcOut(Long materialId, BigDecimal quantity);
+
+    /**
+     * 质检库存减少（检验不合格退货时调用）。
+     *
+     * @param context 带采购行、仓库和批次的库存变更上下文
+     */
+    default void qcOut(InventoryChangeContext context) {
+        qcOut(context.materialId(), context.quantity());
+    }
 }

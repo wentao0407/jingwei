@@ -1,4 +1,4 @@
-import { EyeOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { EyeOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { ProCard } from '@ant-design/pro-components';
 import { App, Button, Descriptions, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
@@ -8,12 +8,14 @@ import { getCurrentUserPermissions } from '@/services/auth/authService';
 import { getApiErrorMessage } from '@/services/http/apiClient';
 import type { PageResult } from '@/services/master/customerService';
 import {
+  createAsn,
   getAsnDetail,
   pageAsns,
   receiveAsnGoods,
   submitAsnQc,
   type AsnLineRecord,
   type AsnRecord,
+  type CreateAsnPayload,
 } from '@/services/procurement/procurementService';
 import { getAuthSession, setAuthSession } from '@/shared/storage/authSessionStorage';
 
@@ -51,7 +53,11 @@ export function AsnManagementPage() {
   const [receiveLine, setReceiveLine] = useState<AsnLineRecord | null>(null);
   const [qcLine, setQcLine] = useState<AsnLineRecord | null>(null);
   const [permissions, setPermissions] = useState<string[]>(() => getAuthSession()?.permissions ?? []);
+  const [createForm] = Form.useForm<AsnFormValues>();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const actions = {
+    canCreate: permissions.includes('procurement:asn:create'),
     canReceive: permissions.includes('procurement:asn:receive'),
     canQc: permissions.includes('procurement:asn:qc'),
   };
@@ -115,6 +121,28 @@ export function AsnManagementPage() {
     await loadAsns();
   }
 
+  function openCreateForm() {
+    createForm.setFieldsValue({ lines: [createEmptyAsnLineForm()] });
+    setCreateOpen(true);
+  }
+
+  async function handleCreateAsn() {
+    try {
+      const values = await createForm.validateFields();
+      setSaving(true);
+      await createAsn(toAsnPayload(values));
+      message.success('新增ASN成功');
+      setCreateOpen(false);
+      await loadAsns();
+    } catch (error) {
+      if (!isFormValidationError(error)) {
+        message.error(getApiErrorMessage(error));
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (loading && !pageResult) {
     return <LoadingState message="正在加载到货通知" />;
   }
@@ -138,6 +166,9 @@ export function AsnManagementPage() {
           <Select aria-label="到货状态筛选" options={statusOptions} value={status} onChange={(value) => { setStatus(value); setCurrentPage(INITIAL_PAGE); }} />
           <Button icon={<SearchOutlined />} onClick={() => { setProcurementOrderId(orderInput.trim()); setCurrentPage(INITIAL_PAGE); }}>搜索</Button>
           <Button icon={<ReloadOutlined />} onClick={loadAsns}>刷新</Button>
+          {actions.canCreate ? (
+            <Button aria-label="新增ASN" icon={<PlusOutlined />} type="primary" onClick={openCreateForm}>新增ASN</Button>
+          ) : null}
         </Space>
         {pageResult?.records.length === 0 ? (
           <EmptyState message="暂无到货通知" />
@@ -172,7 +203,60 @@ export function AsnManagementPage() {
       />
       <ReceiveModal asn={detail} line={receiveLine} onClose={() => setReceiveLine(null)} onReload={reloadDetail} />
       <QcModal line={qcLine} onClose={() => setQcLine(null)} onReload={reloadDetail} />
+      <AsnCreateModal
+        form={createForm}
+        open={createOpen}
+        saving={saving}
+        onCancel={() => setCreateOpen(false)}
+        onSave={handleCreateAsn}
+      />
     </div>
+  );
+}
+
+function AsnCreateModal({
+  form,
+  open,
+  saving,
+  onCancel,
+  onSave,
+}: {
+  form: ReturnType<typeof Form.useForm<AsnFormValues>>[0];
+  open: boolean;
+  saving: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <Modal cancelText="取消" confirmLoading={saving} getContainer={false} okText="保存ASN" onCancel={onCancel} onOk={onSave} open={open} title="新增ASN" width={980}>
+      <Form<AsnFormValues> form={form} layout="vertical">
+        <Space align="start" wrap>
+          <Form.Item label="采购订单ID" name="procurementOrderId" rules={[{ required: true, message: '请输入采购订单ID' }]}><Input /></Form.Item>
+          <Form.Item label="供应商ID" name="supplierId" rules={[{ required: true, message: '请输入供应商ID' }]}><Input /></Form.Item>
+          <Form.Item label="预计到货日期" name="expectedArrivalDate"><Input placeholder="YYYY-MM-DD" /></Form.Item>
+        </Space>
+        <Form.Item label="备注" name="remark"><Input.TextArea rows={2} /></Form.Item>
+        <Form.List name="lines" rules={[{ validator: validateAsnLines }]}>
+          {(fields, { add, remove }) => (
+            <Space direction="vertical" style={{ width: '100%' }}>
+              {fields.map((field) => (
+                <ProCard key={field.key} bordered size="small">
+                  <Space align="start" wrap>
+                    <Form.Item label="采购订单行ID" name={[field.name, 'procurementLineId']} rules={[{ required: true, message: '请输入采购订单行ID' }]}><Input /></Form.Item>
+                    <Form.Item label="物料ID" name={[field.name, 'materialId']} rules={[{ required: true, message: '请输入物料ID' }]}><Input /></Form.Item>
+                    <Form.Item label="预计到货数量" name={[field.name, 'expectedQuantity']} rules={[{ required: true, message: '请输入预计到货数量' }]}><InputNumber min={0} precision={2} /></Form.Item>
+                    <Form.Item label="批次号" name={[field.name, 'batchNo']}><Input /></Form.Item>
+                    <Form.Item label="行备注" name={[field.name, 'remark']}><Input /></Form.Item>
+                    {fields.length > 1 ? <Button danger onClick={() => remove(field.name)}>删除行</Button> : null}
+                  </Space>
+                </ProCard>
+              ))}
+              <Button onClick={() => add(createEmptyAsnLineForm())}>新增ASN行</Button>
+            </Space>
+          )}
+        </Form.List>
+      </Form>
+    </Modal>
   );
 }
 
@@ -356,4 +440,55 @@ function QcModal({
 
 function formatQuantity(value?: number | null): string {
   return typeof value === 'number' ? value.toLocaleString('zh-CN') : '0';
+}
+
+interface AsnLineFormValues {
+  batchNo?: string;
+  expectedQuantity?: number | null;
+  materialId?: string;
+  procurementLineId?: string;
+  remark?: string;
+}
+
+interface AsnFormValues {
+  expectedArrivalDate?: string;
+  lines?: AsnLineFormValues[];
+  procurementOrderId?: string;
+  remark?: string;
+  supplierId?: string;
+}
+
+function createEmptyAsnLineForm(): AsnLineFormValues {
+  return {};
+}
+
+function toAsnPayload(values: AsnFormValues): CreateAsnPayload {
+  return {
+    procurementOrderId: trimOptional(values.procurementOrderId) ?? '',
+    supplierId: trimOptional(values.supplierId) ?? '',
+    expectedArrivalDate: trimOptional(values.expectedArrivalDate),
+    remark: trimOptional(values.remark),
+    lines: (values.lines ?? []).map((line) => ({
+      procurementLineId: trimOptional(line.procurementLineId) ?? '',
+      materialId: trimOptional(line.materialId) ?? '',
+      expectedQuantity: Number(line.expectedQuantity ?? 0),
+      batchNo: trimOptional(line.batchNo),
+      remark: trimOptional(line.remark),
+    })),
+  };
+}
+
+async function validateAsnLines(_: unknown, value?: AsnLineFormValues[]) {
+  if (!value || value.length === 0) {
+    throw new Error('至少需要一行ASN明细');
+  }
+}
+
+function trimOptional(value?: string | null): string | undefined {
+  const nextValue = value?.trim();
+  return nextValue ? nextValue : undefined;
+}
+
+function isFormValidationError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'errorFields' in error;
 }

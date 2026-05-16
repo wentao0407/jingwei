@@ -9,6 +9,7 @@ import { getApiErrorMessage } from '@/services/http/apiClient';
 import {
   createCodingRule,
   deleteCodingRule,
+  generateCode,
   listCodingRules,
   previewCode,
   updateCodingRule,
@@ -82,6 +83,9 @@ export function CodingRuleManagementPage() {
   const [previewRule, setPreviewRule] = useState<CodingRuleRecord | null>(null);
   const [previewValue, setPreviewValue] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [generatedRule, setGeneratedRule] = useState<CodingRuleRecord | null>(null);
+  const [generatedValue, setGeneratedValue] = useState('');
+  const [generateLoading, setGenerateLoading] = useState(false);
   const [permissions, setPermissions] = useState<string[]>(() => getAuthSession()?.permissions ?? []);
   const actions = getCodingRuleActions(permissions);
 
@@ -198,6 +202,19 @@ export function CodingRuleManagementPage() {
     }
   }
 
+  async function handleGenerate(rule: CodingRuleRecord) {
+    setGeneratedRule(rule);
+    setGeneratedValue('');
+    setGenerateLoading(true);
+    try {
+      setGeneratedValue(await generateCode({ ruleCode: rule.code }));
+    } catch (error) {
+      message.error(getApiErrorMessage(error));
+    } finally {
+      setGenerateLoading(false);
+    }
+  }
+
   async function refreshPermissions() {
     try {
       const response = await getCurrentUserPermissions();
@@ -257,7 +274,7 @@ export function CodingRuleManagementPage() {
         ) : (
           <Table<CodingRuleRecord>
             rowKey="id"
-            columns={buildColumns(actions, { onDelete: handleDelete, onEdit: openEditForm, onPreview: handlePreview })}
+            columns={buildColumns(actions, { onDelete: handleDelete, onEdit: openEditForm, onGenerate: handleGenerate, onPreview: handlePreview })}
             dataSource={filteredRules}
             loading={loading}
             pagination={false}
@@ -299,6 +316,13 @@ export function CodingRuleManagementPage() {
         <ProCard loading={previewLoading} bordered={false}>
           <p className="system-page-muted">规则编码：{previewRule?.code}</p>
           <h2>{previewValue || '-'}</h2>
+        </ProCard>
+      </Modal>
+
+      <Modal title={generatedRule?.name ?? '正式生成'} open={!!generatedRule} footer={null} onCancel={() => setGeneratedRule(null)}>
+        <ProCard loading={generateLoading} bordered={false}>
+          <p className="system-page-muted">规则编码：{generatedRule?.code}</p>
+          <h2>{generatedValue || '-'}</h2>
         </ProCard>
       </Modal>
     </div>
@@ -388,6 +412,7 @@ function buildColumns(
   handlers: {
     onDelete: (rule: CodingRuleRecord) => void;
     onEdit: (rule: CodingRuleRecord) => void;
+    onGenerate: (rule: CodingRuleRecord) => void;
     onPreview: (rule: CodingRuleRecord) => void;
   },
 ): ColumnsType<CodingRuleRecord> {
@@ -417,6 +442,11 @@ function buildColumns(
           <Button icon={<EyeOutlined />} size="small" aria-label={`预览 ${record.code}`} onClick={() => handlers.onPreview(record)}>
             预览
           </Button>
+          {actions.canGenerate ? (
+            <Button size="small" aria-label={`正式生成 ${record.code}`} onClick={() => handlers.onGenerate(record)}>
+              正式生成
+            </Button>
+          ) : null}
           {actions.canUpdate ? (
             <Button icon={<EditOutlined />} size="small" aria-label={`编辑 ${record.code}`} onClick={() => handlers.onEdit(record)}>
               编辑

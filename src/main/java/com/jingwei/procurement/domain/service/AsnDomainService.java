@@ -129,7 +129,12 @@ public class AsnDomainService {
 
             // 触发库存变更：在途 → 质检
             if (line.getMaterialId() != null && rl.receivedQuantity().compareTo(BigDecimal.ZERO) > 0) {
-                inventoryChangeService.inTransitToQc(line.getMaterialId(), rl.receivedQuantity());
+                inventoryChangeService.inTransitToQc(new InventoryChangeContext(
+                        line.getMaterialId(),
+                        line.getProcurementLineId(),
+                        null,
+                        line.getBatchNo(),
+                        rl.receivedQuantity()));
             }
         }
 
@@ -209,15 +214,30 @@ public class AsnDomainService {
         if (line.getMaterialId() != null) {
             if (qcStatus == QcStatus.PASSED || qcStatus == QcStatus.CONCESSION) {
                 // 合格或让步接收 → 质检转可用
-                inventoryChangeService.qcToAvailable(line.getMaterialId(), accepted);
+                inventoryChangeService.qcToAvailable(new InventoryChangeContext(
+                        line.getMaterialId(),
+                        line.getProcurementLineId(),
+                        null,
+                        line.getBatchNo(),
+                        accepted));
             }
             if (qcStatus == QcStatus.FAILED) {
                 // 不合格 → 质检出库（退货）
-                inventoryChangeService.qcOut(line.getMaterialId(), rejected);
+                inventoryChangeService.qcOut(new InventoryChangeContext(
+                        line.getMaterialId(),
+                        line.getProcurementLineId(),
+                        null,
+                        line.getBatchNo(),
+                        rejected));
             }
             if (qcStatus == QcStatus.CONCESSION && rejected.compareTo(BigDecimal.ZERO) > 0) {
                 // 让步接收中不合格部分 → 退货
-                inventoryChangeService.qcOut(line.getMaterialId(), rejected);
+                inventoryChangeService.qcOut(new InventoryChangeContext(
+                        line.getMaterialId(),
+                        line.getProcurementLineId(),
+                        null,
+                        line.getBatchNo(),
+                        rejected));
             }
         }
 

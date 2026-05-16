@@ -222,7 +222,7 @@ public class ReportApplicationService {
                 "单位成本", "成本金额", "来源单据", "来源编号", "操作时间", "备注");
         List<List<Object>> rows = new ArrayList<>();
         for (Map<String, Object> row : data) {
-            rows.add(List.of(
+            rows.add(java.util.Arrays.asList(
                     MapUtil.getStr(row, "operationNo"),
                     OP_TYPE_LABELS.getOrDefault(MapUtil.getStr(row, "operationType"), MapUtil.getStr(row, "operationType")),
                     MapUtil.getStr(row, "inventoryType"),
@@ -333,7 +333,7 @@ public class ReportApplicationService {
         List<List<Object>> rows = new ArrayList<>();
         for (Map<String, Object> row : data) {
             if ("MATERIAL".equalsIgnoreCase(inventoryType)) {
-                rows.add(List.of(
+                rows.add(java.util.Arrays.asList(
                         MapUtil.getStr(row, "materialCode"),
                         MapUtil.getStr(row, "materialName"),
                         MapUtil.getStr(row, "warehouseName"),
@@ -348,7 +348,7 @@ public class ReportApplicationService {
                         row.get("lastOutboundDate")
                 ));
             } else {
-                rows.add(List.of(
+                rows.add(java.util.Arrays.asList(
                         MapUtil.getStr(row, "skuCode"),
                         MapUtil.getStr(row, "spuCode"),
                         MapUtil.getStr(row, "spuName"),
@@ -429,10 +429,13 @@ public class ReportApplicationService {
         return java.time.LocalDate.parse(value.toString());
     }
 
+    private static final java.time.format.DateTimeFormatter TIMESTAMP_FMT =
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSSSSS]");
+
     private java.time.LocalDateTime toLocalDateTime(Object value) {
         if (value == null) return null;
         if (value instanceof java.time.LocalDateTime ldt) return ldt;
-        return java.time.LocalDateTime.parse(value.toString());
+        return java.time.LocalDateTime.parse(value.toString(), TIMESTAMP_FMT);
     }
 
     private String coalesce(String a, String b) {
@@ -490,25 +493,25 @@ public class ReportApplicationService {
         Map<String, BigDecimal> ageRangeQty = new LinkedHashMap<>();
         Map<String, BigDecimal> ageRangeAmount = new LinkedHashMap<>();
 
-        ageRangeCount.put("0-30天", toLongDefault0(fullSummary.get("range0to30count")));
-        ageRangeQty.put("0-30天", toBigDecimalDefault0(fullSummary.get("range0to30qty")));
-        ageRangeCount.put("31-60天", toLongDefault0(fullSummary.get("range31to60count")));
-        ageRangeQty.put("31-60天", toBigDecimalDefault0(fullSummary.get("range31to60qty")));
-        ageRangeCount.put("61-90天", toLongDefault0(fullSummary.get("range61to90count")));
-        ageRangeQty.put("61-90天", toBigDecimalDefault0(fullSummary.get("range61to90qty")));
-        ageRangeCount.put("91-180天", toLongDefault0(fullSummary.get("range91to180count")));
-        ageRangeQty.put("91-180天", toBigDecimalDefault0(fullSummary.get("range91to180qty")));
-        ageRangeCount.put("180天以上", toLongDefault0(fullSummary.get("range180pluscount")));
-        ageRangeQty.put("180天以上", toBigDecimalDefault0(fullSummary.get("range180plusqty")));
+        ageRangeCount.put("0-30天", toLongDefault0(fullSummary.get("range0to30Count")));
+        ageRangeQty.put("0-30天", toBigDecimalDefault0(fullSummary.get("range0to30Qty")));
+        ageRangeCount.put("31-60天", toLongDefault0(fullSummary.get("range31to60Count")));
+        ageRangeQty.put("31-60天", toBigDecimalDefault0(fullSummary.get("range31to60Qty")));
+        ageRangeCount.put("61-90天", toLongDefault0(fullSummary.get("range61to90Count")));
+        ageRangeQty.put("61-90天", toBigDecimalDefault0(fullSummary.get("range61to90Qty")));
+        ageRangeCount.put("91-180天", toLongDefault0(fullSummary.get("range91to180Count")));
+        ageRangeQty.put("91-180天", toBigDecimalDefault0(fullSummary.get("range91to180Qty")));
+        ageRangeCount.put("180天以上", toLongDefault0(fullSummary.get("range180plusCount")));
+        ageRangeQty.put("180天以上", toBigDecimalDefault0(fullSummary.get("range180plusQty")));
 
         summary.setAgeRangeCount(ageRangeCount);
         summary.setAgeRangeQty(ageRangeQty);
         summary.setAgeRangeAmount(ageRangeAmount);
-        summary.setTotalCount(toLongDefault0(fullSummary.get("totalcount")));
-        summary.setTotalQty(toBigDecimalDefault0(fullSummary.get("totalqty")));
-        summary.setTotalAmount(toBigDecimalDefault0(fullSummary.get("totalamount")));
-        summary.setOverdueCount(toLongDefault0(fullSummary.get("overduecount")));
-        summary.setOverdueQty(toBigDecimalDefault0(fullSummary.get("overdueqty")));
+        summary.setTotalCount(toLongDefault0(fullSummary.get("totalCount")));
+        summary.setTotalQty(toBigDecimalDefault0(fullSummary.get("totalQty")));
+        summary.setTotalAmount(toBigDecimalDefault0(fullSummary.get("totalAmount")));
+        summary.setOverdueCount(toLongDefault0(fullSummary.get("overdueCount")));
+        summary.setOverdueQty(toBigDecimalDefault0(fullSummary.get("overdueQty")));
 
         return summary;
     }
@@ -537,7 +540,7 @@ public class ReportApplicationService {
                 "仓库", "批次号", "实际库存", "库存金额", "最后入库日期", "库龄天数", "库龄区间", "是否超期");
         List<List<Object>> rows = new ArrayList<>();
         for (InventoryAgeVO vo : summary.getDetails()) {
-            rows.add(List.of(
+            rows.add(java.util.Arrays.asList(
                     coalesce(vo.getSkuCode(), vo.getMaterialCode()),
                     vo.getSpuCode(),
                     vo.getSpuName(),
@@ -679,7 +682,7 @@ public class ReportApplicationService {
                 "平均库存", "周转天数", "周转率", "畅销等级");
         List<List<Object>> rows = new ArrayList<>();
         for (TurnoverAnalysisVO vo : pageResult.getRecords()) {
-            rows.add(List.of(
+            rows.add(java.util.Arrays.asList(
                     coalesce(vo.getSkuCode(), vo.getMaterialCode()),
                     vo.getSpuCode(),
                     vo.getSpuName(),
