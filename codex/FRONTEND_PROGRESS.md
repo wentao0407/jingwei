@@ -2,7 +2,7 @@
 
 > 用途：记录 JingWei 前端开发阶段、当前进度、下一步任务和恢复上下文。  
 > 当前前端风格：Quiet 企业后台风。  
-> 更新时间：2026-05-16。
+> 更新时间：2026-05-17。
 > 维护规则：每次完成前端任务后，必须更新本文档的阶段状态、已完成内容、验证结果和下一步任务。
 
 ---
@@ -38,8 +38,8 @@ pnpm build
 ## Current Frontend Status
 
 **Current Stage:** 联调与生产优化
-**Current Task:** 已完成数据范围结构化改造、SPU/SKU 批量改价入口、编码规则正式生成入口，以及发运单后端聚合契约 + 前端列表详情。
-**Next Task:** 继续全链路真实后端冒烟，重点覆盖发运列表/详情、数据范围保存、SPU/SKU 批量改价和编码规则正式生成；采购订单编辑、发运历史/物流轨迹等待后端契约。
+**Current Task:** 已完成工作台首页视觉优化、报表中心返回首页入口、盘点单开始操作业务提示优化，以及出库单确认操作业务提示优化。
+**Next Task:** 先修复当前阻断生产构建的 TypeScript 与依赖问题，再继续全链路真实后端冒烟；采购订单编辑、发运历史/物流轨迹等待后端契约。
 
 已完成：
 
@@ -69,6 +69,14 @@ pnpm build
 - 已完成 SPU/SKU 批量改价入口，支持按款式和颜色范围批量更新成本价、销售价、批发价。
 - 已完成编码规则正式生成入口，对接原子递增生成接口并展示生成结果。
 - 已完成发运单后端聚合契约和前端列表详情，接入发运分页、详情和确认发运。
+- 已优化工作台首页：
+  - “今日已同步”改为运行时当前日期时间，不再展示写死日期。
+  - 指标区改为 Quiet 企业后台风运营卡片。
+  - “今日重点”改为分优先级任务卡片，替代原时间线样式。
+  - 履约待办表格补充固定列宽，避免窄屏下文字竖排换行。
+- 已在报表中心顶部新增“返回首页”链接按钮，跳转到工作台首页 `/`。
+- 已优化盘点单“开始”操作：非草稿状态直接弹框说明不可开始，后端业务失败消息也通过弹框告知用户。
+- 已优化出库单“确认”操作：非 DRAFT/CONFIRMED/PICKING 状态直接弹框说明不可确认，后端业务失败消息也通过弹框告知用户。
 - 已进入 Stage 2，新增用户管理列表页基础版：
   - 读取 `POST /system/user/page`
   - 支持 keyword 查询
@@ -953,6 +961,27 @@ P2：
 ---
 
 ## Update Log
+
+### 2026-05-17 工作台首页视觉优化
+
+已完成：
+
+- `DashboardPage` 的“今日已同步”改为按运行时当前时间格式化展示，避免继续显示写死日期。
+- 重构工作台首页整体布局：新增同步状态卡、运营指标卡、履约待办表格辅助说明、今日重点任务卡片和产销节奏进度区。
+- 今日重点从原 Timeline 样式改为可扫读的优先级任务列表，区分高优先级、风险和待确认事项。
+- 履约待办表格设置紧凑列宽和横向约束，避免客户、状态、下一步等字段在常见视口下竖排换行。
+
+验证：
+
+- `cd frontend && pnpm exec vitest run src/pages/dashboard/DashboardPage.test.tsx` 通过。
+- `cd frontend && pnpm exec eslint src/pages/dashboard/DashboardPage.tsx src/pages/dashboard/DashboardPage.test.tsx` 通过。
+- gstack headed 浏览器已打开 `/` 并截图验证，截图路径：`/tmp/jingwei-dashboard-after-3.png`。
+- `cd frontend && pnpm lint` 仍失败，阻断来自既有未使用 import：`SupplierStatementPage.tsx` 的 `AccountBookOutlined`、`PrintPage.tsx` 的 `Space`。
+- `cd frontend && pnpm build` 仍失败，阻断来自既有 TypeScript/依赖问题：`TransferOrderPage.tsx`、`SupplierStatementPage.tsx`、`MaterialIssuePage.tsx`。
+
+后续任务：
+
+- 先修复当前阻断 `pnpm lint` / `pnpm build` 的既有问题，再继续全链路真实后端冒烟。
 
 ### 2026-05-16 数据范围结构化 + SPU/SKU 批量改价 + 编码正式生成 + 发运聚合
 

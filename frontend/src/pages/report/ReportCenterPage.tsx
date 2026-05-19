@@ -1,7 +1,8 @@
-import { AppstoreOutlined, DownloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, DownloadOutlined, HomeOutlined, SearchOutlined } from '@ant-design/icons';
 import { App, Button, Card, Form, Input, Modal, Select, Space, Statistic, Table, Tabs, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   exportInventoryAge,
   exportInventoryLedger,
@@ -33,12 +34,21 @@ import {
 type ReportTabKey = 'ledger' | 'flow' | 'age' | 'turnover' | 'shortage';
 
 const DEFAULT_QUERY = { current: 1, size: 20, inventoryType: 'SKU', keyword: '' };
+const REPORT_ROUTE_BY_KEY: Record<ReportTabKey, string> = {
+  ledger: '/report/ledger',
+  flow: '/report/flow',
+  age: '/report/age',
+  turnover: '/report/turnover',
+  shortage: '/report/shortage',
+};
 
 export function ReportCenterPage() {
   const { message } = App.useApp();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [form] = Form.useForm<typeof DEFAULT_QUERY>();
   const [matrixForm] = Form.useForm<{ spuId: string; warehouseId: string }>();
-  const [activeKey, setActiveKey] = useState<ReportTabKey>('ledger');
+  const [activeKey, setActiveKey] = useState<ReportTabKey>(() => getReportKeyFromPath(location.pathname));
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [matrixOpen, setMatrixOpen] = useState(false);
@@ -85,6 +95,11 @@ export function ReportCenterPage() {
     void loadReport();
   }, [loadReport]);
 
+  useEffect(() => {
+    const routeKey = getReportKeyFromPath(location.pathname);
+    setActiveKey(routeKey);
+  }, [location.pathname]);
+
   const exportReport = useCallback(async () => {
     const values = { ...DEFAULT_QUERY, ...form.getFieldsValue() };
     setExporting(true);
@@ -124,7 +139,14 @@ export function ReportCenterPage() {
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <Card title="报表中心">
+      <Card
+        title="报表中心"
+        extra={
+          <Link to="/">
+            <Button icon={<HomeOutlined />}>返回首页</Button>
+          </Link>
+        }
+      >
         <Form form={form} layout="inline" initialValues={DEFAULT_QUERY} onFinish={loadReport}>
           <Form.Item label="库存类型" name="inventoryType">
             <Select style={{ width: 140 }} options={[{ label: '成品 SKU', value: 'SKU' }, { label: '物料', value: 'MATERIAL' }]} />
@@ -154,7 +176,11 @@ export function ReportCenterPage() {
       <Card>
         <Tabs
           activeKey={activeKey}
-          onChange={(key) => setActiveKey(key as ReportTabKey)}
+          onChange={(key) => {
+            const nextKey = key as ReportTabKey;
+            setActiveKey(nextKey);
+            navigate(REPORT_ROUTE_BY_KEY[nextKey]);
+          }}
           items={[
             { key: 'ledger', label: '库存台账' },
             { key: 'flow', label: '出入库流水' },
@@ -192,6 +218,15 @@ export function ReportCenterPage() {
       </Modal>
     </Space>
   );
+}
+
+function getReportKeyFromPath(pathname: string): ReportTabKey {
+  if (pathname.endsWith('/flow')) return 'flow';
+  if (pathname.endsWith('/age')) return 'age';
+  if (pathname.endsWith('/turnover')) return 'turnover';
+  if (pathname.endsWith('/shortage')) return 'shortage';
+
+  return 'ledger';
 }
 
 const REPORT_FILE_NAMES: Record<ReportTabKey, string> = {

@@ -6,7 +6,7 @@
 -- ADMIN 角色对应菜单、ASN 收货/质检、BOM 审批、MRP 计算，以及采购订单
 -- 统一状态流转按钮权限。
 
-DELETE FROM t_sys_role_menu WHERE menu_id IN (
+UPDATE t_sys_role_menu SET deleted = TRUE WHERE menu_id IN (
     SELECT id
     FROM t_sys_menu
     WHERE permission IN (
@@ -17,9 +17,10 @@ DELETE FROM t_sys_role_menu WHERE menu_id IN (
         'procurement:mrp:calculate'
     )
     AND id NOT IN (3311, 3321, 3322, 3331, 3332)
-);
+    AND deleted = FALSE
+) AND deleted = FALSE;
 
-DELETE FROM t_sys_menu
+UPDATE t_sys_menu SET deleted = TRUE
 WHERE permission IN (
     'procurement:order:fire-event',
     'procurement:asn:receive',
@@ -27,7 +28,8 @@ WHERE permission IN (
     'procurement:bom:approve',
     'procurement:mrp:calculate'
 )
-AND id NOT IN (3311, 3321, 3322, 3331, 3332);
+AND id NOT IN (3311, 3321, 3322, 3331, 3332)
+AND deleted = FALSE;
 
 UPDATE t_sys_menu
 SET deleted = FALSE, status = 'ACTIVE'
@@ -59,14 +61,15 @@ ON CONFLICT (id) DO UPDATE SET
     status = EXCLUDED.status,
     deleted = FALSE;
 
-DELETE FROM t_sys_role_menu
+UPDATE t_sys_role_menu SET deleted = TRUE
 WHERE id IN (
     SELECT id FROM (
         SELECT id, ROW_NUMBER() OVER (PARTITION BY role_id, menu_id ORDER BY id) AS rn
         FROM t_sys_role_menu
         WHERE menu_id IN (3300, 3310, 3311, 3320, 3321, 3322, 3330, 3331, 3332, 3340, 3350)
+          AND deleted = FALSE
     ) t WHERE rn > 1
-);
+) AND deleted = FALSE;
 
 INSERT INTO t_sys_role_menu (id, role_id, menu_id)
 SELECT

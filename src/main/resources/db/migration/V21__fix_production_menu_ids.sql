@@ -5,13 +5,13 @@
 -- 修复：使用 340-346 新 ID 段，同时清理 V03 旧的生产订单菜单
 -- ============================================================
 
--- 1. 删除 V03 遗留的旧生产订单菜单（ID=320）及其关联的角色权限
-DELETE FROM t_sys_role_menu WHERE menu_id = 320;
-DELETE FROM t_sys_menu WHERE id = 320;
+-- 1. 软删除 V03 遗留的旧生产订单菜单（ID=320）及其关联的角色权限
+UPDATE t_sys_role_menu SET deleted = TRUE WHERE menu_id = 320 AND deleted = FALSE;
+UPDATE t_sys_menu SET deleted = TRUE WHERE id = 320 AND deleted = FALSE;
 
--- 2. 删除 V20 未生效的记录（ON CONFLICT DO NOTHING 导致可能不存在，用 WHERE EXISTS 保证安全）
-DELETE FROM t_sys_role_menu WHERE menu_id IN (321, 322, 323, 324, 325, 326);
-DELETE FROM t_sys_menu WHERE id IN (321, 322, 323, 324, 325, 326);
+-- 2. 软删除 V20 未生效的记录（ON CONFLICT DO NOTHING 导致可能不存在，用 WHERE EXISTS 保证安全）
+UPDATE t_sys_role_menu SET deleted = TRUE WHERE menu_id IN (321, 322, 323, 324, 325, 326) AND deleted = FALSE;
+UPDATE t_sys_menu SET deleted = TRUE WHERE id IN (321, 322, 323, 324, 325, 326) AND deleted = FALSE;
 
 -- 3. 插入生产订单主菜单（ID=340，parent=32 即订单管理目录）
 INSERT INTO t_sys_menu (id, parent_id, name, type, path, component, permission, icon, sort_order, visible, status)

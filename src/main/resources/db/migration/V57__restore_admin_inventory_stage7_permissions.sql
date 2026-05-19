@@ -5,7 +5,7 @@
 -- 前端 Stage 7 首批已接入库存 SKU、库存物料、入库单、出库单、盘点单
 -- 五个入口。本迁移补齐 ADMIN 角色对应菜单，以及入库、出库、盘点操作按钮权限。
 
-DELETE FROM t_sys_role_menu WHERE menu_id IN (
+UPDATE t_sys_role_menu SET deleted = TRUE WHERE menu_id IN (
     SELECT id
     FROM t_sys_menu
     WHERE permission IN (
@@ -18,9 +18,10 @@ DELETE FROM t_sys_role_menu WHERE menu_id IN (
         'inventory:stocktaking:review'
     )
     AND id NOT IN (3431, 3432, 3441, 3442, 3451, 3452, 3453)
-);
+    AND deleted = FALSE
+) AND deleted = FALSE;
 
-DELETE FROM t_sys_menu
+UPDATE t_sys_menu SET deleted = TRUE
 WHERE permission IN (
     'inventory:inbound:create',
     'inventory:inbound:confirm',
@@ -30,7 +31,8 @@ WHERE permission IN (
     'inventory:stocktaking:submit',
     'inventory:stocktaking:review'
 )
-AND id NOT IN (3431, 3432, 3441, 3442, 3451, 3452, 3453);
+AND id NOT IN (3431, 3432, 3441, 3442, 3451, 3452, 3453)
+AND deleted = FALSE;
 
 UPDATE t_sys_menu
 SET deleted = FALSE, status = 'ACTIVE'
@@ -64,14 +66,15 @@ ON CONFLICT (id) DO UPDATE SET
     status = EXCLUDED.status,
     deleted = FALSE;
 
-DELETE FROM t_sys_role_menu
+UPDATE t_sys_role_menu SET deleted = TRUE
 WHERE id IN (
     SELECT id FROM (
         SELECT id, ROW_NUMBER() OVER (PARTITION BY role_id, menu_id ORDER BY id) AS rn
         FROM t_sys_role_menu
         WHERE menu_id IN (3400, 3410, 3420, 3430, 3431, 3432, 3440, 3441, 3442, 3450, 3451, 3452, 3453)
+          AND deleted = FALSE
     ) t WHERE rn > 1
-);
+) AND deleted = FALSE;
 
 INSERT INTO t_sys_role_menu (id, role_id, menu_id)
 SELECT

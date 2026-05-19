@@ -52,7 +52,7 @@ ON CONFLICT (id) DO UPDATE SET
     status = EXCLUDED.status,
     deleted = FALSE;
 
-DELETE FROM t_sys_role_menu
+UPDATE t_sys_role_menu SET deleted = TRUE
 WHERE id IN (
     SELECT id FROM (
         SELECT id, ROW_NUMBER() OVER (PARTITION BY role_id, menu_id ORDER BY id) AS rn
@@ -62,8 +62,9 @@ WHERE id IN (
             800, 810, 811, 820, 821,
             900, 910, 911, 912, 920, 921, 922, 930, 931, 932, 940, 941, 942
         )
+          AND deleted = FALSE
     ) t WHERE rn > 1
-);
+) AND deleted = FALSE;
 
 INSERT INTO t_sys_role_menu (id, role_id, menu_id)
 SELECT

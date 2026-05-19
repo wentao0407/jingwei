@@ -90,7 +90,9 @@ INSERT INTO t_sys_menu (id, parent_id, name, type, path, component, permission, 
 ON CONFLICT (id) DO NOTHING;
 
 -- 管理员角色(id=1)拥有所有退货管理权限
-INSERT INTO t_sys_role_menu (id, role_id, menu_id) VALUES
+INSERT INTO t_sys_role_menu (id, role_id, menu_id)
+SELECT v.id, v.role_id, v.menu_id
+FROM (VALUES
     (20310, 1, 330),
     (20311, 1, 331),
     (20312, 1, 332),
@@ -99,7 +101,11 @@ INSERT INTO t_sys_role_menu (id, role_id, menu_id) VALUES
     (20315, 1, 335),
     (20316, 1, 336),
     (20317, 1, 337)
-ON CONFLICT (id) DO NOTHING;
+) AS v(id, role_id, menu_id)
+WHERE NOT EXISTS (
+    SELECT 1 FROM t_sys_role_menu rm
+    WHERE rm.role_id = v.role_id AND rm.menu_id = v.menu_id AND rm.deleted = FALSE
+);
 
 -- 4. 编码规则：退货单号
 INSERT INTO t_md_coding_rule (id, code, name, description, status, used) VALUES

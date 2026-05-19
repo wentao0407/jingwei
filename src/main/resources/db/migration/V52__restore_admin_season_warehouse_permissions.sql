@@ -28,7 +28,18 @@ VALUES
     (309, 300, '解冻库位', 'BUTTON', '', '', 'master:location:unfreeze', '', 9, TRUE, 'ACTIVE'),
     (310, 300, '停用库位', 'BUTTON', '', '', 'master:location:deactivate', '', 10, TRUE, 'ACTIVE'),
     (311, 300, '删除库位', 'BUTTON', '', '', 'master:location:delete', '', 11, TRUE, 'ACTIVE')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+    parent_id = EXCLUDED.parent_id,
+    name = EXCLUDED.name,
+    type = EXCLUDED.type,
+    path = EXCLUDED.path,
+    component = EXCLUDED.component,
+    permission = EXCLUDED.permission,
+    icon = EXCLUDED.icon,
+    sort_order = EXCLUDED.sort_order,
+    visible = EXCLUDED.visible,
+    status = EXCLUDED.status,
+    deleted = FALSE;
 
 UPDATE t_sys_menu
 SET parent_id = 0,

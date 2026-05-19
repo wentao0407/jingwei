@@ -5,7 +5,7 @@
 -- V53 已恢复订单管理和销售订单基础按钮。本迁移补齐销售订单转生产、
 -- 数量变更、创建退货，以及生产订单菜单和状态流转按钮权限。
 
-DELETE FROM t_sys_role_menu WHERE menu_id IN (
+UPDATE t_sys_role_menu SET deleted = TRUE WHERE menu_id IN (
     SELECT id
     FROM t_sys_menu
     WHERE permission IN (
@@ -16,9 +16,10 @@ DELETE FROM t_sys_role_menu WHERE menu_id IN (
         'order:production:fire-line-event'
     )
     AND id NOT IN (3217, 3218, 3219, 3221, 3222)
-);
+    AND deleted = FALSE
+) AND deleted = FALSE;
 
-DELETE FROM t_sys_menu
+UPDATE t_sys_menu SET deleted = TRUE
 WHERE permission IN (
     'order:sales:convert',
     'order:sales:quantity-change',
@@ -26,7 +27,8 @@ WHERE permission IN (
     'order:production:fire-event',
     'order:production:fire-line-event'
 )
-AND id NOT IN (3217, 3218, 3219, 3221, 3222);
+AND id NOT IN (3217, 3218, 3219, 3221, 3222)
+AND deleted = FALSE;
 
 UPDATE t_sys_menu
 SET deleted = FALSE, status = 'ACTIVE'
@@ -55,14 +57,15 @@ ON CONFLICT (id) DO UPDATE SET
     status = EXCLUDED.status,
     deleted = FALSE;
 
-DELETE FROM t_sys_role_menu
+UPDATE t_sys_role_menu SET deleted = TRUE
 WHERE id IN (
     SELECT id FROM (
         SELECT id, ROW_NUMBER() OVER (PARTITION BY role_id, menu_id ORDER BY id) AS rn
         FROM t_sys_role_menu
         WHERE menu_id IN (3200, 3210, 3217, 3218, 3219, 3220, 3221, 3222)
+          AND deleted = FALSE
     ) t WHERE rn > 1
-);
+) AND deleted = FALSE;
 
 INSERT INTO t_sys_role_menu (id, role_id, menu_id)
 SELECT

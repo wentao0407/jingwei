@@ -2,10 +2,14 @@ import { CheckCircleOutlined, FileSearchOutlined, SearchOutlined } from '@ant-de
 import { App, Button, Form, Input, Modal, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
+import { getApiErrorMessage } from '@/services/http/apiClient';
 import { confirmOutbound, getOutboundDetail, pageOutboundOrders, type InventoryOrderLineRecord, type OutboundOrderRecord } from '@/services/inventory/inventoryService';
 
+const CONFIRMABLE_OUTBOUND_STATUSES = new Set(['DRAFT', 'CONFIRMED', 'PICKING']);
+const OUTBOUND_CONFIRM_STATUS_MESSAGE = '只有草稿/已确认/拣货中状态的出库单允许发货确认';
+
 export function OutboundOrderPage() {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [form] = Form.useForm<{ outboundNo?: string; status?: string; warehouseId?: string }>();
   const [records, setRecords] = useState<OutboundOrderRecord[]>([]);
   const [detail, setDetail] = useState<OutboundOrderRecord | null>(null);
@@ -28,9 +32,24 @@ export function OutboundOrderPage() {
 
   const openDetail = async (record: OutboundOrderRecord) => setDetail(await getOutboundDetail(record.id));
   const handleConfirm = async (record: OutboundOrderRecord) => {
-    await confirmOutbound(record.id);
-    message.success('出库已确认');
-    await loadData();
+    if (record.status && !CONFIRMABLE_OUTBOUND_STATUSES.has(record.status)) {
+      modal.warning({
+        title: '无法确认出库',
+        content: OUTBOUND_CONFIRM_STATUS_MESSAGE,
+      });
+      return;
+    }
+
+    try {
+      await confirmOutbound(record.id);
+      message.success('出库已确认');
+      await loadData();
+    } catch (error) {
+      modal.warning({
+        title: '无法确认出库',
+        content: getApiErrorMessage(error),
+      });
+    }
   };
 
   const columns: ColumnsType<OutboundOrderRecord> = [

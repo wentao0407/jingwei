@@ -2,10 +2,13 @@ import { FileSearchOutlined, PlayCircleOutlined, SaveOutlined, SearchOutlined } 
 import { App, Button, Form, Input, InputNumber, Modal, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
+import { getApiErrorMessage } from '@/services/http/apiClient';
 import { getStocktakingDetail, pageStocktakingOrders, recordStocktakingCount, startStocktaking, type StocktakingLineRecord, type StocktakingOrderRecord } from '@/services/inventory/inventoryService';
 
+const STOCKTAKING_START_STATUS_MESSAGE = '只有草稿状态的盘点单允许开始盘点';
+
 export function StocktakingPage() {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [form] = Form.useForm<{ warehouseId?: string; status?: string }>();
   const [countForm] = Form.useForm<{ actualQty?: number }>();
   const [records, setRecords] = useState<StocktakingOrderRecord[]>([]);
@@ -28,8 +31,24 @@ export function StocktakingPage() {
 
   const openDetail = async (record: StocktakingOrderRecord) => setDetail(await getStocktakingDetail(record.id));
   const handleStart = async (record: StocktakingOrderRecord) => {
-    await startStocktaking(record.id);
-    message.success('盘点已开始');
+    if (record.status && record.status !== 'DRAFT') {
+      modal.warning({
+        title: '无法开始盘点',
+        content: STOCKTAKING_START_STATUS_MESSAGE,
+      });
+      return;
+    }
+
+    try {
+      await startStocktaking(record.id);
+      message.success('盘点已开始');
+      await loadData();
+    } catch (error) {
+      modal.warning({
+        title: '无法开始盘点',
+        content: getApiErrorMessage(error),
+      });
+    }
   };
   const handleRecord = async () => {
     if (!detail || !selectedLine) return;

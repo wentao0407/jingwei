@@ -5,34 +5,34 @@
 -- 编码规则菜单可能被软删除；销售订单原始 300/310 菜单段已被后续
 -- 仓库库位修复脚本占用，因此销售订单使用新的 3200+ 菜单段恢复。
 
--- 1. 清理可能存在的错误记录（雪花算法 ID 的重复记录）
--- 删除错误的编码规则记录（保留正确的 id=260）
-DELETE FROM t_sys_role_menu WHERE menu_id IN (
-    SELECT id FROM t_sys_menu WHERE name = '编码规则' AND id != 260 AND parent_id = 200
-);
-DELETE FROM t_sys_menu WHERE name = '编码规则' AND id != 260 AND parent_id = 200;
+-- 1. 软删除可能存在的错误记录（雪花算法 ID 的重复记录）
+-- 软删除错误的编码规则记录（保留正确的 id=260）
+UPDATE t_sys_role_menu SET deleted = TRUE WHERE menu_id IN (
+    SELECT id FROM t_sys_menu WHERE name = '编码规则' AND id != 260 AND parent_id = 200 AND deleted = FALSE
+) AND deleted = FALSE;
+UPDATE t_sys_menu SET deleted = TRUE WHERE name = '编码规则' AND id != 260 AND parent_id = 200 AND deleted = FALSE;
 
--- 删除错误的订单管理记录（保留正确的 id=3200）
-DELETE FROM t_sys_role_menu WHERE menu_id IN (
-    SELECT id FROM t_sys_menu WHERE name = '订单管理' AND id != 3200 AND parent_id = 0
-);
-DELETE FROM t_sys_menu WHERE name = '订单管理' AND id != 3200 AND parent_id = 0;
+-- 软删除错误的订单管理记录（保留正确的 id=3200）
+UPDATE t_sys_role_menu SET deleted = TRUE WHERE menu_id IN (
+    SELECT id FROM t_sys_menu WHERE name = '订单管理' AND id != 3200 AND parent_id = 0 AND deleted = FALSE
+) AND deleted = FALSE;
+UPDATE t_sys_menu SET deleted = TRUE WHERE name = '订单管理' AND id != 3200 AND parent_id = 0 AND deleted = FALSE;
 
--- 删除错误的销售订单记录（保留正确的 id=3210）
-DELETE FROM t_sys_role_menu WHERE menu_id IN (
-    SELECT id FROM t_sys_menu WHERE name = '销售订单' AND id != 3210 AND parent_id = 3200
-);
-DELETE FROM t_sys_menu WHERE name = '销售订单' AND id != 3210 AND parent_id = 3200;
+-- 软删除错误的销售订单记录（保留正确的 id=3210）
+UPDATE t_sys_role_menu SET deleted = TRUE WHERE menu_id IN (
+    SELECT id FROM t_sys_menu WHERE name = '销售订单' AND id != 3210 AND parent_id = 3200 AND deleted = FALSE
+) AND deleted = FALSE;
+UPDATE t_sys_menu SET deleted = TRUE WHERE name = '销售订单' AND id != 3210 AND parent_id = 3200 AND deleted = FALSE;
 
--- 2. 清理可能存在的重复 permission 记录（保留正确的 id）
-DELETE FROM t_sys_role_menu WHERE menu_id IN (
-    SELECT id FROM t_sys_menu WHERE permission LIKE 'master:codingRule%' AND id NOT IN (261, 262, 263, 264)
-);
-DELETE FROM t_sys_role_menu WHERE menu_id IN (
-    SELECT id FROM t_sys_menu WHERE permission LIKE 'order:sales%' AND id NOT IN (3211, 3212, 3213, 3214, 3215, 3216)
-);
-DELETE FROM t_sys_menu WHERE permission LIKE 'master:codingRule%' AND id NOT IN (261, 262, 263, 264);
-DELETE FROM t_sys_menu WHERE permission LIKE 'order:sales%' AND id NOT IN (3211, 3212, 3213, 3214, 3215, 3216);
+-- 2. 软删除可能存在的重复 permission 记录（保留正确的 id）
+UPDATE t_sys_role_menu SET deleted = TRUE WHERE menu_id IN (
+    SELECT id FROM t_sys_menu WHERE permission LIKE 'master:codingRule%' AND id NOT IN (261, 262, 263, 264) AND deleted = FALSE
+) AND deleted = FALSE;
+UPDATE t_sys_role_menu SET deleted = TRUE WHERE menu_id IN (
+    SELECT id FROM t_sys_menu WHERE permission LIKE 'order:sales%' AND id NOT IN (3211, 3212, 3213, 3214, 3215, 3216) AND deleted = FALSE
+) AND deleted = FALSE;
+UPDATE t_sys_menu SET deleted = TRUE WHERE permission LIKE 'master:codingRule%' AND id NOT IN (261, 262, 263, 264) AND deleted = FALSE;
+UPDATE t_sys_menu SET deleted = TRUE WHERE permission LIKE 'order:sales%' AND id NOT IN (3211, 3212, 3213, 3214, 3215, 3216) AND deleted = FALSE;
 
 -- 3. 先处理可能被软删除的菜单记录
 UPDATE t_sys_menu SET deleted = FALSE, status = 'ACTIVE' WHERE id IN (200, 260, 261, 262, 263, 264, 3200, 3210, 3211, 3212, 3213, 3214, 3215, 3216);
@@ -67,15 +67,16 @@ ON CONFLICT (id) DO UPDATE SET
     status = EXCLUDED.status,
     deleted = FALSE;
 
--- 5. 清理 role_menu 表中的重复数据
-DELETE FROM t_sys_role_menu
+-- 5. 软删除 role_menu 表中的重复数据
+UPDATE t_sys_role_menu SET deleted = TRUE
 WHERE id IN (
     SELECT id FROM (
         SELECT id, ROW_NUMBER() OVER (PARTITION BY role_id, menu_id ORDER BY id) as rn
         FROM t_sys_role_menu
         WHERE menu_id IN (200, 260, 261, 262, 263, 264, 3200, 3210, 3211, 3212, 3213, 3214, 3215, 3216)
+          AND deleted = FALSE
     ) t WHERE rn > 1
-);
+) AND deleted = FALSE;
 
 -- 6. 插入角色菜单关联（如果不存在）
 INSERT INTO t_sys_role_menu (id, role_id, menu_id)

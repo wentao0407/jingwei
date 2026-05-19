@@ -52,7 +52,7 @@ public abstract class BaseEntity implements Serializable {
     private LocalDateTime updatedAt;
 
     /** 软删除标记：false=未删除，true=已删除 */
-    @TableLogic
+    @TableLogic(value = "false", delval = "true")
     @TableField(fill = FieldFill.INSERT)
     private Boolean deleted;
 

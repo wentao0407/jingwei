@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { App as AntdApp } from 'antd';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReportCenterPage } from './ReportCenterPage';
 import {
@@ -7,6 +8,7 @@ import {
   queryInventoryLedgerMatrix,
   pageInventoryLedger,
   pageOperationFlows,
+  pageShortage,
   queryInventoryAge,
   queryTurnoverAnalysis,
 } from '@/services/report/reportService';
@@ -18,6 +20,7 @@ vi.mock('@/services/report/reportService', () => ({
   exportTurnoverAnalysis: vi.fn(),
   pageInventoryLedger: vi.fn(),
   pageOperationFlows: vi.fn(),
+  pageShortage: vi.fn(),
   queryInventoryLedgerMatrix: vi.fn(),
   queryInventoryAge: vi.fn(),
   queryTurnoverAnalysis: vi.fn(),
@@ -27,6 +30,7 @@ const mockedExportLedger = vi.mocked(exportInventoryLedger);
 const mockedQueryLedgerMatrix = vi.mocked(queryInventoryLedgerMatrix);
 const mockedPageLedger = vi.mocked(pageInventoryLedger);
 const mockedPageFlows = vi.mocked(pageOperationFlows);
+const mockedPageShortage = vi.mocked(pageShortage);
 const mockedQueryAge = vi.mocked(queryInventoryAge);
 const mockedQueryTurnover = vi.mocked(queryTurnoverAnalysis);
 
@@ -67,6 +71,14 @@ describe('ReportCenterPage', () => {
       pages: 1,
       records: [{ skuCode: 'JW-POLO-RED-M', turnoverGradeLabel: '正常', turnoverDays: 30 }],
     });
+    mockedPageShortage.mockReset();
+    mockedPageShortage.mockResolvedValue({
+      current: 1,
+      size: 20,
+      total: 1,
+      pages: 1,
+      records: [{ orderNo: 'SO-SHORT-001', customerName: '杭州云织', shortageQty: 12 }],
+    });
     mockedQueryLedgerMatrix.mockReset();
     mockedQueryLedgerMatrix.mockResolvedValue({
       spuId: '80001',
@@ -96,6 +108,21 @@ describe('ReportCenterPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /查询报表/ }));
     await waitFor(() => expect(mockedQueryTurnover).toHaveBeenCalledTimes(2));
+  });
+
+  it('loads the report that matches the current route without requesting ledger first', async () => {
+    renderPage('/report/flow');
+
+    expect(await screen.findByText('OP-202605-0001')).toBeInTheDocument();
+    expect(mockedPageFlows).toHaveBeenCalledTimes(1);
+    expect(mockedPageLedger).not.toHaveBeenCalled();
+  });
+
+  it('shows a link back to the dashboard home page', async () => {
+    renderPage('/report/ledger');
+
+    expect(await screen.findByText('JW-POLO-RED-M')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /返回首页/ })).toHaveAttribute('href', '/');
   });
 
   it('exports the active report with current filters', async () => {
@@ -130,10 +157,12 @@ describe('ReportCenterPage', () => {
   });
 });
 
-function renderPage() {
+function renderPage(initialPath = '/report/ledger') {
   render(
     <AntdApp>
-      <ReportCenterPage />
+      <MemoryRouter initialEntries={[initialPath]}>
+        <ReportCenterPage />
+      </MemoryRouter>
     </AntdApp>,
   );
 }

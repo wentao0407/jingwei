@@ -1,0 +1,38 @@
+# 测试环境配置 - 使用独立数据库，避免测试影响开发数据
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/jingwei_test
+    username: jingwei
+    password: jingwei123
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: root123
+      database: 1  # 使用不同的 Redis 数据库
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 5
+          max-idle: 5
+          min-idle: 0
+  flyway:
+    enabled: false  # 测试环境禁用 Flyway，避免迁移脚本问题
+
+# JWT 配置（测试环境使用不同的密钥）
+jwt:
+  secret: jingwei-test-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256
+  expiration: 28800000  # 8小时（毫秒）
+
+# 日志配置
+logging:
+  level:
+    com.jingwei: debug
+    org.springframework.test: info

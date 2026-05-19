@@ -16,8 +16,11 @@ const mockedConfirm = vi.mocked(confirmOutbound);
 
 describe('OutboundOrderPage', () => {
   beforeEach(() => {
+    mockedPage.mockReset();
     mockedPage.mockResolvedValue({ current: 1, size: 10, total: 1, pages: 1, records: [{ id: '20001', outboundNo: 'OUT-001', warehouseName: '主仓', status: 'DRAFT', statusLabel: '草稿' }] });
+    mockedDetail.mockReset();
     mockedDetail.mockResolvedValue({ id: '20001', outboundNo: 'OUT-001', lines: [{ id: '1', inventoryType: 'MATERIAL', materialName: '高支棉', plannedQty: 5 }] });
+    mockedConfirm.mockReset();
     mockedConfirm.mockResolvedValue(undefined);
   });
 
@@ -31,6 +34,24 @@ describe('OutboundOrderPage', () => {
     expect(await screen.findByText('高支棉')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '确认 OUT-001' }));
     await waitFor(() => expect(mockedConfirm).toHaveBeenCalledWith('20001'));
+  });
+
+  it('explains why an already shipped outbound order cannot be confirmed again', async () => {
+    mockedPage.mockResolvedValue({
+      current: 1,
+      size: 10,
+      total: 1,
+      pages: 1,
+      records: [{ id: '20002', outboundNo: 'OUT-002', warehouseName: '主仓', status: 'SHIPPED', statusLabel: '已发货' }],
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('OUT-002')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '确认 OUT-002' }));
+
+    expect(mockedConfirm).not.toHaveBeenCalled();
+    expect(await screen.findByText('只有草稿/已确认/拣货中状态的出库单允许发货确认')).toBeInTheDocument();
   });
 });
 

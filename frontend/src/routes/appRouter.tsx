@@ -111,6 +111,7 @@ export const appRouter: ReturnType<typeof createBrowserRouter> = createBrowserRo
         { path: 'report/flow', element: withLazyRoute(<ReportCenterPage />) },
         { path: 'report/age', element: withLazyRoute(<ReportCenterPage />) },
         { path: 'report/turnover', element: withLazyRoute(<ReportCenterPage />) },
+        { path: 'report/shortage', element: withLazyRoute(<ReportCenterPage />) },
         { path: 'cost/query', element: withLazyRoute(<CostAccountingPage />) },
         { path: 'cost/report', element: withLazyRoute(<CostAccountingPage />) },
       ],

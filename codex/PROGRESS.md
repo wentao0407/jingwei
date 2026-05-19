@@ -1,7 +1,7 @@
 # 经纬项目进度
 
 > 用途：记录当前实现状态。每次编码任务完成后都要更新本文档。
-> 更新时间：2026-05-16。
+> 更新时间：2026-05-17。
 
 ## 当前状态
 
@@ -32,12 +32,59 @@
 
 ## 进行中
 
-前端阶段计划的主入口已完成，已完成首轮全链路联调、路由懒加载、生产构建拆包、代码检视第一批、报表导出、审批历史、代码检视 5-8 项修复、剩余主要查询与管理入口修复、采购库存联动精确性修复、生产订单新增/编辑/删除页面表单、BOM 新增/编辑/删除表单、采购订单创建页面、库存 SKU/物料查询 500 修复、ASN 创建页面、退货生命周期页面、库存 SKU/物料筛选增强、数据范围结构化改造、SPU/SKU 批量改价入口、编码规则正式生成入口，以及发运单后端聚合契约与前端列表详情。
+前端阶段计划的主入口已完成，已完成首轮全链路联调、路由懒加载、生产构建拆包、代码检视第一批、报表导出、审批历史、代码检视 5-8 项修复、剩余主要查询与管理入口修复、采购库存联动精确性修复、生产订单新增/编辑/删除页面表单、BOM 新增/编辑/删除表单、采购订单创建页面、库存 SKU/物料查询 500 修复、ASN 创建页面、退货生命周期页面、库存 SKU/物料筛选增强、数据范围结构化改造、SPU/SKU 批量改价入口、编码规则正式生成入口、发运单后端聚合契约与前端列表详情、工作台首页视觉优化、报表中心返回首页入口、盘点单开始操作业务提示优化，以及出库单确认操作业务提示优化。
 
 推荐下一个任务：
 
-- 继续全链路真实后端冒烟，重点覆盖新补齐的发运列表/详情、数据范围保存、SPU/SKU 批量改价和编码规则正式生成。
+- 先修复当前阻断 `pnpm lint` / `pnpm build` 的既有前端问题，再继续全链路真实后端冒烟，重点覆盖新补齐的发运列表/详情、数据范围保存、SPU/SKU 批量改价和编码规则正式生成。
 - 采购订单编辑和发运历史/物流轨迹仍需后端契约后再接入。
+
+## 2026-05-17 任务：工作台首页视觉优化
+
+已完成：
+- 工作台首页“今日已同步”改为运行时当前日期时间，不再展示写死日期。
+- 重新设计工作台首页布局：同步状态卡、运营指标卡、履约待办表格、今日重点任务卡和产销节奏进度区。
+- 今日重点从原 Timeline 样式调整为可扫读的优先级任务列表。
+- 履约待办表格补充紧凑列宽，避免常见视口下出现竖排换行。
+
+验证：
+- `cd frontend && pnpm exec vitest run src/pages/dashboard/DashboardPage.test.tsx` 通过。
+- `cd frontend && pnpm exec eslint src/pages/dashboard/DashboardPage.tsx src/pages/dashboard/DashboardPage.test.tsx` 通过。
+- gstack headed 浏览器已打开工作台并截图验证：`/tmp/jingwei-dashboard-after-3.png`。
+- `cd frontend && pnpm lint` 仍失败，阻断来自既有未使用 import。
+- `cd frontend && pnpm build` 仍失败，阻断来自既有 TypeScript/依赖问题。
+
+## 2026-05-17 任务：报表中心返回首页入口
+
+已完成：
+- 报表中心顶部操作区新增“返回首页”链接按钮，跳转至工作台首页 `/`。
+- 为报表中心补充返回首页入口测试，防止后续改版遗漏。
+
+验证：
+- `cd frontend && pnpm exec vitest run src/pages/report/ReportCenterPage.test.tsx src/routes/appRouter.test.ts` 通过。
+- `cd frontend && pnpm exec eslint src/pages/report/ReportCenterPage.tsx src/pages/report/ReportCenterPage.test.tsx src/routes/appRouter.tsx` 通过。
+
+## 2026-05-17 任务：盘点单开始操作业务提示
+
+已完成：
+- 盘点单列表“开始”操作在非草稿状态下不再直接调用后端接口，改为弹框说明“只有草稿状态的盘点单允许开始盘点”。
+- 后端返回开始失败业务消息时，前端使用弹框展示后端消息，避免用户只看到未处理错误。
+- 开始成功后刷新盘点单列表，保持列表状态同步。
+
+验证：
+- `cd frontend && pnpm exec vitest run src/pages/inventory/stocktaking/StocktakingPage.test.tsx` 通过。
+- `cd frontend && pnpm exec eslint src/pages/inventory/stocktaking/StocktakingPage.tsx src/pages/inventory/stocktaking/StocktakingPage.test.tsx` 通过。
+
+## 2026-05-17 任务：出库单确认操作业务提示
+
+已完成：
+- 出库单列表“确认”操作在非 DRAFT/CONFIRMED/PICKING 状态下不再直接调用后端接口，改为弹框说明“只有草稿/已确认/拣货中状态的出库单允许发货确认”。
+- 后端返回确认出库业务失败消息时，前端使用弹框展示后端消息，避免用户只看到未处理错误。
+- 确认成功后继续刷新出库单列表，保持列表状态同步。
+
+验证：
+- `cd frontend && pnpm exec vitest run src/pages/inventory/outbound/OutboundOrderPage.test.tsx` 通过。
+- `cd frontend && pnpm exec eslint src/pages/inventory/outbound/OutboundOrderPage.tsx src/pages/inventory/outbound/OutboundOrderPage.test.tsx` 通过。
 
 ## 2026-05-16 任务：数据范围结构化 + SPU/SKU 批量改价 + 编码正式生成 + 发运聚合
 

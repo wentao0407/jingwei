@@ -218,6 +218,14 @@ function normalizeMenuPath(path?: string | null): string {
     return '/system/configs';
   }
 
+  if (path === '/system/audit-log') {
+    return '/system/audit-logs';
+  }
+
+  if (path === '/system/data-scope') {
+    return '/system/data-scopes';
+  }
+
   if (path === '/master/customer') {
     return '/master/customers';
   }
@@ -256,6 +264,10 @@ function normalizeMenuPath(path?: string | null): string {
 
   if (path === '/order/sale' || path === '/order/salesOrder') {
     return '/order/sales';
+  }
+
+  if (path === '/order/return') {
+    return '/order/returns';
   }
 
   if (path === '/order/productionOrder' || path === '/order/production-order') {
